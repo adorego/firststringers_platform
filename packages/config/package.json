@@ -1,0 +1,8 @@
+{
+  "name": "@firststringers/config",
+  "version": "0.1.0",
+  "main": "./index.ts",
+  "devDependencies": {
+    "typescript": "^5.0.0"
+  }
+}

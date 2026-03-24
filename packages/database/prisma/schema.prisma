@@ -1,0 +1,61 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Organization {
+  id         String      @id @default(uuid())
+  name       String
+  createdAt  DateTime    @default(now())
+  athletes   Athlete[]
+  recruiters Recruiter[]
+}
+
+model Athlete {
+  id             String         @id @default(uuid())
+  organizationId String
+  organization   Organization   @relation(fields: [organizationId], references: [id])
+  email          String         @unique
+  name           String
+  sport          String?
+  position       String?
+  dossier        Dossier?
+  sessions       JerrySession[]
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+}
+
+model Dossier {
+  id            String   @id @default(uuid())
+  athleteId     String   @unique
+  athlete       Athlete  @relation(fields: [athleteId], references: [id])
+  data          Json     @default("{}")
+  completeness  Float    @default(0)
+  narrative     String?
+  advocacyScore Float?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+}
+
+model JerrySession {
+  id        String   @id @default(uuid())
+  athleteId String
+  athlete   Athlete  @relation(fields: [athleteId], references: [id])
+  messages  Json     @default("[]")
+  status    String   @default("active")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Recruiter {
+  id             String       @id @default(uuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id])
+  email          String       @unique
+  name           String
+  createdAt      DateTime     @default(now())
+}

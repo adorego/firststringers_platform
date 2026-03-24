@@ -1,0 +1,25 @@
+import { Module } from '@nestjs/common'
+import { BullModule } from '@nestjs/bull'
+import { JerryGateway } from './jerry.gateway'
+import { SessionService } from './session.service'
+import { ConversationWorker } from './conversation.worker'
+import { IntentClassifierService } from './intent-classifier.service'
+import { DataExtractorService } from './data-extractor.service'
+import { ValidatorService } from './validator.service'
+
+@Module({
+  imports: [
+    BullModule.registerQueue({
+      name: 'jerry',
+    }),
+  ],
+  providers: [
+    JerryGateway,
+    SessionService,
+    ConversationWorker,
+    IntentClassifierService,
+    DataExtractorService,
+    ValidatorService,
+  ],
+})
+export class JerryModule {}
