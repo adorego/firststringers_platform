@@ -5,6 +5,8 @@ import { SessionService } from './session.service'
 import { IntentClassifierService } from './intent-classifier.service'
 import { DataExtractorService } from './data-extractor.service'
 import { ValidatorService } from './validator.service'
+import { StrategyPlannerService } from './strategy-planner.service'
+import { PromptBuilderService } from './prompt-builder.service'
 import { LLMService } from '../../shared/llm/llm.service'
 import { MessageJob, JerryMessage } from '../../shared/types'
 
@@ -15,6 +17,8 @@ export class ConversationWorker {
     private readonly intentClassifier: IntentClassifierService,
     private readonly dataExtractor: DataExtractorService,
     private readonly validator: ValidatorService,
+    private readonly strategyPlanner: StrategyPlannerService,
+    private readonly promptBuilder: PromptBuilderService,
     private readonly llm: LLMService,
     private readonly eventEmitter: EventEmitter2,
   ) {}
@@ -29,8 +33,15 @@ export class ConversationWorker {
       const extractedData = await this.dataExtractor.extract(message, intent)
       const missingFields = await this.validator.getMissingFields(athleteId)
 
+      const strategy = this.strategyPlanner.decide({
+        intent,
+        missingFields,
+        extractedData,
+        session: sessionState,
+      })
+
       const response = await this.llm.chat({
-        systemPrompt: this.buildSystemPrompt(missingFields),
+        systemPrompt: this.promptBuilder.build(strategy),
         messages: sessionState.messages,
         extractedData,
       })
@@ -62,27 +73,5 @@ export class ConversationWorker {
       })
       throw error
     }
-  }
-
-  private buildSystemPrompt(missingFields: string[]): string {
-    const fieldsText =
-      missingFields.length > 0
-        ? `Campos que aún necesitas recopilar: ${missingFields.join(', ')}.`
-        : 'El dossier está completo. Enfócate en refinar la narrativa.'
-
-    return `
-      Eres Jerry, el agente de representación deportiva de First Stringers.
-      Tu misión es ayudar a los atletas a construir su dossier de reclutamiento.
-
-      ${fieldsText}
-
-      Reglas:
-      - Haz solo UNA pregunta a la vez
-      - Sé conversacional y empático, no un formulario
-      - Si el atleta da información voluntariamente, úsala sin volver a pedirla
-      - Celebra los logros del atleta
-      - Responde siempre en español
-      - Mensajes cortos y directos, máximo 3 oraciones
-    `
   }
 }

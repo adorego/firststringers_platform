@@ -66,3 +66,25 @@ export interface ChatParams {
   messages: JerryMessage[]
   extractedData?: Partial<DossierData> | null
 }
+
+export type ConversationStrategyType =
+  | 'welcome'
+  | 'confirm_and_probe'
+  | 'answer_and_redirect'
+  | 'clarify'
+  | 'strategic_ask'
+  | 'narrative_focus'
+  | 'reset'
+
+export interface ConversationStrategy {
+  type: ConversationStrategyType
+  targetField?: string
+  confirmedData?: Partial<DossierData>
+}
+
+export interface StrategyContext {
+  intent: JerryIntent
+  missingFields: string[]
+  extractedData: Partial<DossierData> | null
+  session: JerrySessionState
+}

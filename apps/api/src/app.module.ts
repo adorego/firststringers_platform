@@ -7,6 +7,7 @@ import { RedisModule } from './shared/redis/redis.module'
 import { LLMModule } from './shared/llm/llm.module'
 import { JerryModule } from './modules/jerry/jerry.module'
 import { DossierModule } from './modules/dossier/dossier.module'
+import { HealthModule } from './modules/health/health.module'
 
 @Module({
   imports: [
@@ -17,7 +18,7 @@ import { DossierModule } from './modules/dossier/dossier.module'
     BullModule.forRoot({
       redis: {
         host: process.env.REDIS_HOST || 'localhost',
-        port: parseInt(process.env.REDIS_PORT || '6379'),
+        port: parseInt(process.env.REDIS_PORT || '6379', 10),
       },
     }),
     PrismaModule,
@@ -25,6 +26,7 @@ import { DossierModule } from './modules/dossier/dossier.module'
     LLMModule,
     JerryModule,
     DossierModule,
+    HealthModule,
   ],
 })
 export class AppModule {}

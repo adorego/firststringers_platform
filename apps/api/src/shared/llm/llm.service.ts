@@ -1,14 +1,22 @@
-import { Injectable } from '@nestjs/common'
+import { Injectable, Logger } from '@nestjs/common'
 import OpenAI from 'openai'
 import { ChatParams, DossierData, JerryIntent } from '../types'
 
+const LLM_TIMEOUT_MS = 30_000
+
 @Injectable()
 export class LLMService {
+  private readonly logger = new Logger(LLMService.name)
   private client: OpenAI
 
   constructor() {
+    if (!process.env.OPENAI_API_KEY) {
+      throw new Error('Missing required environment variable: OPENAI_API_KEY')
+    }
+
     this.client = new OpenAI({
       apiKey: process.env.OPENAI_API_KEY,
+      timeout: LLM_TIMEOUT_MS,
     })
   }
 
@@ -28,7 +36,13 @@ export class LLMService {
       ],
     })
 
-    return response.choices[0]?.message?.content ?? ''
+    const content = response.choices?.[0]?.message?.content
+    if (!content) {
+      this.logger.warn('LLM chat returned empty content')
+      return ''
+    }
+
+    return content
   }
 
   async extract(
@@ -63,8 +77,8 @@ export class LLMService {
       ],
     })
 
-    const toolCall = response.choices[0]?.message?.tool_calls?.[0]
-    if (!toolCall) return null
+    const toolCall = response.choices?.[0]?.message?.tool_calls?.[0]
+    if (!toolCall || toolCall.type !== 'function') return null
 
     try {
       return JSON.parse(toolCall.function.arguments) as Partial<DossierData>
@@ -92,7 +106,7 @@ export class LLMService {
     })
 
     const result =
-      response.choices[0]?.message?.content?.trim().toLowerCase() ?? 'other'
+      response.choices?.[0]?.message?.content?.trim().toLowerCase() ?? 'other'
 
     const validIntents: JerryIntent[] = [
       'stats',
@@ -108,8 +122,8 @@ export class LLMService {
       : 'other'
   }
 
-  private getSchemaForIntent(intent: JerryIntent): object {
-    const schemas: Record<JerryIntent, object> = {
+  private getSchemaForIntent(intent: JerryIntent): Record<string, unknown> {
+    const schemas: Record<JerryIntent, Record<string, unknown>> = {
       stats: {
         type: 'object',
         properties: {
