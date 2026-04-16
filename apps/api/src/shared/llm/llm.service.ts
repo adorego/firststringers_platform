@@ -50,7 +50,7 @@ export class LLMService {
           function: {
             name: 'extract_data',
             description: 'Extrae datos estructurados del texto del atleta',
-            parameters: schema,
+            parameters: schema as Record<string, unknown>,
           },
         },
       ],
@@ -64,7 +64,7 @@ export class LLMService {
     })
 
     const toolCall = response.choices[0]?.message?.tool_calls?.[0]
-    if (!toolCall) return null
+    if (!toolCall || !('function' in toolCall)) return null
 
     try {
       return JSON.parse(toolCall.function.arguments) as Partial<DossierData>
