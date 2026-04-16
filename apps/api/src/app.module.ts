@@ -11,6 +11,7 @@ import { JerryModule } from './modules/jerry/jerry.module'
 import { DossierModule } from './modules/dossier/dossier.module'
 import { JwtAuthGuard } from './modules/auth/auth.guard'
 import { RolesGuard } from './modules/auth/roles.guard'
+import { HealthModule } from './modules/health/health.module'
 
 @Module({
   imports: [
@@ -21,7 +22,7 @@ import { RolesGuard } from './modules/auth/roles.guard'
     BullModule.forRoot({
       redis: {
         host: process.env.REDIS_HOST || 'localhost',
-        port: parseInt(process.env.REDIS_PORT || '6379'),
+        port: parseInt(process.env.REDIS_PORT || '6379', 10),
       },
     }),
     PrismaModule,
@@ -30,6 +31,7 @@ import { RolesGuard } from './modules/auth/roles.guard'
     AuthModule,
     JerryModule,
     DossierModule,
+    HealthModule,
   ],
   providers: [
     { provide: APP_GUARD, useClass: JwtAuthGuard },

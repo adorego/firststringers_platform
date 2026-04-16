@@ -1,8 +1,23 @@
 import { NestFactory } from '@nestjs/core'
-import { ValidationPipe } from '@nestjs/common'
+import { ValidationPipe, Logger } from '@nestjs/common'
 import { AppModule } from './app.module'
 
+const logger = new Logger('Bootstrap')
+
+function validateEnv() {
+  const required = ['OPENAI_API_KEY']
+  const missing = required.filter((key) => !process.env[key])
+
+  if (missing.length > 0) {
+    throw new Error(
+      `Missing required environment variables: ${missing.join(', ')}`,
+    )
+  }
+}
+
 async function bootstrap() {
+  validateEnv()
+
   const app = await NestFactory.create(AppModule)
 
   app.useGlobalPipes(
@@ -17,10 +32,13 @@ async function bootstrap() {
     credentials: true,
   })
 
-  const port = process.env.PORT || 3001
+  const port = parseInt(process.env.PORT || '3001', 10)
   await app.listen(port)
 
-  console.log(`API running on http://localhost:${port}`)
+  logger.log(`API running on http://localhost:${port}`)
 }
 
-bootstrap()
+bootstrap().catch((err) => {
+  logger.error('Failed to start application', err)
+  process.exit(1)
+})

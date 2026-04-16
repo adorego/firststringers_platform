@@ -6,6 +6,7 @@ import { ConversationWorker } from './conversation.worker'
 import { IntentClassifierService } from './intent-classifier.service'
 import { DataExtractorService } from './data-extractor.service'
 import { ValidatorService } from './validator.service'
+import { StrategyPlannerService } from './strategy-planner.service'
 
 @Module({
   imports: [
@@ -20,6 +21,7 @@ import { ValidatorService } from './validator.service'
     IntentClassifierService,
     DataExtractorService,
     ValidatorService,
+    StrategyPlannerService,
   ],
 })
 export class JerryModule {}

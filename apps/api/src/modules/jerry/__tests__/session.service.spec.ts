@@ -87,6 +87,24 @@ describe('SessionService', () => {
       )
     })
 
+    it('debe crear sesión nueva si Redis devuelve JSON inválido (datos corruptos)', async () => {
+      const athleteId = 'athlete-corrupto'
+      mockRedisService.get.mockResolvedValue('esto-no-es-json{{{')
+      mockRedisService.setex.mockResolvedValue('OK')
+
+      const result = await service.getSession(athleteId)
+
+      // No crashea — crea sesión limpia en lugar de propagar el SyntaxError
+      expect(result.athleteId).toBe(athleteId)
+      expect(result.messages).toEqual([])
+      // Persistió la sesión nueva en Redis
+      expect(mockRedisService.setex).toHaveBeenCalledWith(
+        `jerry:session:${athleteId}`,
+        expect.any(Number),
+        expect.any(String),
+      )
+    })
+
     it('debe usar la key correcta para Redis', async () => {
       const athleteId = 'athlete-456'
       mockRedisService.get.mockResolvedValue(null)
@@ -163,6 +181,48 @@ describe('SessionService', () => {
     })
   })
 
+  // ── appendMessage (nuevos) ──────────────────────────────────────────────────
+
+  describe('appendMessage — límite de 20 mensajes', () => {
+    it('debe mantener exactamente los últimos 20 mensajes y descartar el más antiguo cuando hay 21', async () => {
+      const athleteId = 'athlete-123'
+      const session = makeSession(athleteId)
+      session.messages = Array.from({ length: 20 }, (_, i) =>
+        makeMessage('user', `Mensaje ${i}`),
+      )
+      mockRedisService.get.mockResolvedValue(JSON.stringify(session))
+      mockRedisService.setex.mockResolvedValue('OK')
+
+      await service.appendMessage(athleteId, makeMessage('user', 'Mensaje 20'))
+
+      const savedSession = JSON.parse(
+        mockRedisService.setex.mock.calls[0][2],
+      ) as JerrySessionState
+
+      expect(savedSession.messages).toHaveLength(20)
+      expect(savedSession.messages[19].content).toBe('Mensaje 20')
+      expect(savedSession.messages[0].content).toBe('Mensaje 1')
+    })
+
+    it('debe mantener todos los mensajes si hay menos de 20', async () => {
+      const athleteId = 'athlete-123'
+      const session = makeSession(athleteId)
+      session.messages = Array.from({ length: 5 }, (_, i) =>
+        makeMessage('user', `Mensaje ${i}`),
+      )
+      mockRedisService.get.mockResolvedValue(JSON.stringify(session))
+      mockRedisService.setex.mockResolvedValue('OK')
+
+      await service.appendMessage(athleteId, makeMessage('user', 'Mensaje 5'))
+
+      const savedSession = JSON.parse(
+        mockRedisService.setex.mock.calls[0][2],
+      ) as JerrySessionState
+
+      expect(savedSession.messages).toHaveLength(6)
+    })
+  })
+
   // ── updateDossierSnapshot ───────────────────────────────────────────────────
 
   describe('updateDossierSnapshot', () => {
@@ -185,6 +245,66 @@ describe('SessionService', () => {
 
       expect(savedSession.dossierSnapshot.identity?.sport).toBe('Football')
       expect(savedSession.dossierSnapshot.academic?.gpa).toBe(3.8)
+    })
+
+    it('debe hacer merge profundo sin perder campos existentes dentro de la misma sección', async () => {
+      const athleteId = 'athlete-123'
+      const session = makeSession(athleteId)
+      session.dossierSnapshot = {
+        identity: { sport: 'Football', position: 'QB' },
+      }
+      mockRedisService.get.mockResolvedValue(JSON.stringify(session))
+      mockRedisService.setex.mockResolvedValue('OK')
+
+      await service.updateDossierSnapshot(athleteId, {
+        identity: { sport: 'Soccer' },
+      })
+
+      const savedSession = JSON.parse(
+        mockRedisService.setex.mock.calls[0][2],
+      ) as JerrySessionState
+
+      expect(savedSession.dossierSnapshot.identity?.sport).toBe('Soccer')
+      expect(savedSession.dossierSnapshot.identity?.position).toBe('QB')
+    })
+
+    it('debe agregar secciones nuevas sin tocar las existentes', async () => {
+      const athleteId = 'athlete-123'
+      const session = makeSession(athleteId)
+      session.dossierSnapshot = {
+        identity: { sport: 'Football' },
+      }
+      mockRedisService.get.mockResolvedValue(JSON.stringify(session))
+      mockRedisService.setex.mockResolvedValue('OK')
+
+      await service.updateDossierSnapshot(athleteId, {
+        academic: { gpa: 3.8 },
+      })
+
+      const savedSession = JSON.parse(
+        mockRedisService.setex.mock.calls[0][2],
+      ) as JerrySessionState
+
+      expect(savedSession.dossierSnapshot.identity?.sport).toBe('Football')
+      expect(savedSession.dossierSnapshot.academic?.gpa).toBe(3.8)
+    })
+
+    it('debe actualizar updatedAt al hacer merge del dossier', async () => {
+      const athleteId = 'athlete-123'
+      const session = makeSession(athleteId)
+      const originalUpdatedAt = session.updatedAt
+      mockRedisService.get.mockResolvedValue(JSON.stringify(session))
+      mockRedisService.setex.mockResolvedValue('OK')
+
+      await service.updateDossierSnapshot(athleteId, { identity: { sport: 'Soccer' } })
+
+      const savedSession = JSON.parse(
+        mockRedisService.setex.mock.calls[0][2],
+      ) as JerrySessionState
+
+      expect(new Date(savedSession.updatedAt).getTime()).toBeGreaterThanOrEqual(
+        new Date(originalUpdatedAt).getTime(),
+      )
     })
 
     it('debe sobrescribir datos existentes con los nuevos', async () => {
@@ -220,6 +340,36 @@ describe('SessionService', () => {
       expect(mockRedisService.del).toHaveBeenCalledWith(
         `jerry:session:${athleteId}`,
       )
+    })
+  })
+
+  // ── Manejo de fechas (bug conocido) ─────────────────────────────────────────
+
+  describe('fechas tras round-trip por Redis', () => {
+    it('el timestamp del mensaje regresa como string después de Redis, no como Date', async () => {
+      // Documenta el comportamiento actual — JSON.stringify serializa Date a ISO string,
+      // JSON.parse no revierte el string a Date. No se arregla aquí, solo se hace explícito.
+      const athleteId = 'athlete-123'
+      const session = makeSession(athleteId)
+      mockRedisService.get.mockResolvedValue(JSON.stringify(session))
+      mockRedisService.setex.mockResolvedValue('OK')
+
+      const originalMessage = makeMessage('user', 'test')
+      await service.appendMessage(athleteId, originalMessage)
+
+      // Simular lo que Redis devolvería en la siguiente lectura
+      const serialized = mockRedisService.setex.mock.calls[0][2] as string
+      mockRedisService.get.mockResolvedValue(serialized)
+
+      const recovered = await service.getSession(athleteId)
+      const recoveredMessage = recovered.messages[0]
+
+      // El contenido y rol son correctos
+      expect(recoveredMessage).toMatchObject({ role: 'user', content: 'test' })
+
+      // El timestamp ya NO es una instancia de Date después del round-trip
+      expect(recoveredMessage.timestamp).not.toBeInstanceOf(Date)
+      expect(typeof recoveredMessage.timestamp).toBe('string')
     })
   })
 

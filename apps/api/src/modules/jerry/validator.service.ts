@@ -35,7 +35,7 @@ export class ValidatorService {
     if (!data.performance?.leagueLevel) missing.push('nivel de liga')
     if (!data.academic?.gpa) missing.push('GPA')
     if (!data.academic?.intendedMajor) missing.push('carrera de interés')
-    if (!data.availability?.transferPortal !== undefined) missing.push('disponibilidad')
+    if (data.availability?.transferPortal === undefined) missing.push('disponibilidad')
     if (!data.availability?.preferredRegions) missing.push('regiones preferidas')
 
     return missing
