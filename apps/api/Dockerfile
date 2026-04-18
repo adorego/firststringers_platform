@@ -4,27 +4,30 @@ FROM node:20-alpine AS builder
 WORKDIR /app
 
 RUN apk add --no-cache python3 make g++ libc6-compat
-RUN corepack enable && corepack prepare pnpm@latest --activate
+RUN corepack enable && corepack prepare pnpm@9.0.0 --activate
 
 # Copy workspace manifest + lockfile for dependency installation
 COPY package.json pnpm-workspace.yaml pnpm-lock.yaml ./
 COPY packages ./packages
 COPY apps/api/package.json apps/api/nest-cli.json apps/api/tsconfig.json ./apps/api/
 COPY apps/api/src ./apps/api/src
+COPY apps/api/prisma ./apps/api/prisma
 
 RUN pnpm install --frozen-lockfile
+RUN pnpm --dir apps/api exec prisma generate
 RUN pnpm --dir apps/api build
 
 FROM node:20-alpine AS production
 WORKDIR /app
 
 RUN apk add --no-cache libc6-compat
-RUN corepack enable && corepack prepare pnpm@latest --activate
+RUN corepack enable && corepack prepare pnpm@9.0.0 --activate
 
 COPY package.json pnpm-workspace.yaml pnpm-lock.yaml ./
 COPY apps/api/package.json ./apps/api/package.json
 COPY packages ./packages
 COPY --from=builder /app/apps/api/dist ./apps/api/dist
+COPY --from=builder /app/apps/api/prisma ./apps/api/prisma
 
 RUN pnpm install --prod --frozen-lockfile
 

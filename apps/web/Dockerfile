@@ -32,7 +32,7 @@ COPY --from=builder /app/apps/web/public ./apps/web/public
 
 # Fix pnpm store path so root-installed modules are accessible by the node user
 RUN pnpm config set store-dir /app/.pnpm-store --global
-RUN pnpm install --frozen-lockfile
+RUN pnpm install --prod --frozen-lockfile
 
 ENV NEXT_TELEMETRY_DISABLED=1
 
