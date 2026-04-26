@@ -25,6 +25,7 @@ model Athlete {
   position       String?
   dossier        Dossier?
   sessions       JerrySession[]
+  user           User?
   createdAt      DateTime       @default(now())
   updatedAt      DateTime       @updatedAt
 }
@@ -58,4 +59,14 @@ model Recruiter {
   email          String       @unique
   name           String
   createdAt      DateTime     @default(now())
+}
+
+model User {
+  id        String   @id @default(uuid())
+  email     String   @unique
+  password  String
+  role      String   @default("ATHLETE")
+  athleteId String?  @unique
+  athlete   Athlete? @relation(fields: [athleteId], references: [id])
+  createdAt DateTime @default(now())
 }

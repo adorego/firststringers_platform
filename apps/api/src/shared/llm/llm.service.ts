@@ -64,7 +64,7 @@ export class LLMService {
           function: {
             name: 'extract_data',
             description: 'Extrae datos estructurados del texto del atleta',
-            parameters: schema,
+            parameters: schema as Record<string, unknown>,
           },
         },
       ],
