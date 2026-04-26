@@ -6,6 +6,9 @@ on:
   pull_request:
     branches: [ main, develop ]
 
+permissions:
+  contents: read
+
 jobs:
   lint:
     runs-on: ubuntu-latest
@@ -30,6 +33,8 @@ jobs:
           POSTGRES_USER: postgres
           POSTGRES_PASSWORD: test
           POSTGRES_DB: test
+        ports:
+          - 5432:5432
         options: >-
           --health-cmd pg_isready
           --health-interval 10s
@@ -37,6 +42,8 @@ jobs:
           --health-retries 5
       redis:
         image: redis:7-alpine
+        ports:
+          - 6379:6379
         options: >-
           --health-cmd "redis-cli ping"
           --health-interval 10s
@@ -53,6 +60,10 @@ jobs:
           cache: 'pnpm'
       - run: pnpm install --frozen-lockfile
       - run: pnpm db:generate
+      - name: Apply database migrations
+        run: pnpm --filter=api exec prisma migrate deploy
+        env:
+          DATABASE_URL: postgresql://postgres:test@localhost:5432/test
       - run: pnpm test
         env:
           DATABASE_URL: postgresql://postgres:test@localhost:5432/test
@@ -98,6 +109,9 @@ jobs:
     runs-on: ubuntu-latest
     needs: build
     if: github.ref == 'refs/heads/main'
+    permissions:
+      contents: read
+      packages: write
     steps:
       - uses: actions/checkout@v4
       - name: Set up Docker Buildx
@@ -107,11 +121,21 @@ jobs:
         with:
           username: ${{ secrets.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKER_PASSWORD }}
-      - name: Extract metadata
-        id: meta
+      - name: Extract metadata for API
+        id: meta-api
         uses: docker/metadata-action@v5
         with:
-          images: firststringers
+          images: ${{ secrets.DOCKER_USERNAME }}/firststringers-api
+          tags: |
+            type=ref,event=branch
+            type=ref,event=pr
+            type=sha,prefix={{branch}}-
+            type=raw,value=latest,enable={{is_default_branch}}
+      - name: Extract metadata for Web
+        id: meta-web
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ secrets.DOCKER_USERNAME }}/firststringers-web
           tags: |
             type=ref,event=branch
             type=ref,event=pr
@@ -124,8 +148,10 @@ jobs:
           context: .
           file: ./apps/api/Dockerfile
           push: true
-          tags: firststringers/api:${{ steps.meta.outputs.tags }}
-          labels: ${{ steps.meta.outputs.labels }}
+          tags: ${{ steps.meta-api.outputs.tags }}
+          labels: ${{ steps.meta-api.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
       - name: Build and push Web
         if: needs.build.outputs.web-changed == 'true'
         uses: docker/build-push-action@v5
@@ -133,5 +159,7 @@ jobs:
           context: .
           file: ./apps/web/Dockerfile
           push: true
-          tags: firststringers/web:${{ steps.meta.outputs.tags }}
-          labels: ${{ steps.meta.outputs.labels }}
+          tags: ${{ steps.meta-web.outputs.tags }}
+          labels: ${{ steps.meta-web.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
