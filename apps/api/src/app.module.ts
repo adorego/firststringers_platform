@@ -1,13 +1,13 @@
-import { Module } from '@nestjs/common'
-import { ConfigModule } from '@nestjs/config'
-import { BullModule } from '@nestjs/bull'
-import { EventEmitterModule } from '@nestjs/event-emitter'
-import { PrismaModule } from './shared/prisma/prisma.module'
-import { RedisModule } from './shared/redis/redis.module'
-import { LLMModule } from './shared/llm/llm.module'
-import { JerryModule } from './modules/jerry/jerry.module'
-import { DossierModule } from './modules/dossier/dossier.module'
-import { HealthModule } from './modules/health/health.module'
+import { Module } from '@nestjs/common';
+import { ConfigModule } from '@nestjs/config';
+import { BullModule } from '@nestjs/bull';
+import { EventEmitterModule } from '@nestjs/event-emitter';
+import { PrismaModule } from './shared/prisma/prisma.module';
+import { RedisModule } from './shared/redis/redis.module';
+import { LLMModule } from './shared/llm/llm.module';
+import { JerryModule } from './modules/jerry/jerry.module';
+import { DossierModule } from './modules/dossier/dossier.module';
+import { HealthModule } from './modules/health/health.module';
 
 @Module({
   imports: [

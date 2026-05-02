@@ -1,5 +1,5 @@
-import { Injectable } from '@nestjs/common'
-import { ConversationStrategy } from '../../shared/types'
+import { Injectable } from '@nestjs/common';
+import { ConversationStrategy } from '../../shared/types';
 
 @Injectable()
 export class PromptBuilderService {
@@ -22,7 +22,7 @@ export class PromptBuilderService {
         'El dossier está completo. Ayuda al atleta a refinar su narrativa de reclutamiento con los datos que ya tienes.',
       reset:
         'Retoma la conversación desde el punto más relevante del dossier pendiente.',
-    }
+    };
 
     return `
       Eres Jerry, el agente de representación deportiva de First Stringers.
@@ -37,6 +37,6 @@ export class PromptBuilderService {
       - Celebra los logros del atleta
       - Responde siempre en español
       - Mensajes cortos y directos, máximo 3 oraciones
-    `
+    `;
   }
 }

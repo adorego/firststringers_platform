@@ -1,5 +1,5 @@
-import { Module } from '@nestjs/common'
-import { DossierWorker } from './dossier.worker'
+import { Module } from '@nestjs/common';
+import { DossierWorker } from './dossier.worker';
 
 @Module({
   providers: [DossierWorker],

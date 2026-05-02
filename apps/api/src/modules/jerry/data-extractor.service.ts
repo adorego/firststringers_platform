@@ -1,6 +1,6 @@
-import { Injectable } from '@nestjs/common'
-import { LLMService } from '../../shared/llm/llm.service'
-import { DossierData, JerryIntent } from '../../shared/types'
+import { Injectable } from '@nestjs/common';
+import { LLMService } from '../../shared/llm/llm.service';
+import { DossierData, JerryIntent } from '../../shared/types';
 
 @Injectable()
 export class DataExtractorService {
@@ -11,9 +11,9 @@ export class DataExtractorService {
     intent: JerryIntent,
   ): Promise<Partial<DossierData> | null> {
     if (intent === 'question' || intent === 'other') {
-      return null
+      return null;
     }
 
-    return this.llm.extract(text, intent)
+    return this.llm.extract(text, intent);
   }
 }

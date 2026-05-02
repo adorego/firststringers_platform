@@ -1,7 +1,7 @@
-import { Test, TestingModule } from '@nestjs/testing'
-import { ValidatorService } from '../validator.service'
-import { PrismaService } from '../../../shared/prisma/prisma.service'
-import { DossierData } from '../../../shared/types'
+import { Test, TestingModule } from '@nestjs/testing';
+import { ValidatorService } from '../validator.service';
+import { PrismaService } from '../../../shared/prisma/prisma.service';
+import { DossierData } from '../../../shared/types';
 
 // ─── Mocks ────────────────────────────────────────────────────────────────────
 
@@ -9,7 +9,7 @@ const mockPrisma = {
   dossier: {
     findUnique: jest.fn(),
   },
-}
+};
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -21,12 +21,12 @@ const fullDossier: DossierData = {
     transferPortal: false,
     preferredRegions: ['Midwest'],
   },
-}
+};
 
 // ─── Tests ────────────────────────────────────────────────────────────────────
 
 describe('ValidatorService', () => {
-  let service: ValidatorService
+  let service: ValidatorService;
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
@@ -34,22 +34,25 @@ describe('ValidatorService', () => {
         ValidatorService,
         { provide: PrismaService, useValue: mockPrisma },
       ],
-    }).compile()
+    }).compile();
 
-    service = module.get<ValidatorService>(ValidatorService)
-    jest.clearAllMocks()
-  })
+    service = module.get<ValidatorService>(ValidatorService);
+    jest.clearAllMocks();
+  });
 
   // ── getMissingFields ────────────────────────────────────────────────────────
 
   describe('getMissingFields', () => {
     it('debe NO agregar disponibilidad si transferPortal está definido como false', async () => {
-      mockPrisma.dossier.findUnique.mockResolvedValue({ athleteId: 'x', data: fullDossier })
+      mockPrisma.dossier.findUnique.mockResolvedValue({
+        athleteId: 'x',
+        data: fullDossier,
+      });
 
-      const result = await service.getMissingFields('x')
+      const result = await service.getMissingFields('x');
 
-      expect(result).not.toContain('disponibilidad')
-    })
+      expect(result).not.toContain('disponibilidad');
+    });
 
     it('debe retornar array vacío para dossier completamente lleno', async () => {
       const completeDossier: DossierData = {
@@ -57,18 +60,21 @@ describe('ValidatorService', () => {
         performance: { stats: { td: 28 }, leagueLevel: 'D1' },
         academic: { gpa: 3.7, intendedMajor: 'Business' },
         availability: { transferPortal: true, preferredRegions: ['Midwest'] },
-      }
-      mockPrisma.dossier.findUnique.mockResolvedValue({ athleteId: 'x', data: completeDossier })
+      };
+      mockPrisma.dossier.findUnique.mockResolvedValue({
+        athleteId: 'x',
+        data: completeDossier,
+      });
 
-      const result = await service.getMissingFields('x')
+      const result = await service.getMissingFields('x');
 
-      expect(result).toEqual([])
-    })
+      expect(result).toEqual([]);
+    });
 
     it('debe retornar los 9 campos requeridos cuando el dossier es null', async () => {
-      mockPrisma.dossier.findUnique.mockResolvedValue(null)
+      mockPrisma.dossier.findUnique.mockResolvedValue(null);
 
-      const result = await service.getMissingFields('x')
+      const result = await service.getMissingFields('x');
 
       expect(result).toEqual([
         'deporte',
@@ -80,10 +86,10 @@ describe('ValidatorService', () => {
         'carrera de interés',
         'disponibilidad',
         'regiones preferidas',
-      ])
-      expect(result).toHaveLength(9)
-    })
-  })
+      ]);
+      expect(result).toHaveLength(9);
+    });
+  });
 
   // ── getCompleteness ─────────────────────────────────────────────────────────
 
@@ -94,12 +100,15 @@ describe('ValidatorService', () => {
       const partialDossier: DossierData = {
         identity: { sport: 'Football', position: 'QB', graduationYear: 2025 },
         performance: { stats: { td: 28 }, leagueLevel: 'D1' },
-      }
-      mockPrisma.dossier.findUnique.mockResolvedValue({ athleteId: 'x', data: partialDossier })
+      };
+      mockPrisma.dossier.findUnique.mockResolvedValue({
+        athleteId: 'x',
+        data: partialDossier,
+      });
 
-      const completeness = await service.getCompleteness('x')
+      const completeness = await service.getCompleteness('x');
 
-      expect(completeness).toBeCloseTo(5 / 9, 5)
-    })
-  })
-})
+      expect(completeness).toBeCloseTo(5 / 9, 5);
+    });
+  });
+});

@@ -1,9 +1,9 @@
-import { Injectable } from '@nestjs/common'
-import { OnEvent } from '@nestjs/event-emitter'
-import type { Prisma } from '@firststringers/database'
-import { PrismaService } from '../../shared/prisma/prisma.service'
-import { LLMService } from '../../shared/llm/llm.service'
-import type { DossierUpdateJob, DossierData } from '../../shared/types'
+import { Injectable } from '@nestjs/common';
+import { OnEvent } from '@nestjs/event-emitter';
+import type { Prisma } from '@firststringers/database';
+import { PrismaService } from '../../shared/prisma/prisma.service';
+import { LLMService } from '../../shared/llm/llm.service';
+import type { DossierUpdateJob, DossierData } from '../../shared/types';
 
 @Injectable()
 export class DossierWorker {
@@ -14,15 +14,15 @@ export class DossierWorker {
 
   @OnEvent('dossier.update')
   async handleDossierUpdate(payload: DossierUpdateJob) {
-    const { athleteId, newData } = payload
+    const { athleteId, newData } = payload;
 
     const current = await this.prisma.dossier.findUnique({
       where: { athleteId },
-    })
+    });
 
-    const currentData = (current?.data as DossierData) || {}
-    const mergedData = this.mergeDeep(currentData, newData)
-    const completeness = this.calculateCompleteness(mergedData)
+    const currentData = (current?.data as DossierData) || {};
+    const mergedData = this.mergeDeep(currentData, newData);
+    const completeness = this.calculateCompleteness(mergedData);
 
     await this.prisma.dossier.upsert({
       where: { athleteId },
@@ -35,14 +35,14 @@ export class DossierWorker {
         data: mergedData as unknown as Prisma.InputJsonValue,
         completeness,
       },
-    })
+    });
 
     console.log(
       `Dossier updated for ${athleteId} — completeness: ${Math.round(completeness * 100)}%`,
-    )
+    );
 
     if (completeness >= 0.75 && !current?.narrative) {
-      await this.generateNarrative(athleteId, mergedData)
+      await this.generateNarrative(athleteId, mergedData);
     }
   }
 
@@ -62,14 +62,14 @@ export class DossierWorker {
           timestamp: new Date(),
         },
       ],
-    })
+    });
 
     await this.prisma.dossier.update({
       where: { athleteId },
       data: { narrative },
-    })
+    });
 
-    console.log(`Narrative generated for athlete ${athleteId}`)
+    console.log(`Narrative generated for athlete ${athleteId}`);
   }
 
   private calculateCompleteness(data: DossierData): number {
@@ -83,21 +83,21 @@ export class DossierWorker {
       !!data.academic?.intendedMajor,
       data.availability?.transferPortal !== undefined,
       !!data.availability?.preferredRegions,
-    ]
+    ];
 
-    const filled = checks.filter(Boolean).length
-    return filled / checks.length
+    const filled = checks.filter(Boolean).length;
+    return filled / checks.length;
   }
 
   private mergeDeep(
     target: Partial<DossierData>,
     source: Partial<DossierData>,
   ): DossierData {
-    const result: Record<string, unknown> = { ...target }
+    const result: Record<string, unknown> = { ...target };
 
     for (const key of Object.keys(source) as (keyof DossierData)[]) {
-      const sourceVal = source[key]
-      const targetVal = target[key]
+      const sourceVal = source[key];
+      const targetVal = target[key];
 
       if (
         sourceVal &&
@@ -106,12 +106,12 @@ export class DossierWorker {
         targetVal &&
         typeof targetVal === 'object'
       ) {
-        result[key] = { ...targetVal, ...sourceVal }
+        result[key] = { ...targetVal, ...sourceVal };
       } else if (sourceVal !== undefined && sourceVal !== null) {
-        result[key] = sourceVal
+        result[key] = sourceVal;
       }
     }
 
-    return result as DossierData
+    return result as DossierData;
   }
 }
