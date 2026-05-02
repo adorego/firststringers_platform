@@ -14,7 +14,7 @@ COPY apps/api/src ./apps/api/src
 COPY apps/api/prisma ./apps/api/prisma
 
 RUN pnpm install --frozen-lockfile
-RUN pnpm --dir apps/api exec prisma generate
+RUN pnpm --dir packages/database exec prisma generate
 RUN pnpm --dir apps/api build
 
 FROM node:20-alpine AS production

@@ -22,7 +22,7 @@ export class LLMService {
 
   async chat(params: ChatParams): Promise<string> {
     const response = await this.client.chat.completions.create({
-      model: 'gpt-4o',
+      model: process.env.OPENAI_MODEL || 'gpt-4o',
       max_tokens: 1024,
       messages: [
         {
@@ -56,7 +56,7 @@ export class LLMService {
     const schema = this.getSchemaForIntent(intent)
 
     const response = await this.client.chat.completions.create({
-      model: 'gpt-4o',
+      model: process.env.OPENAI_MODEL || 'gpt-4o',
       max_tokens: 1024,
       tools: [
         {
@@ -89,7 +89,7 @@ export class LLMService {
 
   async classify(text: string): Promise<JerryIntent> {
     const response = await this.client.chat.completions.create({
-      model: 'gpt-4o',
+      model: process.env.OPENAI_MODEL || 'gpt-4o',
       max_tokens: 10,
       messages: [
         {
