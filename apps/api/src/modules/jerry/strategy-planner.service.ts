@@ -6,18 +6,18 @@ import {
 } from '../../shared/types';
 
 const FIELD_PRIORITY = [
-  'deporte',
-  'posición',
-  'año de graduación',
-  'estadísticas',
-  'nivel de liga',
+  'sport',
+  'position',
+  'graduation year',
+  'stats',
+  'league level',
   'GPA',
-  'carrera de interés',
-  'disponibilidad',
-  'regiones preferidas',
+  'intended major',
+  'availability',
+  'preferred regions',
 ];
 
-const FRUSTRATION_KEYWORDS = ['no sé', 'no se', 'para', 'stop'];
+const FRUSTRATION_KEYWORDS = ["don't know", 'not sure', 'stop', 'quit'];
 const FRUSTRATION_WINDOW = 4;
 
 @Injectable()

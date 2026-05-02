@@ -63,7 +63,7 @@ export class LLMService {
           type: 'function',
           function: {
             name: 'extract_data',
-            description: 'Extrae datos estructurados del texto del atleta',
+            description: 'Extracts structured data from the athlete text',
             parameters: schema,
           },
         },
@@ -72,7 +72,7 @@ export class LLMService {
       messages: [
         {
           role: 'user',
-          content: `Extrae los datos de este texto: "${text}"`,
+          content: `Extract the data from this text: "${text}"`,
         },
       ],
     });
@@ -94,9 +94,9 @@ export class LLMService {
       messages: [
         {
           role: 'system',
-          content: `Clasifica el mensaje del atleta en exactamente una de estas categorías:
+          content: `Classify the athlete's message into exactly one of these categories:
             stats, academic, personal, availability, question, other.
-            Responde SOLO con la categoría, sin explicación ni puntuación.`,
+            Respond with ONLY the category, no explanation or punctuation.`,
         },
         {
           role: 'user',

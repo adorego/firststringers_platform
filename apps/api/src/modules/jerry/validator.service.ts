@@ -28,32 +28,32 @@ export class ValidatorService {
   private calculateMissingFields(data: DossierData): string[] {
     const missing: string[] = [];
 
-    if (!data.identity?.sport) missing.push('deporte');
-    if (!data.identity?.position) missing.push('posición');
-    if (!data.identity?.graduationYear) missing.push('año de graduación');
-    if (!data.performance?.stats) missing.push('estadísticas');
-    if (!data.performance?.leagueLevel) missing.push('nivel de liga');
+    if (!data.identity?.sport) missing.push('sport');
+    if (!data.identity?.position) missing.push('position');
+    if (!data.identity?.graduationYear) missing.push('graduation year');
+    if (!data.performance?.stats) missing.push('stats');
+    if (!data.performance?.leagueLevel) missing.push('league level');
     if (!data.academic?.gpa) missing.push('GPA');
-    if (!data.academic?.intendedMajor) missing.push('carrera de interés');
+    if (!data.academic?.intendedMajor) missing.push('intended major');
     if (data.availability?.transferPortal === undefined)
-      missing.push('disponibilidad');
+      missing.push('availability');
     if (!data.availability?.preferredRegions)
-      missing.push('regiones preferidas');
+      missing.push('preferred regions');
 
     return missing;
   }
 
   private getAllRequiredFields(): string[] {
     return [
-      'deporte',
-      'posición',
-      'año de graduación',
-      'estadísticas',
-      'nivel de liga',
+      'sport',
+      'position',
+      'graduation year',
+      'stats',
+      'league level',
       'GPA',
-      'carrera de interés',
-      'disponibilidad',
-      'regiones preferidas',
+      'intended major',
+      'availability',
+      'preferred regions',
     ];
   }
 }

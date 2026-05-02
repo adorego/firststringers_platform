@@ -51,14 +51,14 @@ export class DossierWorker {
     data: DossierData,
   ): Promise<void> {
     const narrative = await this.llm.chat({
-      systemPrompt: `Eres un agente de representación deportiva de élite.
-        Genera un pitch de reclutamiento convincente, honesto y específico
-        para este atleta. Destaca fortalezas concretas, trayectoria
-        y potencial de desarrollo. Máximo 3 párrafos en español.`,
+      systemPrompt: `You are an elite sports representation agent.
+        Generate a compelling, honest, and specific recruitment pitch
+        for this athlete. Highlight concrete strengths, trajectory,
+        and development potential. Maximum 3 paragraphs in English.`,
       messages: [
         {
           role: 'user',
-          content: `Genera el pitch para este atleta: ${JSON.stringify(data, null, 2)}`,
+          content: `Generate the recruitment pitch for this athlete: ${JSON.stringify(data, null, 2)}`,
           timestamp: new Date(),
         },
       ],

@@ -6,7 +6,7 @@ import { JerryIntent } from '../../shared/types';
 export class IntentClassifierService {
   constructor(private readonly llm: LLMService) {}
 
-  // istanbul ignore next — delegación directa sin lógica propia; cubierto vía LLMService
+  // istanbul ignore next — direct delegation with no own logic; covered via LLMService
   async classify(message: string): Promise<JerryIntent> {
     return this.llm.classify(message);
   }

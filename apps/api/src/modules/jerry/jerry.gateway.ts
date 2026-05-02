@@ -19,7 +19,7 @@ import { JerryMessage, MessageJob } from '../../shared/types';
 
 @WebSocketGateway({
   cors: {
-    // istanbul ignore next — valor de entorno no inyectable en tests unitarios
+    // istanbul ignore next — env value not injectable in unit tests
     origin: process.env.FRONTEND_URL || 'http://localhost:3000',
     credentials: true,
   },
@@ -59,14 +59,14 @@ export class JerryGateway implements OnGatewayConnection, OnGatewayDisconnect {
         });
       } else {
         client.emit('connected', {
-          message: '¡Hola! Soy Jerry, tu agente de representación. ¿Empezamos?',
+          message: "Hi! I'm Jerry, your sports representation agent. Ready to get started?",
         });
       }
     } catch (err) {
       this.logger.error(`Error during connection for socket ${client.id}`, err);
       client.emit('error', {
         code: 'CONNECTION_ERROR',
-        message: 'Error al conectar',
+        message: 'Connection error',
       });
       client.disconnect();
     }
@@ -91,7 +91,7 @@ export class JerryGateway implements OnGatewayConnection, OnGatewayDisconnect {
     if (!athleteId) {
       client.emit('error', {
         code: 'UNAUTHENTICATED',
-        message: 'No autenticado',
+        message: 'Not authenticated',
       });
       return;
     }
@@ -121,7 +121,7 @@ export class JerryGateway implements OnGatewayConnection, OnGatewayDisconnect {
       this.logger.error(`Error handling message for athlete ${athleteId}`, err);
       client.emit('error', {
         code: 'MESSAGE_ERROR',
-        message: 'Error al procesar el mensaje',
+        message: 'Error processing message',
       });
     }
   }

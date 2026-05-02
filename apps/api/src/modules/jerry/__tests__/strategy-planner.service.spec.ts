@@ -31,8 +31,8 @@ function makeCtx(overrides: Partial<StrategyContext> = {}): StrategyContext {
     missingFields: ['GPA'],
     extractedData: null,
     session: makeSession([
-      makeMessage('user', 'Hola'),
-      makeMessage('assistant', 'Bienvenido'),
+      makeMessage('user', 'Hello'),
+      makeMessage('assistant', 'Welcome'),
     ]),
     ...overrides,
   };
@@ -47,27 +47,27 @@ describe('StrategyPlannerService', () => {
     service = new StrategyPlannerService();
   });
 
-  // ── Escenarios de primera sesión ─────────────────────────────────────────
+  // ── First session scenarios ──────────────────────────────────────────────
 
   describe('welcome', () => {
-    it('retorna "welcome" cuando messages.length === 0 (sesión vacía)', () => {
+    it('returns "welcome" when messages.length === 0 (empty session)', () => {
       const result = service.decide(makeCtx({ session: makeSession([]) }));
       expect(result.type).toBe('welcome');
     });
 
-    it('retorna "welcome" cuando messages.length === 1 (solo el primer mensaje del atleta)', () => {
+    it('returns "welcome" when messages.length === 1 (only the first athlete message)', () => {
       const result = service.decide(
-        makeCtx({ session: makeSession([makeMessage('user', 'Hola')]) }),
+        makeCtx({ session: makeSession([makeMessage('user', 'Hello')]) }),
       );
       expect(result.type).toBe('welcome');
     });
 
-    it('NO retorna "welcome" cuando messages.length === 2 (Jerry ya respondió una vez)', () => {
+    it('does NOT return "welcome" when messages.length === 2 (Jerry already replied once)', () => {
       const result = service.decide(
         makeCtx({
           session: makeSession([
-            makeMessage('user', 'Hola'),
-            makeMessage('assistant', 'Bienvenido, soy Jerry'),
+            makeMessage('user', 'Hello'),
+            makeMessage('assistant', 'Welcome, I am Jerry'),
           ]),
         }),
       );
@@ -75,37 +75,37 @@ describe('StrategyPlannerService', () => {
     });
   });
 
-  // ── Escenarios de frustración (detectFrustration) ────────────────────────
+  // ── Frustration detection scenarios ─────────────────────────────────────
 
-  describe('reset por frustración', () => {
-    it('retorna "reset" cuando el atleta dice "no sé" en los últimos 4 mensajes', () => {
+  describe('reset on frustration', () => {
+    it('returns "reset" when the athlete says "don\'t know" in the last 4 messages', () => {
       const session = makeSession([
-        makeMessage('user', 'Hola'),
-        makeMessage('assistant', '¿Cuál es tu deporte?'),
-        makeMessage('user', 'no sé qué responder la verdad'),
+        makeMessage('user', 'Hello'),
+        makeMessage('assistant', 'What is your sport?'),
+        makeMessage('user', "I don't know what to answer honestly"),
       ]);
       const result = service.decide(makeCtx({ session }));
       expect(result.type).toBe('reset');
     });
 
-    it('retorna "reset" cuando el atleta dice "para"', () => {
+    it('returns "reset" when the athlete says "stop"', () => {
       const session = makeSession([
-        makeMessage('user', 'Hola'),
-        makeMessage('assistant', '¿Cuál es tu GPA?'),
-        makeMessage('user', 'para'),
+        makeMessage('user', 'Hello'),
+        makeMessage('assistant', 'What is your GPA?'),
+        makeMessage('user', 'stop'),
       ]);
       const result = service.decide(makeCtx({ session }));
       expect(result.type).toBe('reset');
     });
 
-    it('NO retorna "reset" cuando "para" fue dicho hace 6 mensajes (fuera de ventana de 4)', () => {
+    it('does NOT return "reset" when "stop" was said 6 messages ago (outside the 4-message window)', () => {
       const session = makeSession([
-        makeMessage('user', 'para'), // índice 0 — fuera de ventana
-        makeMessage('assistant', 'Entiendo...'),
-        makeMessage('user', 'bueno, sigo'),
-        makeMessage('assistant', '¿Tu deporte?'),
-        makeMessage('user', 'fútbol americano'),
-        makeMessage('assistant', '¿Tu posición?'),
+        makeMessage('user', 'stop'), // index 0 — outside window
+        makeMessage('assistant', 'I understand...'),
+        makeMessage('user', 'ok, continuing'),
+        makeMessage('assistant', 'What is your sport?'),
+        makeMessage('user', 'soccer'),
+        makeMessage('assistant', 'What is your position?'),
       ]);
       const result = service.decide(
         makeCtx({ session, missingFields: ['GPA'] }),
@@ -114,48 +114,48 @@ describe('StrategyPlannerService', () => {
     });
   });
 
-  // ── Escenarios de campo siguiente (pickNextField) ─────────────────────────
+  // ── Next field selection scenarios ───────────────────────────────────────
 
   describe('pickNextField', () => {
-    it('pregunta "deporte" antes que "GPA" porque tiene mayor prioridad', () => {
+    it('asks "sport" before "GPA" because it has higher priority', () => {
       const result = service.decide(
-        makeCtx({ missingFields: ['GPA', 'deporte'], intent: 'other' }),
+        makeCtx({ missingFields: ['GPA', 'sport'], intent: 'other' }),
       );
       expect(result.type).toBe('strategic_ask');
-      expect(result.targetField).toBe('deporte');
+      expect(result.targetField).toBe('sport');
     });
 
-    it('no repite el campo que Jerry preguntó en su último mensaje', () => {
+    it('does not repeat the field Jerry asked in its last message', () => {
       const session = makeSession([
-        makeMessage('user', 'Hola'),
-        makeMessage('assistant', 'Cuéntame tu posición en el campo'),
+        makeMessage('user', 'Hello'),
+        makeMessage('assistant', 'Tell me about your position on the field'),
       ]);
       const result = service.decide(
         makeCtx({
           session,
-          missingFields: ['posición', 'GPA'],
+          missingFields: ['position', 'GPA'],
           intent: 'other',
         }),
       );
-      expect(result.targetField).not.toBe('posición');
+      expect(result.targetField).not.toBe('position');
       expect(result.targetField).toBe('GPA');
     });
 
-    it('retorna "narrative_focus" cuando todos los campos están completos', () => {
+    it('returns "narrative_focus" when all fields are complete', () => {
       const result = service.decide(makeCtx({ missingFields: [] }));
       expect(result.type).toBe('narrative_focus');
     });
   });
 
-  // ── Escenarios de intención ───────────────────────────────────────────────
+  // ── Intent scenarios ─────────────────────────────────────────────────────
 
   describe('intent', () => {
-    it('retorna "answer_and_redirect" cuando intent === "question"', () => {
+    it('returns "answer_and_redirect" when intent === "question"', () => {
       const result = service.decide(makeCtx({ intent: 'question' }));
       expect(result.type).toBe('answer_and_redirect');
     });
 
-    it('retorna "confirm_and_probe" cuando intent === "stats" y hay datos extraídos', () => {
+    it('returns "confirm_and_probe" when intent === "stats" and data was extracted', () => {
       const result = service.decide(
         makeCtx({
           intent: 'stats',
@@ -165,14 +165,14 @@ describe('StrategyPlannerService', () => {
       expect(result.type).toBe('confirm_and_probe');
     });
 
-    it('retorna "strategic_ask" cuando intent === "other" y no hay datos extraídos', () => {
+    it('returns "strategic_ask" when intent === "other" and no data was extracted', () => {
       const result = service.decide(
         makeCtx({ intent: 'other', extractedData: null }),
       );
       expect(result.type).toBe('strategic_ask');
     });
 
-    it('retorna "clarify" cuando intent === "personal" pero extractedData es null (dato vago)', () => {
+    it('returns "clarify" when intent === "personal" but extractedData is null (vague input)', () => {
       const result = service.decide(
         makeCtx({ intent: 'personal', extractedData: null }),
       );
@@ -180,21 +180,21 @@ describe('StrategyPlannerService', () => {
     });
   });
 
-  // ── Escenarios borde ──────────────────────────────────────────────────────
+  // ── Edge cases ───────────────────────────────────────────────────────────
 
   describe('edge cases', () => {
-    it('retorna "narrative_focus" cuando missingFields está vacío aunque intent === "question"', () => {
+    it('returns "narrative_focus" when missingFields is empty even if intent === "question"', () => {
       const result = service.decide(
         makeCtx({ missingFields: [], intent: 'question' }),
       );
       expect(result.type).toBe('narrative_focus');
     });
 
-    it('retorna "narrative_focus" cuando missingFields está vacío aunque hay extractedData', () => {
+    it('returns "narrative_focus" when missingFields is empty even if there is extractedData', () => {
       const result = service.decide(
         makeCtx({
           missingFields: [],
-          extractedData: { identity: { sport: 'fútbol' } },
+          extractedData: { identity: { sport: 'soccer' } },
         }),
       );
       expect(result.type).toBe('narrative_focus');

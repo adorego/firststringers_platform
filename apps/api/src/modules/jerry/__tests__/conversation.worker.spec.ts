@@ -1,6 +1,16 @@
 import type { Job } from 'bull';
+import type { Queue } from 'bull';
+import type { Socket } from 'socket.io';
 import { ConversationWorker } from '../conversation.worker';
 import { JerryGateway } from '../jerry.gateway';
+import type { SessionService } from '../session.service';
+import type { IntentClassifierService } from '../intent-classifier.service';
+import type { DataExtractorService } from '../data-extractor.service';
+import type { ValidatorService } from '../validator.service';
+import type { StrategyPlannerService } from '../strategy-planner.service';
+import type { PromptBuilderService } from '../prompt-builder.service';
+import type { LLMService } from '../../../shared/llm/llm.service';
+import type { EventEmitter2 } from '@nestjs/event-emitter';
 import {
   MessageJob,
   JerrySessionState,
@@ -14,7 +24,7 @@ function makeJob(data: Partial<MessageJob> = {}): Job<MessageJob> {
     data: {
       athleteId: 'athlete-123',
       sessionId: 'session-1',
-      message: 'Hola',
+      message: 'Hello',
       ...data,
     },
   } as Job<MessageJob>;
@@ -34,31 +44,54 @@ function makeSession(
   };
 }
 
-// ─── Mocks compartidos ───────────────────────────────────────────────────────
+// ─── Shared mocks ────────────────────────────────────────────────────────────
 
-const mockSession = {
+const mockSession: jest.Mocked<
+  Pick<SessionService, 'getSession' | 'appendMessage' | 'updateDossierSnapshot'>
+> = {
   getSession: jest.fn(),
   appendMessage: jest.fn(),
   updateDossierSnapshot: jest.fn(),
 };
-const mockIntentClassifier = { classify: jest.fn() };
-const mockDataExtractor = { extract: jest.fn() };
-const mockValidator = { getMissingFields: jest.fn() };
-const mockStrategyPlanner = { decide: jest.fn() };
-const mockPromptBuilder = { build: jest.fn() };
-const mockLlm = { chat: jest.fn() };
-const mockEventEmitter = { emit: jest.fn() };
+
+const mockIntentClassifier: jest.Mocked<Pick<IntentClassifierService, 'classify'>> = {
+  classify: jest.fn(),
+};
+
+const mockDataExtractor: jest.Mocked<Pick<DataExtractorService, 'extract'>> = {
+  extract: jest.fn(),
+};
+
+const mockValidator: jest.Mocked<Pick<ValidatorService, 'getMissingFields'>> = {
+  getMissingFields: jest.fn(),
+};
+
+const mockStrategyPlanner: jest.Mocked<Pick<StrategyPlannerService, 'decide'>> = {
+  decide: jest.fn(),
+};
+
+const mockPromptBuilder: jest.Mocked<Pick<PromptBuilderService, 'build'>> = {
+  build: jest.fn(),
+};
+
+const mockLlm: jest.Mocked<Pick<LLMService, 'chat'>> = {
+  chat: jest.fn(),
+};
+
+const mockEventEmitter: jest.Mocked<Pick<EventEmitter2, 'emit'>> = {
+  emit: jest.fn(),
+};
 
 function makeWorker(): ConversationWorker {
   return new ConversationWorker(
-    mockSession as any,
-    mockIntentClassifier as any,
-    mockDataExtractor as any,
-    mockValidator as any,
-    mockStrategyPlanner as any,
-    mockPromptBuilder as any,
-    mockLlm as any,
-    mockEventEmitter as any,
+    mockSession as unknown as SessionService,
+    mockIntentClassifier as unknown as IntentClassifierService,
+    mockDataExtractor as unknown as DataExtractorService,
+    mockValidator as unknown as ValidatorService,
+    mockStrategyPlanner as unknown as StrategyPlannerService,
+    mockPromptBuilder as unknown as PromptBuilderService,
+    mockLlm as unknown as LLMService,
+    mockEventEmitter as unknown as EventEmitter2,
   );
 }
 
@@ -70,7 +103,7 @@ describe('ConversationWorker', () => {
   beforeEach(() => {
     jest.clearAllMocks();
 
-    // Defaults que permiten que el pipeline complete sin errores
+    // Defaults that allow the pipeline to complete without errors
     mockSession.getSession.mockResolvedValue(makeSession());
     mockSession.appendMessage.mockResolvedValue(undefined);
     mockSession.updateDossierSnapshot.mockResolvedValue(undefined);
@@ -81,15 +114,15 @@ describe('ConversationWorker', () => {
       type: 'strategic_ask',
       targetField: 'GPA',
     });
-    mockPromptBuilder.build.mockReturnValue('system prompt generado');
-    mockLlm.chat.mockResolvedValue('Respuesta de Jerry');
+    mockPromptBuilder.build.mockReturnValue('generated system prompt');
+    mockLlm.chat.mockResolvedValue('Jerry response');
 
     worker = makeWorker();
   });
 
   // ── TEST 1 ───────────────────────────────────────────────────────────────
 
-  it('debe ejecutar el pipeline en el orden correcto', async () => {
+  it('runs the pipeline in the correct order', async () => {
     const callOrder: string[] = [];
 
     mockSession.getSession.mockImplementation(() => {
@@ -118,7 +151,7 @@ describe('ConversationWorker', () => {
     });
     mockLlm.chat.mockImplementation(() => {
       callOrder.push('chat');
-      return Promise.resolve('Respuesta');
+      return Promise.resolve('Response');
     });
     mockSession.appendMessage.mockImplementation(() => {
       callOrder.push('appendMessage');
@@ -141,7 +174,7 @@ describe('ConversationWorker', () => {
 
   // ── TEST 2 ───────────────────────────────────────────────────────────────
 
-  it('debe emitir dossier.update cuando hay datos extraídos', async () => {
+  it('emits dossier.update when data is extracted', async () => {
     const extractedData = { academic: { gpa: 3.8 } };
     mockDataExtractor.extract.mockResolvedValue(extractedData);
 
@@ -155,7 +188,7 @@ describe('ConversationWorker', () => {
 
   // ── TEST 3 ───────────────────────────────────────────────────────────────
 
-  it('NO debe emitir dossier.update si extract devuelve null, pero sí emite jerry.response', async () => {
+  it('does not emit dossier.update when extract returns null, but does emit jerry.response', async () => {
     mockDataExtractor.extract.mockResolvedValue(null);
 
     await worker.handle(makeJob());
@@ -169,11 +202,11 @@ describe('ConversationWorker', () => {
 
   // ── TEST 4 ───────────────────────────────────────────────────────────────
 
-  it('debe emitir jerry.error y relanzar el error si falla getSession', async () => {
-    const redisError = new Error('Redis caído');
+  it('emits jerry.error and rethrows when getSession fails', async () => {
+    const redisError = new Error('Redis down');
     mockSession.getSession.mockRejectedValue(redisError);
 
-    await expect(worker.handle(makeJob())).rejects.toThrow('Redis caído');
+    await expect(worker.handle(makeJob())).rejects.toThrow('Redis down');
 
     expect(mockEventEmitter.emit).toHaveBeenCalledWith(
       'jerry.error',
@@ -183,7 +216,7 @@ describe('ConversationWorker', () => {
 
   // ── TEST 5 ───────────────────────────────────────────────────────────────
 
-  it('promptBuilder.build recibe exactamente el objeto retornado por strategyPlanner.decide', async () => {
+  it('passes the exact strategy object from strategyPlanner.decide to promptBuilder.build', async () => {
     const strategy: ConversationStrategy = {
       type: 'confirm_and_probe',
       targetField: 'GPA',
@@ -196,10 +229,10 @@ describe('ConversationWorker', () => {
     expect(mockPromptBuilder.build).toHaveBeenCalledTimes(1);
   });
 
-  // ── TEST 6 — branch: extractedData vacío ────────────────────────────────
+  // ── TEST 6 — branch: empty extractedData ────────────────────────────────
 
-  it('NO debe emitir dossier.update si extract devuelve objeto vacío {}', async () => {
-    // Cubre el branch: extractedData es truthy pero Object.keys().length === 0
+  it('does not emit dossier.update when extract returns empty object {}', async () => {
+    // Covers branch: extractedData is truthy but Object.keys().length === 0
     mockDataExtractor.extract.mockResolvedValue({});
 
     await worker.handle(makeJob());
@@ -213,19 +246,21 @@ describe('ConversationWorker', () => {
   });
 });
 
-// ─── TEST 6 — Gateway ────────────────────────────────────────────────────────
+// ─── Gateway ─────────────────────────────────────────────────────────────────
 
-describe('JerryGateway — appendMessage precede al encolado', () => {
-  it('guarda el mensaje del atleta en sesión antes de encolar el job', async () => {
+describe('JerryGateway — appendMessage precedes queue enqueue', () => {
+  it('saves the athlete message to session before enqueuing the job', async () => {
     const callOrder: string[] = [];
 
-    const mockJerryQueue = {
+    const mockJerryQueue: jest.Mocked<Pick<Queue, 'add'>> = {
       add: jest.fn().mockImplementation(() => {
         callOrder.push('queue.add');
         return Promise.resolve();
       }),
     };
-    const mockSessionGateway = {
+    const mockSessionGateway: jest.Mocked<
+      Pick<SessionService, 'getSession' | 'appendMessage'>
+    > = {
       getSession: jest.fn().mockResolvedValue({ messages: [] }),
       appendMessage: jest.fn().mockImplementation(() => {
         callOrder.push('appendMessage');
@@ -233,11 +268,14 @@ describe('JerryGateway — appendMessage precede al encolado', () => {
       }),
     };
 
-    const mockEventEmitterGateway = { emit: jest.fn() };
+    const mockEventEmitterGateway: jest.Mocked<Pick<EventEmitter2, 'emit'>> = {
+      emit: jest.fn(),
+    };
+
     const gateway = new JerryGateway(
-      mockJerryQueue as any,
-      mockSessionGateway as any,
-      mockEventEmitterGateway as any,
+      mockJerryQueue as unknown as Queue,
+      mockSessionGateway as unknown as SessionService,
+      mockEventEmitterGateway as unknown as EventEmitter2,
     );
 
     const mockClient = {
@@ -248,18 +286,18 @@ describe('JerryGateway — appendMessage precede al encolado', () => {
       handshake: { query: { athleteId: 'athlete-123' } },
     };
 
-    // Conectar para que el gateway registre athleteId → socketId
-    await gateway.handleConnection(mockClient as any);
-    await gateway.handleMessage(mockClient as any, {
-      content: 'Hola Jerry',
+    // Connect so the gateway registers athleteId → socketId
+    await gateway.handleConnection(mockClient as unknown as Socket);
+    await gateway.handleMessage(mockClient as unknown as Socket, {
+      content: 'Hello Jerry',
       sessionId: 'session-1',
     });
 
     expect(callOrder).toEqual(['appendMessage', 'queue.add']);
-    // Verifica además que el mensaje guardado tiene role "user"
+    // Also verifies that the saved message has role "user"
     expect(mockSessionGateway.appendMessage).toHaveBeenCalledWith(
       'athlete-123',
-      expect.objectContaining({ role: 'user', content: 'Hola Jerry' }),
+      expect.objectContaining({ role: 'user', content: 'Hello Jerry' }),
     );
   });
 });
