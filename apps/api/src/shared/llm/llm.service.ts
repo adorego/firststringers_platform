@@ -1,28 +1,28 @@
-import { Injectable, Logger } from '@nestjs/common'
-import OpenAI from 'openai'
-import { ChatParams, DossierData, JerryIntent } from '../types'
+import { Injectable, Logger } from '@nestjs/common';
+import OpenAI from 'openai';
+import { ChatParams, DossierData, JerryIntent } from '../types';
 
-const LLM_TIMEOUT_MS = 30_000
+const LLM_TIMEOUT_MS = 30_000;
 
 @Injectable()
 export class LLMService {
-  private readonly logger = new Logger(LLMService.name)
-  private client: OpenAI
+  private readonly logger = new Logger(LLMService.name);
+  private client: OpenAI;
 
   constructor() {
     if (!process.env.OPENAI_API_KEY) {
-      throw new Error('Missing required environment variable: OPENAI_API_KEY')
+      throw new Error('Missing required environment variable: OPENAI_API_KEY');
     }
 
     this.client = new OpenAI({
       apiKey: process.env.OPENAI_API_KEY,
       timeout: LLM_TIMEOUT_MS,
-    })
+    });
   }
 
   async chat(params: ChatParams): Promise<string> {
     const response = await this.client.chat.completions.create({
-      model: 'gpt-4o',
+      model: process.env.OPENAI_MODEL || 'gpt-4o',
       max_tokens: 1024,
       messages: [
         {
@@ -34,15 +34,15 @@ export class LLMService {
           content: m.content,
         })),
       ],
-    })
+    });
 
-    const content = response.choices?.[0]?.message?.content
+    const content = response.choices?.[0]?.message?.content;
     if (!content) {
-      this.logger.warn('LLM chat returned empty content')
-      return ''
+      this.logger.warn('LLM chat returned empty content');
+      return '';
     }
 
-    return content
+    return content;
   }
 
   async extract(
@@ -50,20 +50,20 @@ export class LLMService {
     intent: JerryIntent,
   ): Promise<Partial<DossierData> | null> {
     if (intent === 'question' || intent === 'other') {
-      return null
+      return null;
     }
 
-    const schema = this.getSchemaForIntent(intent)
+    const schema = this.getSchemaForIntent(intent);
 
     const response = await this.client.chat.completions.create({
-      model: 'gpt-4o',
+      model: process.env.OPENAI_MODEL || 'gpt-4o',
       max_tokens: 1024,
       tools: [
         {
           type: 'function',
           function: {
             name: 'extract_data',
-            description: 'Extrae datos estructurados del texto del atleta',
+            description: 'Extracts structured data from the athlete text',
             parameters: schema,
           },
         },
@@ -72,41 +72,41 @@ export class LLMService {
       messages: [
         {
           role: 'user',
-          content: `Extrae los datos de este texto: "${text}"`,
+          content: `Extract the data from this text: "${text}"`,
         },
       ],
-    })
+    });
 
-    const toolCall = response.choices?.[0]?.message?.tool_calls?.[0]
-    if (!toolCall || toolCall.type !== 'function') return null
+    const toolCall = response.choices?.[0]?.message?.tool_calls?.[0];
+    if (!toolCall || toolCall.type !== 'function') return null;
 
     try {
-      return JSON.parse(toolCall.function.arguments) as Partial<DossierData>
+      return JSON.parse(toolCall.function.arguments) as Partial<DossierData>;
     } catch {
-      return null
+      return null;
     }
   }
 
   async classify(text: string): Promise<JerryIntent> {
     const response = await this.client.chat.completions.create({
-      model: 'gpt-4o',
+      model: process.env.OPENAI_MODEL || 'gpt-4o',
       max_tokens: 10,
       messages: [
         {
           role: 'system',
-          content: `Clasifica el mensaje del atleta en exactamente una de estas categorías:
+          content: `Classify the athlete's message into exactly one of these categories:
             stats, academic, personal, availability, question, other.
-            Responde SOLO con la categoría, sin explicación ni puntuación.`,
+            Respond with ONLY the category, no explanation or punctuation.`,
         },
         {
           role: 'user',
           content: text,
         },
       ],
-    })
+    });
 
     const result =
-      response.choices?.[0]?.message?.content?.trim().toLowerCase() ?? 'other'
+      response.choices?.[0]?.message?.content?.trim().toLowerCase() ?? 'other';
 
     const validIntents: JerryIntent[] = [
       'stats',
@@ -115,11 +115,11 @@ export class LLMService {
       'availability',
       'question',
       'other',
-    ]
+    ];
 
     return validIntents.includes(result as JerryIntent)
       ? (result as JerryIntent)
-      : 'other'
+      : 'other';
   }
 
   private getSchemaForIntent(intent: JerryIntent): Record<string, unknown> {
@@ -186,8 +186,8 @@ export class LLMService {
       },
       question: { type: 'object', properties: {} },
       other: { type: 'object', properties: {} },
-    }
+    };
 
-    return schemas[intent]
+    return schemas[intent];
   }
 }

@@ -1,11 +1,11 @@
-import { IsString, IsNotEmpty, IsUUID } from 'class-validator'
+import { IsString, IsNotEmpty, IsUUID } from 'class-validator';
 
 export class SendMessageDto {
   @IsString()
   @IsNotEmpty()
-  content: string
+  content: string;
 
   @IsUUID()
   @IsNotEmpty()
-  sessionId: string
+  sessionId: string;
 }

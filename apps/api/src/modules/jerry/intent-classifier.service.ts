@@ -1,13 +1,13 @@
-import { Injectable } from '@nestjs/common'
-import { LLMService } from '../../shared/llm/llm.service'
-import { JerryIntent } from '../../shared/types'
+import { Injectable } from '@nestjs/common';
+import { LLMService } from '../../shared/llm/llm.service';
+import { JerryIntent } from '../../shared/types';
 
 @Injectable()
 export class IntentClassifierService {
   constructor(private readonly llm: LLMService) {}
 
-  // istanbul ignore next — delegación directa sin lógica propia; cubierto vía LLMService
+  // istanbul ignore next — direct delegation with no own logic; covered via LLMService
   async classify(message: string): Promise<JerryIntent> {
-    return this.llm.classify(message)
+    return this.llm.classify(message);
   }
 }
