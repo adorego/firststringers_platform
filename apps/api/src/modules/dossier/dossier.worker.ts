@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common'
 import { OnEvent } from '@nestjs/event-emitter'
+import type { Prisma } from '@firststringers/database'
 import { PrismaService } from '../../shared/prisma/prisma.service'
 import { LLMService } from '../../shared/llm/llm.service'
 import type { DossierUpdateJob, DossierData } from '../../shared/types'
@@ -27,11 +28,11 @@ export class DossierWorker {
       where: { athleteId },
       create: {
         athleteId,
-        data: mergedData as any,
+        data: mergedData as unknown as Prisma.InputJsonValue,
         completeness,
       },
       update: {
-        data: mergedData as any,
+        data: mergedData as unknown as Prisma.InputJsonValue,
         completeness,
       },
     })
@@ -92,7 +93,7 @@ export class DossierWorker {
     target: Partial<DossierData>,
     source: Partial<DossierData>,
   ): DossierData {
-    const result = { ...target }
+    const result: Record<string, unknown> = { ...target }
 
     for (const key of Object.keys(source) as (keyof DossierData)[]) {
       const sourceVal = source[key]
@@ -105,9 +106,9 @@ export class DossierWorker {
         targetVal &&
         typeof targetVal === 'object'
       ) {
-        result[key] = { ...targetVal, ...sourceVal } as any
+        result[key] = { ...targetVal, ...sourceVal }
       } else if (sourceVal !== undefined && sourceVal !== null) {
-        result[key] = sourceVal as any
+        result[key] = sourceVal
       }
     }
 

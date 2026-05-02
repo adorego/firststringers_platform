@@ -74,7 +74,7 @@ export class JerryGateway
     this.connectedAthletes.delete(client.id)
     if (athleteId) {
       this.logger.log(`Athlete ${athleteId} disconnected`)
-      this.eventEmitter.emit('athlete.disconnected', { athleteId })
+      void this.eventEmitter.emit('athlete.disconnected', { athleteId })
     }
   }
 

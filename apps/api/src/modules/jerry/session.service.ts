@@ -1,4 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common'
+import type { Prisma } from '@firststringers/database'
 import { RedisService } from '../../shared/redis/redis.service'
 import { PrismaService } from '../../shared/prisma/prisma.service'
 import {
@@ -87,7 +88,7 @@ export class SessionService {
     await this.prisma.jerrySession.create({
       data: {
         athleteId,
-        messages: JSON.parse(JSON.stringify(session.messages)),
+        messages: session.messages as unknown as Prisma.InputJsonValue,
         status: 'active',
       },
     })

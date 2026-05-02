@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/unbound-method */
 import type { Job } from 'bull'
 import { ConversationWorker } from '../conversation.worker'
 import { JerryGateway } from '../jerry.gateway'
@@ -78,21 +79,21 @@ describe('ConversationWorker', () => {
   it('debe ejecutar el pipeline en el orden correcto', async () => {
     const callOrder: string[] = []
 
-    mockSession.getSession.mockImplementation(async () => {
+    mockSession.getSession.mockImplementation(() => {
       callOrder.push('getSession')
-      return makeSession()
+      return Promise.resolve(makeSession())
     })
-    mockIntentClassifier.classify.mockImplementation(async () => {
+    mockIntentClassifier.classify.mockImplementation(() => {
       callOrder.push('classify')
-      return 'other'
+      return Promise.resolve('other')
     })
-    mockDataExtractor.extract.mockImplementation(async () => {
+    mockDataExtractor.extract.mockImplementation(() => {
       callOrder.push('extract')
-      return null
+      return Promise.resolve(null)
     })
-    mockValidator.getMissingFields.mockImplementation(async () => {
+    mockValidator.getMissingFields.mockImplementation(() => {
       callOrder.push('getMissingFields')
-      return ['GPA']
+      return Promise.resolve(['GPA'])
     })
     mockStrategyPlanner.decide.mockImplementation(() => {
       callOrder.push('decide')
@@ -102,12 +103,13 @@ describe('ConversationWorker', () => {
       callOrder.push('build')
       return 'system prompt'
     })
-    mockLlm.chat.mockImplementation(async () => {
+    mockLlm.chat.mockImplementation(() => {
       callOrder.push('chat')
-      return 'Respuesta'
+      return Promise.resolve('Respuesta')
     })
-    mockSession.appendMessage.mockImplementation(async () => {
+    mockSession.appendMessage.mockImplementation(() => {
       callOrder.push('appendMessage')
+      return Promise.resolve()
     })
 
     await worker.handle(makeJob())
@@ -198,14 +200,16 @@ describe('JerryGateway — appendMessage precede al encolado', () => {
     const callOrder: string[] = []
 
     const mockJerryQueue = {
-      add: jest.fn().mockImplementation(async () => {
+      add: jest.fn().mockImplementation(() => {
         callOrder.push('queue.add')
+        return Promise.resolve()
       }),
     }
     const mockSessionGateway = {
       getSession: jest.fn().mockResolvedValue({ messages: [] }),
-      appendMessage: jest.fn().mockImplementation(async () => {
+      appendMessage: jest.fn().mockImplementation(() => {
         callOrder.push('appendMessage')
+        return Promise.resolve()
       }),
     }
 

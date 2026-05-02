@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/unbound-method */
 import { Test, TestingModule } from '@nestjs/testing'
 import { SessionService } from '../session.service'
 import { RedisService } from '../../../shared/redis/redis.service'

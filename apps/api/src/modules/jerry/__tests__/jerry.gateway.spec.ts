@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/unbound-method */
 import { JerryGateway } from '../jerry.gateway'
 import { Server, Socket } from 'socket.io'
 import { JerrySessionState } from '../../../shared/types'
@@ -156,8 +157,9 @@ describe('JerryGateway', () => {
       ;(client.emit as jest.Mock).mockImplementation((event: string) => {
         callOrder.push(`emit:${event}`)
       })
-      mockJerryQueue.add.mockImplementation(async () => {
+      mockJerryQueue.add.mockImplementation(() => {
         callOrder.push('queue.add')
+        return Promise.resolve()
       })
 
       await gateway.handleMessage(client, { content: 'Hola', sessionId: 'sess-1' })
