@@ -8,6 +8,9 @@ RUN corepack enable && corepack prepare pnpm@9.0.0 --activate
 
 # Copy workspace manifest + lockfile for dependency installation
 COPY package.json pnpm-workspace.yaml pnpm-lock.yaml ./
+# Hoist all packages to root node_modules so prisma generate puts the
+# query engine binary at /app/node_modules/.prisma (not inside packages/database)
+RUN echo "shamefully-hoist=true" > .npmrc
 COPY packages ./packages
 COPY apps/api/package.json apps/api/nest-cli.json apps/api/tsconfig.json ./apps/api/
 COPY apps/api/src ./apps/api/src
@@ -23,6 +26,7 @@ RUN apk add --no-cache libc6-compat openssl
 RUN corepack enable && corepack prepare pnpm@9.0.0 --activate
 
 COPY package.json pnpm-workspace.yaml pnpm-lock.yaml ./
+RUN echo "shamefully-hoist=true" > .npmrc
 COPY apps/api/package.json ./apps/api/package.json
 COPY packages ./packages
 COPY --from=builder /app/apps/api/dist ./apps/api/dist

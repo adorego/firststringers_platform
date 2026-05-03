@@ -8,6 +8,7 @@ RUN corepack enable && corepack prepare pnpm@9.0.0 --activate
 
 # Copy workspace manifest + lockfile for dependency installation
 COPY package.json pnpm-workspace.yaml pnpm-lock.yaml ./
+RUN echo "shamefully-hoist=true" > .npmrc
 COPY packages ./packages
 COPY apps/web/package.json apps/web/next.config.ts apps/web/postcss.config.mjs ./apps/web/
 COPY apps/web/src ./apps/web/src
@@ -24,6 +25,7 @@ RUN apk add --no-cache libc6-compat
 RUN corepack enable && corepack prepare pnpm@9.0.0 --activate
 
 COPY package.json pnpm-workspace.yaml pnpm-lock.yaml ./
+RUN echo "shamefully-hoist=true" > .npmrc
 COPY apps/web/package.json ./apps/web/package.json
 COPY apps/web/next.config.ts ./apps/web/next.config.ts
 COPY packages ./packages
