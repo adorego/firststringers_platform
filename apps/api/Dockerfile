@@ -6,17 +6,18 @@ WORKDIR /app
 RUN apk add --no-cache python3 make g++ libc6-compat
 RUN corepack enable && corepack prepare pnpm@9.0.0 --activate
 
-# Copy workspace manifest + lockfile for dependency installation
 COPY package.json pnpm-workspace.yaml pnpm-lock.yaml ./
-# Hoist all packages to root node_modules so prisma generate puts the
-# query engine binary at /app/node_modules/.prisma (not inside packages/database)
-RUN echo "shamefully-hoist=true" > .npmrc
 COPY packages ./packages
 COPY apps/api/package.json apps/api/nest-cli.json apps/api/tsconfig.json ./apps/api/
 COPY apps/api/src ./apps/api/src
 
 RUN pnpm install --frozen-lockfile
 RUN pnpm --dir packages/database exec prisma generate
+# prisma generate writes to packages/database/node_modules (schema-relative output).
+# cp -rL follows pnpm symlinks so production gets real files, not broken .pnpm refs.
+RUN mkdir -p /app/node_modules/@prisma && \
+    cp -rL /app/packages/database/node_modules/.prisma /app/node_modules/ && \
+    cp -rL /app/packages/database/node_modules/@prisma/client /app/node_modules/@prisma/
 RUN pnpm --dir apps/api build
 
 FROM node:20-alpine AS production
@@ -26,17 +27,21 @@ RUN apk add --no-cache libc6-compat openssl
 RUN corepack enable && corepack prepare pnpm@9.0.0 --activate
 
 COPY package.json pnpm-workspace.yaml pnpm-lock.yaml ./
+# Hoist all packages to root so @prisma/client resolves at node_modules/@prisma/client,
+# the same path where we restore the generated client from the builder.
 RUN echo "shamefully-hoist=true" > .npmrc
 COPY apps/api/package.json ./apps/api/package.json
 COPY packages ./packages
 COPY --from=builder /app/apps/api/dist ./apps/api/dist
 
-# --ignore-scripts prevents packages/database postinstall from running
-# prisma generate, which fails because prisma CLI is a devDependency
+# --ignore-scripts prevents packages/database postinstall (prisma generate)
+# from running — prisma CLI is a devDependency, not available with --prod.
 RUN pnpm install --prod --frozen-lockfile --ignore-scripts
 
-# Restore the Prisma query engine generated in the builder stage
+# Restore the Prisma native query engine and schema-specific generated client
+# from the builder. These overwrite the vanilla @prisma/client that pnpm installed.
 COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma
+COPY --from=builder /app/node_modules/@prisma/client ./node_modules/@prisma/client
 
 WORKDIR /app/apps/api
 RUN chown -R node:node /app
