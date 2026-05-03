@@ -6,7 +6,6 @@ WORKDIR /app
 RUN apk add --no-cache libc6-compat
 RUN corepack enable && corepack prepare pnpm@9.0.0 --activate
 
-# Copy workspace manifest + lockfile for dependency installation
 COPY package.json pnpm-workspace.yaml pnpm-lock.yaml ./
 COPY packages ./packages
 COPY apps/web/package.json apps/web/next.config.ts apps/web/postcss.config.mjs ./apps/web/
@@ -24,7 +23,10 @@ RUN apk add --no-cache libc6-compat
 RUN corepack enable && corepack prepare pnpm@9.0.0 --activate
 
 COPY package.json pnpm-workspace.yaml pnpm-lock.yaml ./
+# Both apps must be present so pnpm resolves the full apps/* workspace
+# and correctly creates bin links for apps/web's dependencies.
 COPY apps/web/package.json ./apps/web/package.json
+COPY apps/api/package.json ./apps/api/package.json
 COPY apps/web/next.config.ts ./apps/web/next.config.ts
 COPY packages ./packages
 COPY --from=builder /app/apps/web/.next ./apps/web/.next
@@ -42,6 +44,6 @@ USER node
 
 EXPOSE 3000
 HEALTHCHECK --interval=30s --timeout=3s --start-period=30s --retries=3 \
-  CMD node -e "require('http').get('http://localhost:3000/api/health', (res) => { process.exit(res.statusCode === 200 ? 0 : 1) }).on('error', () => process.exit(1))"
+  CMD node -e "require('http').get('http://localhost:' + (process.env.PORT||3000) + '/api/health', (res) => { process.exit(res.statusCode === 200 ? 0 : 1) }).on('error', () => process.exit(1))"
 
-CMD ["sh", "-c", "node_modules/.bin/next start --port ${PORT:-3000}"]
+CMD ["sh", "-c", "pnpm run start"]
