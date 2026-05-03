@@ -32,7 +32,9 @@ COPY --from=builder /app/apps/web/public ./apps/web/public
 
 # Fix pnpm store path so root-installed modules are accessible by the node user
 RUN pnpm config set store-dir /app/.pnpm-store --global
-RUN pnpm install --prod --frozen-lockfile
+# --ignore-scripts prevents packages/database postinstall from running
+# prisma generate, which fails because prisma CLI is a devDependency
+RUN pnpm install --prod --frozen-lockfile --ignore-scripts
 
 ENV NEXT_TELEMETRY_DISABLED=1
 

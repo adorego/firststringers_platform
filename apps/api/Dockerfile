@@ -20,7 +20,7 @@ RUN pnpm --dir apps/api build
 FROM node:20-alpine AS production
 WORKDIR /app
 
-RUN apk add --no-cache libc6-compat
+RUN apk add --no-cache libc6-compat openssl
 RUN corepack enable && corepack prepare pnpm@9.0.0 --activate
 
 COPY package.json pnpm-workspace.yaml pnpm-lock.yaml ./
@@ -29,7 +29,12 @@ COPY packages ./packages
 COPY --from=builder /app/apps/api/dist ./apps/api/dist
 COPY --from=builder /app/apps/api/prisma ./apps/api/prisma
 
-RUN pnpm install --prod --frozen-lockfile
+# --ignore-scripts prevents packages/database postinstall from running
+# prisma generate, which fails because prisma CLI is a devDependency
+RUN pnpm install --prod --frozen-lockfile --ignore-scripts
+
+# Restore the Prisma query engine generated in the builder stage
+COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma
 
 WORKDIR /app/apps/api
 RUN chown -R node:node /app
