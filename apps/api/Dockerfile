@@ -11,7 +11,6 @@ COPY package.json pnpm-workspace.yaml pnpm-lock.yaml ./
 COPY packages ./packages
 COPY apps/api/package.json apps/api/nest-cli.json apps/api/tsconfig.json ./apps/api/
 COPY apps/api/src ./apps/api/src
-COPY apps/api/prisma ./apps/api/prisma
 
 RUN pnpm install --frozen-lockfile
 RUN pnpm --dir packages/database exec prisma generate
@@ -27,7 +26,6 @@ COPY package.json pnpm-workspace.yaml pnpm-lock.yaml ./
 COPY apps/api/package.json ./apps/api/package.json
 COPY packages ./packages
 COPY --from=builder /app/apps/api/dist ./apps/api/dist
-COPY --from=builder /app/apps/api/prisma ./apps/api/prisma
 
 # --ignore-scripts prevents packages/database postinstall from running
 # prisma generate, which fails because prisma CLI is a devDependency
