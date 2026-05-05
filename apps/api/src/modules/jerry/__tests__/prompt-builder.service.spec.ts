@@ -1,97 +1,106 @@
-import { PromptBuilderService } from '../prompt-builder.service'
-import { ConversationStrategy } from '../../../shared/types'
+import { PromptBuilderService } from '../prompt-builder.service';
+import { ConversationStrategy } from '../../../shared/types';
 
 describe('PromptBuilderService', () => {
-  const service = new PromptBuilderService()
+  const service = new PromptBuilderService();
 
-  // El prompt siempre incluye el encabezado y las reglas fijas
-  const JERRY_HEADER = 'Eres Jerry'
-  const RULES_MARKER = 'Haz solo UNA pregunta'
+  // The prompt always includes the Jerry header and fixed rules
+  const JERRY_HEADER = 'You are Jerry';
+  const RULES_MARKER = 'Ask only ONE question';
 
-  describe('estructura base del prompt', () => {
-    it('siempre incluye la identidad de Jerry y las reglas', () => {
-      const result = service.build({ type: 'welcome' })
-      expect(result).toContain(JERRY_HEADER)
-      expect(result).toContain(RULES_MARKER)
-    })
-  })
+  describe('base prompt structure', () => {
+    it('always includes Jerry identity and rules', () => {
+      const result = service.build({ type: 'welcome' });
+      expect(result).toContain(JERRY_HEADER);
+      expect(result).toContain(RULES_MARKER);
+    });
+  });
 
-  describe('estrategia: welcome', () => {
-    it('incluye instrucción de presentación y pregunta por deporte/posición', () => {
-      const result = service.build({ type: 'welcome' })
-      expect(result).toContain('Preséntate brevemente')
-      expect(result).toContain('deporte')
-    })
-  })
+  describe('strategy: welcome', () => {
+    it('includes introduction instruction and asks about sport/position', () => {
+      const result = service.build({ type: 'welcome' });
+      expect(result).toContain('Introduce yourself briefly');
+      expect(result).toContain('sport');
+    });
+  });
 
-  describe('estrategia: confirm_and_probe', () => {
-    it('menciona el campo confirmado cuando targetField está presente', () => {
-      const strategy: ConversationStrategy = { type: 'confirm_and_probe', targetField: 'GPA' }
-      const result = service.build(strategy)
-      expect(result).toContain('"GPA"')
-      expect(result).toContain('Confirma lo que entendiste')
-    })
+  describe('strategy: confirm_and_probe', () => {
+    it('mentions the confirmed field when targetField is present', () => {
+      const strategy: ConversationStrategy = {
+        type: 'confirm_and_probe',
+        targetField: 'GPA',
+      };
+      const result = service.build(strategy);
+      expect(result).toContain('"GPA"');
+      expect(result).toContain('Confirm what you understood');
+    });
 
-    it('usa instrucción genérica cuando no hay targetField', () => {
-      const strategy: ConversationStrategy = { type: 'confirm_and_probe' }
-      const result = service.build(strategy)
-      expect(result).toContain('Confirma la información recibida')
-      expect(result).not.toContain('undefined')
-    })
-  })
+    it('uses generic instruction when there is no targetField', () => {
+      const strategy: ConversationStrategy = { type: 'confirm_and_probe' };
+      const result = service.build(strategy);
+      expect(result).toContain('Confirm the information received');
+      expect(result).not.toContain('undefined');
+    });
+  });
 
-  describe('estrategia: answer_and_redirect', () => {
-    it('menciona el campo pendiente cuando targetField está presente', () => {
-      const strategy: ConversationStrategy = { type: 'answer_and_redirect', targetField: 'posición' }
-      const result = service.build(strategy)
-      expect(result).toContain('"posición"')
-      expect(result).toContain('Responde la pregunta')
-    })
+  describe('strategy: answer_and_redirect', () => {
+    it('mentions the pending field when targetField is present', () => {
+      const strategy: ConversationStrategy = {
+        type: 'answer_and_redirect',
+        targetField: 'position',
+      };
+      const result = service.build(strategy);
+      expect(result).toContain('"position"');
+      expect(result).toContain("Answer the athlete's question concisely");
+    });
 
-    it('usa instrucción genérica cuando no hay targetField', () => {
-      const strategy: ConversationStrategy = { type: 'answer_and_redirect' }
-      const result = service.build(strategy)
-      expect(result).toContain('redirige hacia el dossier')
-      expect(result).not.toContain('undefined')
-    })
-  })
+    it('uses generic instruction when there is no targetField', () => {
+      const strategy: ConversationStrategy = { type: 'answer_and_redirect' };
+      const result = service.build(strategy);
+      expect(result).toContain('redirect toward the dossier');
+      expect(result).not.toContain('undefined');
+    });
+  });
 
-  describe('estrategia: clarify', () => {
-    it('instruye a pedir clarificación amable', () => {
-      const result = service.build({ type: 'clarify' })
-      expect(result).toContain('clarificación')
-      expect(result).toContain('amable')
-    })
-  })
+  describe('strategy: clarify', () => {
+    it('instructs to ask for friendly clarification', () => {
+      const result = service.build({ type: 'clarify' });
+      expect(result).toContain('clarification');
+      expect(result).toContain('friendly');
+    });
+  });
 
-  describe('estrategia: strategic_ask', () => {
-    it('menciona el campo específico cuando targetField está presente', () => {
-      const strategy: ConversationStrategy = { type: 'strategic_ask', targetField: 'deporte' }
-      const result = service.build(strategy)
-      expect(result).toContain('"deporte"')
-      expect(result).toContain('Solo esa información')
-    })
+  describe('strategy: strategic_ask', () => {
+    it('mentions the specific field when targetField is present', () => {
+      const strategy: ConversationStrategy = {
+        type: 'strategic_ask',
+        targetField: 'sport',
+      };
+      const result = service.build(strategy);
+      expect(result).toContain('"sport"');
+      expect(result).toContain('Only that information');
+    });
 
-    it('usa instrucción genérica cuando no hay targetField', () => {
-      const strategy: ConversationStrategy = { type: 'strategic_ask' }
-      const result = service.build(strategy)
-      expect(result).toContain('siguiente campo pendiente')
-      expect(result).not.toContain('undefined')
-    })
-  })
+    it('uses generic instruction when there is no targetField', () => {
+      const strategy: ConversationStrategy = { type: 'strategic_ask' };
+      const result = service.build(strategy);
+      expect(result).toContain('next pending field in the dossier');
+      expect(result).not.toContain('undefined');
+    });
+  });
 
-  describe('estrategia: narrative_focus', () => {
-    it('indica que el dossier está completo y pide refinar narrativa', () => {
-      const result = service.build({ type: 'narrative_focus' })
-      expect(result).toContain('dossier está completo')
-      expect(result).toContain('narrativa de reclutamiento')
-    })
-  })
+  describe('strategy: narrative_focus', () => {
+    it('indicates the dossier is complete and asks to refine the narrative', () => {
+      const result = service.build({ type: 'narrative_focus' });
+      expect(result).toContain('dossier is complete');
+      expect(result).toContain('recruitment narrative');
+    });
+  });
 
-  describe('estrategia: reset', () => {
-    it('instruye a retomar la conversación desde el punto relevante', () => {
-      const result = service.build({ type: 'reset' })
-      expect(result).toContain('Retoma la conversación')
-    })
-  })
-})
+  describe('strategy: reset', () => {
+    it('instructs to resume the conversation from the relevant point', () => {
+      const result = service.build({ type: 'reset' });
+      expect(result).toContain('Resume the conversation');
+    });
+  });
+});

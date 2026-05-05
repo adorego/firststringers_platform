@@ -1,6 +1,6 @@
-export type UserRole = 'ATHLETE' | 'RECRUITER' | 'COACH' | 'ADMIN'
+export type UserRole = 'ATHLETE' | 'RECRUITER' | 'COACH' | 'ADMIN';
 
-export type MessageRole = 'user' | 'assistant'
+export type MessageRole = 'user' | 'assistant';
 
 export type JerryIntent =
   | 'stats'
@@ -8,63 +8,63 @@ export type JerryIntent =
   | 'personal'
   | 'availability'
   | 'question'
-  | 'other'
+  | 'other';
 
 export interface JerryMessage {
-  role: MessageRole
-  content: string
-  timestamp: Date
+  role: MessageRole;
+  content: string;
+  timestamp: Date;
 }
 
 export interface JerrySessionState {
-  athleteId: string
-  messages: JerryMessage[]
-  dossierSnapshot: Partial<DossierData>
-  missingFields: string[]
-  createdAt: Date
-  updatedAt: Date
+  athleteId: string;
+  messages: JerryMessage[];
+  dossierSnapshot: Partial<DossierData>;
+  missingFields: string[];
+  createdAt: Date;
+  updatedAt: Date;
 }
 
 export interface DossierData {
   identity?: {
-    sport?: string
-    position?: string
-    nationality?: string
-    graduationYear?: number
-  }
+    sport?: string;
+    position?: string;
+    nationality?: string;
+    graduationYear?: number;
+  };
   performance?: {
-    stats?: Record<string, number>
-    leagueLevel?: string
-    highlightUrls?: string[]
-  }
+    stats?: Record<string, number>;
+    leagueLevel?: string;
+    highlightUrls?: string[];
+  };
   academic?: {
-    gpa?: number
-    satAct?: number
-    intendedMajor?: string
-    ncaaEligibility?: boolean
-  }
+    gpa?: number;
+    satAct?: number;
+    intendedMajor?: string;
+    ncaaEligibility?: boolean;
+  };
   availability?: {
-    transferPortal?: boolean
-    preferredRegions?: string[]
-    scholarshipNeed?: boolean
-  }
+    transferPortal?: boolean;
+    preferredRegions?: string[];
+    scholarshipNeed?: boolean;
+  };
 }
 
 export interface MessageJob {
-  athleteId: string
-  sessionId: string
-  message: string
+  athleteId: string;
+  sessionId: string;
+  message: string;
 }
 
 export interface DossierUpdateJob {
-  athleteId: string
-  newData: Partial<DossierData>
+  athleteId: string;
+  newData: Partial<DossierData>;
 }
 
 export interface ChatParams {
-  systemPrompt: string
-  messages: JerryMessage[]
-  extractedData?: Partial<DossierData> | null
+  systemPrompt: string;
+  messages: JerryMessage[];
+  extractedData?: Partial<DossierData> | null;
 }
 
 export type ConversationStrategyType =
@@ -74,17 +74,17 @@ export type ConversationStrategyType =
   | 'clarify'
   | 'strategic_ask'
   | 'narrative_focus'
-  | 'reset'
+  | 'reset';
 
 export interface ConversationStrategy {
-  type: ConversationStrategyType
-  targetField?: string
-  confirmedData?: Partial<DossierData>
+  type: ConversationStrategyType;
+  targetField?: string;
+  confirmedData?: Partial<DossierData>;
 }
 
 export interface StrategyContext {
-  intent: JerryIntent
-  missingFields: string[]
-  extractedData: Partial<DossierData> | null
-  session: JerrySessionState
+  intent: JerryIntent;
+  missingFields: string[];
+  extractedData: Partial<DossierData> | null;
+  session: JerrySessionState;
 }

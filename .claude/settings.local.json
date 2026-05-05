@@ -1,0 +1,7 @@
+{
+  "permissions": {
+    "allow": [
+      "PowerShell(wsl -d Ubuntu -u andres -- /bin/bash -c \"chmod +x /home/andres/FirstStringers/firststringers_platform/packages/database/node_modules/.bin/prisma && export PATH='/home/andres/.nvm/versions/node/v20.20.2/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin' && cd /home/andres/FirstStringers/firststringers_platform/packages/database && ./node_modules/.bin/prisma generate\" 2>&1)"
+    ]
+  }
+}
