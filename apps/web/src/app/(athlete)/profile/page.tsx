@@ -1,4 +1,5 @@
-import { Card, Badge, Avatar, Button } from "@/components/ui";
+import Image from "next/image";
+import { Card, Button } from "@/components/ui";
 import { Award, Video, FileText, Target } from "lucide-react";
 
 export default function ProfilePage() {
@@ -18,11 +19,12 @@ export default function ProfilePage() {
       {/* Bio card */}
       <Card className="mt-8">
         <div className="flex gap-6">
-          <div className="h-32 w-32 flex-shrink-0 overflow-hidden rounded-lg bg-fs-light-gray">
-            <img
+          <div className="relative h-32 w-32 flex-shrink-0 overflow-hidden rounded-lg bg-fs-light-gray">
+            <Image
               src="/images/athlete-placeholder.jpg"
               alt="Marcus Johnson"
-              className="h-full w-full object-cover"
+              fill
+              className="object-cover"
             />
           </div>
           <div>
@@ -130,12 +132,13 @@ export default function ProfilePage() {
           {[1, 2, 3].map((n) => (
             <div
               key={n}
-              className="relative aspect-video overflow-hidden rounded-lg bg-fs-light-gray"
+              className="relative aspect-video overflow-hidden rounded-lg bg-fs-light-gray [&>img]:object-cover"
             >
-              <img
+              <Image
                 src="/images/athlete-placeholder.jpg"
                 alt={`Season Highlights ${n}`}
-                className="h-full w-full object-cover"
+                fill
+                className="object-cover"
               />
               <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/70 to-transparent p-3">
                 <p className="text-sm font-medium text-white">

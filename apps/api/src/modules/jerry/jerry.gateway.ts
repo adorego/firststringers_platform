@@ -59,7 +59,8 @@ export class JerryGateway implements OnGatewayConnection, OnGatewayDisconnect {
         });
       } else {
         client.emit('connected', {
-          message: "Hi! I'm Jerry, your sports representation agent. Ready to get started?",
+          message:
+            "Hi! I'm Jerry, your sports representation agent. Ready to get started?",
         });
       }
     } catch (err) {
