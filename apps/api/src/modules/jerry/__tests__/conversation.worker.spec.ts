@@ -54,7 +54,9 @@ const mockSession: jest.Mocked<
   updateDossierSnapshot: jest.fn(),
 };
 
-const mockIntentClassifier: jest.Mocked<Pick<IntentClassifierService, 'classify'>> = {
+const mockIntentClassifier: jest.Mocked<
+  Pick<IntentClassifierService, 'classify'>
+> = {
   classify: jest.fn(),
 };
 
@@ -66,9 +68,10 @@ const mockValidator: jest.Mocked<Pick<ValidatorService, 'getMissingFields'>> = {
   getMissingFields: jest.fn(),
 };
 
-const mockStrategyPlanner: jest.Mocked<Pick<StrategyPlannerService, 'decide'>> = {
-  decide: jest.fn(),
-};
+const mockStrategyPlanner: jest.Mocked<Pick<StrategyPlannerService, 'decide'>> =
+  {
+    decide: jest.fn(),
+  };
 
 const mockPromptBuilder: jest.Mocked<Pick<PromptBuilderService, 'build'>> = {
   build: jest.fn(),

@@ -11,9 +11,15 @@
   "dependencies": {
     "@firststringers/config": "workspace:^",
     "@firststringers/types": "workspace:^",
+    "@tanstack/react-query": "^5.95.2",
+    "axios": "^1.14.0",
+    "lucide-react": "^1.7.0",
     "next": "16.1.6",
+    "next-auth": "^4.24.13",
     "react": "19.2.3",
-    "react-dom": "19.2.3"
+    "react-dom": "19.2.3",
+    "socket.io-client": "^4.8.3",
+    "zustand": "^5.0.12"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",

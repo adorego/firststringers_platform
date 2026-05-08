@@ -58,6 +58,18 @@ CREATE TABLE "Recruiter" (
     CONSTRAINT "Recruiter_pkey" PRIMARY KEY ("id")
 );
 
+-- CreateTable
+CREATE TABLE "User" (
+    "id" TEXT NOT NULL,
+    "email" TEXT NOT NULL,
+    "password" TEXT NOT NULL,
+    "role" TEXT NOT NULL DEFAULT 'ATHLETE',
+    "athleteId" TEXT,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT "User_pkey" PRIMARY KEY ("id")
+);
+
 -- CreateIndex
 CREATE UNIQUE INDEX "Athlete_email_key" ON "Athlete"("email");
 
@@ -66,6 +78,12 @@ CREATE UNIQUE INDEX "Dossier_athleteId_key" ON "Dossier"("athleteId");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "Recruiter_email_key" ON "Recruiter"("email");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "User_email_key" ON "User"("email");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "User_athleteId_key" ON "User"("athleteId");
 
 -- AddForeignKey
 ALTER TABLE "Athlete" ADD CONSTRAINT "Athlete_organizationId_fkey" FOREIGN KEY ("organizationId") REFERENCES "Organization"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
@@ -78,3 +96,6 @@ ALTER TABLE "JerrySession" ADD CONSTRAINT "JerrySession_athleteId_fkey" FOREIGN 
 
 -- AddForeignKey
 ALTER TABLE "Recruiter" ADD CONSTRAINT "Recruiter_organizationId_fkey" FOREIGN KEY ("organizationId") REFERENCES "Organization"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "User" ADD CONSTRAINT "User_athleteId_fkey" FOREIGN KEY ("athleteId") REFERENCES "Athlete"("id") ON DELETE SET NULL ON UPDATE CASCADE;
