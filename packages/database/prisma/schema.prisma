@@ -60,6 +60,7 @@ model Recruiter {
   email          String       @unique
   name           String
   createdAt      DateTime     @default(now())
+  billyMessages  BillyMessage[]
 }
 
 model User {
@@ -70,4 +71,16 @@ model User {
   athleteId String?  @unique
   athlete   Athlete? @relation(fields: [athleteId], references: [id])
   createdAt DateTime @default(now())
+}
+
+model BillyMessage {
+  id          String    @id @default(uuid())
+  recruiterId String
+  recruiter   Recruiter @relation(fields: [recruiterId], references: [id], onDelete: Cascade)
+  role        String
+  content     String
+  metadata    Json?
+  createdAt   DateTime  @default(now())
+
+  @@map("billy_messages")
 }
