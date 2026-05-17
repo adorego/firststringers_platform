@@ -16,6 +16,7 @@ import { InjectQueue } from '@nestjs/bull';
 import type { Queue } from 'bull';
 import { BillySessionService } from './billy-session.service';
 import { BillyMessage, BillyMessageJob } from '../../shared/types/billy.types';
+import { JerryPitchService } from '../jerry/jerry-pitch.service';
 
 @Public()
 @WebSocketGateway({
@@ -36,6 +37,7 @@ export class BillyGateway implements OnGatewayConnection, OnGatewayDisconnect {
     @InjectQueue('billy') private readonly billyQueue: Queue,
     private readonly session: BillySessionService,
     private readonly eventEmitter: EventEmitter2,
+    private readonly jerryPitch: JerryPitchService,
   ) {}
 
   async handleConnection(client: Socket) {
@@ -181,5 +183,57 @@ export class BillyGateway implements OnGatewayConnection, OnGatewayDisconnect {
     this.server
       .to(`recruiter:${payload.recruiterId}`)
       .emit('error', { code: 'PROCESSING_ERROR', message: payload.error });
+  }
+  @SubscribeMessage('contact_jerry')
+  async handleContactJerry(
+    @ConnectedSocket() client: Socket,
+    @MessageBody() dto: { athleteId: string },
+  ) {
+    const recruiterId = this.connectedRecruiters.get(client.id);
+    if (!recruiterId) return;
+
+    try {
+      client.emit('status', { status: 'typing' });
+
+      const { athleteName, pitch } = await this.jerryPitch.getPitchForRecruiter(dto.athleteId);
+
+      client.emit('jerry_pitch', { athleteName, pitch, athleteId: dto.athleteId });
+
+      // Guardar en sesión de Billy
+      const msg = {
+        role: 'assistant' as const,
+        content: pitch,
+        timestamp: new Date(),
+      };
+      await this.session.appendMessage(recruiterId, msg);
+
+    } catch (error) {
+      this.logger.error('Error getting Jerry pitch', error);
+      client.emit('message', {
+        role: 'assistant',
+        content: "I couldn't reach Jerry right now. Please try again.",
+        timestamp: new Date(),
+      });
+    }
+  }
+  @SubscribeMessage('initiate_contact')
+  async handleInitiateContact(
+    @ConnectedSocket() client: Socket,
+    @MessageBody() dto: { athleteId: string; athleteName: string },
+  ) {
+    const recruiterId = this.connectedRecruiters.get(client.id);
+    if (!recruiterId) return;
+
+    client.emit('status', { status: 'typing' });
+
+    // Respuesta de Billy confirmando el contacto
+    const msg = {
+      role: 'assistant' as const,
+      content: `Great choice! I'm initiating contact with ${dto.athleteName}'s team. A private chat will be set up shortly. Is there anything specific you'd like me to mention when reaching out?`,
+      timestamp: new Date(),
+    };
+
+    await this.session.appendMessage(recruiterId, msg);
+    client.emit('message', msg);
   }
 }

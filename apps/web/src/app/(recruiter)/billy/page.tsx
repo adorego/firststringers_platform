@@ -5,7 +5,7 @@ import { Send, Loader2, Wifi, WifiOff, ChevronDown, User, GraduationCap, MapPin 
 import { useBilly, AthleteResult, SearchCriteria } from "@/hooks/useBilly";
 
 // ─── Temporary: replace with real auth when ready ───────────────────────────
-const MOCK_RECRUITER_ID = "recruiter-dev-001";
+const MOCK_RECRUITER_ID = "e0b6c0c8-2b27-4521-9b26-46ace16b4983";
 
 // ─── Sub-components ──────────────────────────────────────────────────────────
 
@@ -70,27 +70,24 @@ function CriteriaPanel({ criteria }: { criteria: SearchCriteria }) {
   );
 }
 
-function AthleteCard({ athlete }: { athlete: AthleteResult }) {
+function AthleteCard({ athlete, onContactJerry }: {
+  athlete: AthleteResult;
+  onContactJerry: (athleteId: string, athleteName: string) => void;
+}) {
   return (
     <div className="rounded-xl border border-fs-border-gray bg-white p-4 shadow-sm transition-shadow hover:shadow-md">
       <div className="flex items-start justify-between">
         <div className="flex items-center gap-3">
           <div className="flex h-10 w-10 items-center justify-center rounded-full bg-fs-light-gray text-sm font-bold text-[#111827]">
-            {athlete.fullName
-              .split(" ")
-              .map((n) => n[0])
-              .join("")
-              .slice(0, 2)}
+            {athlete.fullName.split(" ").map((n) => n[0]).join("").slice(0, 2)}
           </div>
           <div>
             <p className="font-semibold text-[#111827]">{athlete.fullName}</p>
-            <p className="text-xs text-fs-muted">
-              {athlete.position} · {athlete.sport}
-            </p>
+            <p className="text-xs text-fs-muted">{athlete.position} · {athlete.sport}</p>
           </div>
         </div>
         <span className="rounded-full bg-fs-light-gray px-2 py-1 text-xs font-medium text-[#111827]">
-          {Math.round(athlete.completenessScore)}% complete
+          {Math.round(athlete.completenessScore * 100)}% complete
         </span>
       </div>
 
@@ -118,9 +115,18 @@ function AthleteCard({ athlete }: { athlete: AthleteResult }) {
         </p>
       )}
 
-      <button className="mt-3 w-full rounded-lg border border-fs-border-gray py-1.5 text-xs font-medium text-[#111827] transition-colors hover:bg-fs-light-gray">
-        View Profile
-      </button>
+      {/* Botones */}
+      <div className="mt-3 flex flex-col gap-2">
+        <button className="w-full rounded-lg border border-fs-border-gray py-1.5 text-xs font-medium text-[#111827] transition-colors hover:bg-fs-light-gray">
+          View Profile
+        </button>
+        <button
+          onClick={() => onContactJerry(athlete.id, athlete.fullName)}
+          className="w-full rounded-lg border border-[#00D4AA] bg-[#E6FBF7] py-1.5 text-xs font-medium text-[#00A88A] transition-colors hover:bg-[#00D4AA] hover:text-white"
+        >
+        Contact Jerry
+        </button>
+      </div>
     </div>
   );
 }
@@ -148,8 +154,12 @@ export default function BillyPage() {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  const { messages, status, isTyping, searchCriteria, sendMessage } =
+  const { messages, status, isTyping, searchCriteria, sendMessage, contactJerry, handleOption } =
     useBilly(MOCK_RECRUITER_ID);
+
+  const handleContactJerry = (athleteId: string, athleteName: string) => {
+    contactJerry(athleteId, athleteName);
+  };  
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -200,36 +210,59 @@ export default function BillyPage() {
         <div className="mx-auto flex max-w-3xl flex-col gap-4">
           {messages.map((msg) => (
             <div key={msg.id}>
-              <div
-                className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}
-              >
-                {msg.role === "assistant" && (
-                  <div className="mr-2 mt-1 flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full bg-[#111827] text-xs font-black text-white">
+
+              {/* Mensaje del usuario */}
+              {msg.role === "user" && (
+                <div className="flex justify-end">
+                  <div className="max-w-lg rounded-2xl bg-[#111827] px-4 py-3 text-white">
+                    <p className="whitespace-pre-wrap text-sm leading-relaxed">
+                      {msg.content}
+                    </p>
+                    <p className="mt-1 text-xs text-white/40">
+                      {new Date(msg.timestamp).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              {/* Mensaje del asistente */}
+              {msg.role === "assistant" && (
+                <div className="flex justify-start gap-2">
+                  <div className="mr-1 mt-1 flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full bg-[#111827] text-xs font-black text-white">
                     B
                   </div>
-                )}
-                <div
-                  className={`max-w-lg rounded-2xl px-4 py-3 ${
-                    msg.role === "user"
-                      ? "bg-[#111827] text-white"
-                      : "bg-fs-light-gray text-[#111827]"
-                  }`}
-                >
-                  <p className="whitespace-pre-wrap text-sm leading-relaxed">
-                    {msg.content}
-                  </p>
-                  <p
-                    className={`mt-1 text-xs ${
-                      msg.role === "user" ? "text-white/40" : "text-fs-muted"
-                    }`}
-                  >
-                    {new Date(msg.timestamp).toLocaleTimeString([], {
-                      hour: "2-digit",
-                      minute: "2-digit",
-                    })}
-                  </p>
+                  <div className="max-w-lg">
+                    <div className="rounded-2xl bg-fs-light-gray px-4 py-3">
+                      <p className="whitespace-pre-wrap text-sm leading-relaxed text-[#111827]">
+                        {msg.content}
+                      </p>
+                      <p className="mt-1 text-xs text-fs-muted">
+                        {new Date(msg.timestamp).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                      </p>
+                    </div>
+
+                    {/* Opciones de acción */}
+                    {msg.options && msg.options.length > 0 && (
+                      <div className="mt-2 flex flex-wrap gap-2">
+                        {msg.options.map((option, idx) => (
+                          <button
+                            key={idx}
+                            onClick={() => handleOption(option)}
+                            className={`rounded-full px-4 py-1.5 text-xs font-medium transition-colors border ${
+                              option.action === "contact_athlete"
+                                ? "border-[#00D4AA] bg-[#E6FBF7] text-[#00A88A] hover:bg-[#00D4AA] hover:text-white"
+                                : "border-fs-border-gray bg-white text-[#374151] hover:bg-fs-light-gray"
+                            }`}
+                          >
+                            {option.action === "contact_athlete" ? "💬 " : "🔍 "}
+                            {option.label}
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
                 </div>
-              </div>
+              )}
 
               {/* Search results inline */}
               {msg.searchResults && msg.searchResults.length > 0 && (
@@ -239,11 +272,16 @@ export default function BillyPage() {
                   </p>
                   <div className="grid gap-3 sm:grid-cols-2">
                     {msg.searchResults.map((athlete) => (
-                      <AthleteCard key={athlete.id} athlete={athlete} />
+                      <AthleteCard
+                        key={athlete.id}
+                        athlete={athlete}
+                        onContactJerry={handleContactJerry}
+                      />
                     ))}
                   </div>
                 </div>
               )}
+
             </div>
           ))}
 

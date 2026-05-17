@@ -45,12 +45,15 @@ model Dossier {
 
 model JerrySession {
   id        String   @id @default(uuid())
-  athleteId String
+  athleteId String   @unique
   athlete   Athlete  @relation(fields: [athleteId], references: [id])
   messages  Json     @default("[]")
   status    String   @default("active")
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+  currentPitch String?
+  pitchVersion Int      @default(0)
+  lastPitchAt  DateTime? 
 }
 
 model Recruiter {

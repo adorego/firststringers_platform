@@ -7,6 +7,7 @@ import { PrismaService } from '../../shared/prisma/prisma.service';
 import { BillySessionService } from './billy-session.service';
 import { BillyMessage, BillyMessageJob } from '../../shared/types/billy.types';
 import { Prisma } from 'generated/prisma/wasm';
+import { ScoutService } from '../scout/scout.service';
 
 const SYSTEM_PROMPT = `You are Billy, an intelligent sports recruitment assistant helping a coach or recruiter find the right athlete.
 
@@ -38,6 +39,7 @@ export class BillyWorker {
     private readonly session: BillySessionService,
     private readonly prisma: PrismaService,
     private readonly eventEmitter: EventEmitter2,
+    private readonly scout: ScoutService,
   ) {
     this.openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
   }
@@ -133,17 +135,18 @@ export class BillyWorker {
   }
 
   private async runSearch(filters: Record<string, unknown>): Promise<unknown[]> {
-    const where: Record<string, unknown> = {};
-    if (filters.sport) where.sport = filters.sport;
-    if (filters.position) where.position = filters.position;
-
-    return this.prisma.athlete.findMany({
-      where,
-      take: 10,
-      include: {
-        dossier: { select: { data: true, completeness: true } },
-      },
-      orderBy: { createdAt: 'desc' },
-    });
+    try {
+      this.logger.log(`Running search with filters: ${JSON.stringify(filters)}`);
+      const result = await this.scout.search(
+        filters['query'] as string ?? '',
+        filters as any,
+        5,
+      );
+      this.logger.log(`Scout found ${result.athletes.length} athletes`);
+      return result.athletes;
+    } catch (error) {
+      this.logger.error('Scout search failed', error);
+      return [];
+    }
   }
 }

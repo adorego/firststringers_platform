@@ -13,6 +13,7 @@ import { JwtAuthGuard } from './modules/auth/auth.guard';
 import { RolesGuard } from './modules/auth/roles.guard';
 import { HealthModule } from './modules/health/health.module';
 import { BillyModule } from './modules/billy/billy.module';
+import { ScoutModule } from './modules/scout/scout.module';
 
 @Module({
   imports: [
@@ -32,6 +33,7 @@ import { BillyModule } from './modules/billy/billy.module';
     DossierModule,
     HealthModule,
     BillyModule,
+    ScoutModule,
   ],
   providers: [
     { provide: APP_GUARD, useClass: JwtAuthGuard },

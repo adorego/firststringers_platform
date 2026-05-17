@@ -9,6 +9,15 @@ export interface BillyMessage {
   content: string;
   timestamp: Date;
   searchResults?: AthleteResult[];
+  options?: MessageOption[];
+  athleteId?: string;
+}
+
+export interface MessageOption {
+  label: string;
+  action: "contact_athlete" | "search_again";
+  athleteId?: string;
+  athleteName?: string;
 }
 
 export interface AthleteResult {
@@ -96,7 +105,31 @@ export function useBilly(recruiterId: string) {
         ];
       });
     });
-
+    socket.on("jerry_pitch", (data: { athleteName: string; pitch: string; athleteId: string }) => {
+      setIsTyping(false);
+      setMessages((prev) => [
+        ...prev,
+        {
+          id: crypto.randomUUID(),
+          role: "assistant",
+          content: `🤖 **Jerry** (${data.athleteName}'s agent):\n\n${data.pitch}`,
+          timestamp: new Date(),
+          athleteId: data.athleteId,
+          options: [
+            {
+              label: `Contact ${data.athleteName}`,
+              action: "contact_athlete",
+              athleteId: data.athleteId,
+              athleteName: data.athleteName,
+            },
+            {
+              label: "Search other options",
+              action: "search_again",
+            },
+          ],
+        },
+      ]);
+    });
     return () => {
       socket.disconnect();
     };
@@ -116,5 +149,50 @@ export function useBilly(recruiterId: string) {
     socketRef.current.emit("message", { content });
   }, []);
 
-  return { messages, status, isTyping, searchCriteria, sendMessage };
+  const contactJerry = useCallback((athleteId: string, athleteName: string) => {
+    if (!socketRef.current) return;
+
+    // Mensaje optimista del usuario
+    const userMsg: BillyMessage = {
+      id: crypto.randomUUID(),
+      role: "user",
+      content: `Tell me more about ${athleteName} — get Jerry's pitch.`,
+      timestamp: new Date(),
+    };
+    setMessages((prev) => [...prev, userMsg]);
+    setIsTyping(true);
+
+    socketRef.current.emit("contact_jerry", { athleteId });
+  }, []);
+
+  const handleOption = useCallback((option: MessageOption) => {
+    if (!socketRef.current) return;
+
+    if (option.action === "contact_athlete") {
+      const msg: BillyMessage = {
+        id: crypto.randomUUID(),
+        role: "user",
+        content: `I want to contact ${option.athleteName}.`,
+        timestamp: new Date(),
+      };
+      setMessages((prev) => [...prev, msg]);
+      socketRef.current.emit("initiate_contact", {
+        athleteId: option.athleteId,
+        athleteName: option.athleteName,
+      });
+    }
+
+    if (option.action === "search_again") {
+      const msg: BillyMessage = {
+        id: crypto.randomUUID(),
+        role: "user",
+        content: "Show me other options.",
+        timestamp: new Date(),
+      };
+      setMessages((prev) => [...prev, msg]);
+      socketRef.current.emit("message", { content: "I'd like to see other athlete options." });
+    }
+  }, []);
+
+  return { messages, status, isTyping, searchCriteria, sendMessage, contactJerry, handleOption };
 }

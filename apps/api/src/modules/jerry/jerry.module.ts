@@ -8,6 +8,7 @@ import { DataExtractorService } from './data-extractor.service';
 import { ValidatorService } from './validator.service';
 import { StrategyPlannerService } from './strategy-planner.service';
 import { PromptBuilderService } from './prompt-builder.service';
+import { JerryPitchService } from './jerry-pitch.service';
 
 @Module({
   imports: [
@@ -24,6 +25,8 @@ import { PromptBuilderService } from './prompt-builder.service';
     ValidatorService,
     StrategyPlannerService,
     PromptBuilderService,
+    JerryPitchService
   ],
+  exports: [JerryPitchService],
 })
 export class JerryModule {}
