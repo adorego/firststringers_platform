@@ -9,13 +9,15 @@ import {
 } from '@nestjs/websockets';
 import { Logger } from '@nestjs/common';
 import { Server, Socket } from 'socket.io';
+import { JwtService } from '@nestjs/jwt';
 import { OnEvent } from '@nestjs/event-emitter';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { InjectQueue } from '@nestjs/bull';
 import type { Queue } from 'bull';
+import { PrismaService } from '../../shared/prisma/prisma.service';
 import { SessionService } from './session.service';
 import { SendMessageDto } from './dto/send-message.dto';
-import { JerryMessage, MessageJob } from '../../shared/types';
+import { JerryMessage, MessageJob, DossierData } from '../../shared/types';
 
 @WebSocketGateway({
   cors: {
@@ -34,19 +36,42 @@ export class JerryGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
   constructor(
     @InjectQueue('jerry') private readonly jerryQueue: Queue,
+    private readonly jwt: JwtService,
+    private readonly prisma: PrismaService,
     private readonly session: SessionService,
     private readonly eventEmitter: EventEmitter2,
   ) {}
 
   async handleConnection(client: Socket) {
     try {
-      const athleteId = client.handshake.query.athleteId as string;
+      const token = client.handshake.auth.token as string | undefined;
 
-      if (!athleteId) {
+      if (!token) {
+        client.emit('error', { code: 'UNAUTHENTICATED', message: 'Token required' });
         client.disconnect();
         return;
       }
 
+      let payload: { sub: string };
+      try {
+        payload = this.jwt.verify<{ sub: string }>(token);
+      } catch {
+        client.emit('error', { code: 'UNAUTHENTICATED', message: 'Invalid token' });
+        client.disconnect();
+        return;
+      }
+
+      const user = await this.prisma.user.findUnique({
+        where: { id: payload.sub },
+      });
+
+      if (!user?.athleteId) {
+        client.emit('error', { code: 'UNAUTHENTICATED', message: 'Not an athlete' });
+        client.disconnect();
+        return;
+      }
+
+      const athleteId = user.athleteId;
       this.connectedAthletes.set(client.id, athleteId);
       client.join(`athlete:${athleteId}`);
 
@@ -55,7 +80,7 @@ export class JerryGateway implements OnGatewayConnection, OnGatewayDisconnect {
       const session = await this.session.getSession(athleteId);
       if (session.messages.length > 0) {
         client.emit('session_resumed', {
-          messageCount: session.messages.length,
+          messages: session.messages,
         });
       } else {
         client.emit('connected', {
@@ -141,5 +166,17 @@ export class JerryGateway implements OnGatewayConnection, OnGatewayDisconnect {
     this.server
       .to(`athlete:${payload.athleteId}`)
       .emit('error', { code: 'PROCESSING_ERROR', message: payload.error });
+  }
+
+  @OnEvent('dossier.updated')
+  handleDossierUpdated(payload: {
+    athleteId: string;
+    data: DossierData;
+    completeness: number;
+  }) {
+    this.server.to(`athlete:${payload.athleteId}`).emit('dossier_updated', {
+      data: payload.data,
+      completeness: payload.completeness,
+    });
   }
 }

@@ -9,7 +9,7 @@ import {
   mockFullDossier,
 } from "@/lib/mocks";
 
-const USE_MOCKS = process.env.NEXT_PUBLIC_USE_MOCKS !== "false"; // true by default
+const USE_MOCKS = process.env.NEXT_PUBLIC_USE_MOCKS === "true"; // false by default
 
 // ── Axios instance (used when USE_MOCKS is false) ──────────────────────────
 const http = axios.create({
@@ -26,6 +26,71 @@ http.interceptors.request.use((config) => {
   }
   return config;
 });
+
+// ── Auto-refresh on 401 ──────────────────────────────────────────────────
+let isRefreshing = false;
+let failedQueue: {
+  resolve: (token: string) => void;
+  reject: (err: unknown) => void;
+}[] = [];
+
+function processQueue(error: unknown, token: string | null) {
+  failedQueue.forEach((p) => {
+    if (error) {
+      p.reject(error);
+    } else {
+      p.resolve(token!);
+    }
+  });
+  failedQueue = [];
+}
+
+http.interceptors.response.use(
+  (response) => response,
+  async (error) => {
+    const originalRequest = error.config;
+
+    if (
+      error.response?.status !== 401 ||
+      originalRequest._retry ||
+      originalRequest.url?.includes("/auth/")
+    ) {
+      return Promise.reject(error);
+    }
+
+    if (isRefreshing) {
+      return new Promise((resolve, reject) => {
+        failedQueue.push({
+          resolve: (token: string) => {
+            originalRequest.headers.Authorization = `Bearer ${token}`;
+            resolve(http(originalRequest));
+          },
+          reject,
+        });
+      });
+    }
+
+    originalRequest._retry = true;
+    isRefreshing = true;
+
+    try {
+      const tokens = await api.refresh();
+      processQueue(null, tokens.access_token);
+      originalRequest.headers.Authorization = `Bearer ${tokens.access_token}`;
+      return http(originalRequest);
+    } catch (refreshError) {
+      processQueue(refreshError, null);
+      // Refresh failed — clear tokens and redirect to welcome
+      api.logout();
+      if (typeof window !== "undefined") {
+        window.location.href = "/welcome";
+      }
+      return Promise.reject(refreshError);
+    } finally {
+      isRefreshing = false;
+    }
+  },
+);
 
 // ── Simulated delay for mocks ──────────────────────────────────────────────
 function delay<T>(data: T, ms = 300): Promise<T> {

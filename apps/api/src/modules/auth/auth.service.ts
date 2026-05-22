@@ -87,11 +87,16 @@ export class AuthService {
         sub: string;
         email: string;
         role: string;
+        type: string;
       }>(refreshToken, {
         secret:
           this.config.get<string>('JWT_REFRESH_SECRET') ||
           this.config.get<string>('JWT_SECRET'),
       });
+
+      if (payload.type !== 'refresh') {
+        throw new UnauthorizedException('Invalid token type');
+      }
 
       const user = await this.prisma.user.findUnique({
         where: { id: payload.sub },
@@ -108,18 +113,20 @@ export class AuthService {
   }
 
   private generateTokens(userId: string, email: string, role: string) {
-    const payload = { sub: userId, email, role };
-
     return {
-      access_token: this.jwt.sign(payload, {
-        expiresIn: '7d',
-      }),
-      refresh_token: this.jwt.sign(payload, {
-        secret:
-          this.config.get<string>('JWT_REFRESH_SECRET') ||
-          this.config.get<string>('JWT_SECRET'),
-        expiresIn: '30d',
-      }),
+      access_token: this.jwt.sign(
+        { sub: userId, email, role, type: 'access' },
+        { expiresIn: '30m' },
+      ),
+      refresh_token: this.jwt.sign(
+        { sub: userId, email, role, type: 'refresh' },
+        {
+          secret:
+            this.config.get<string>('JWT_REFRESH_SECRET') ||
+            this.config.get<string>('JWT_SECRET'),
+          expiresIn: '30d',
+        },
+      ),
     };
   }
 }

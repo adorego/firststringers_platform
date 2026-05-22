@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { OnEvent } from '@nestjs/event-emitter';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 import type { Prisma } from '@firststringers/database';
 import { PrismaService } from '../../shared/prisma/prisma.service';
 import { LLMService } from '../../shared/llm/llm.service';
@@ -10,6 +11,7 @@ export class DossierWorker {
   constructor(
     private readonly prisma: PrismaService,
     private readonly llm: LLMService,
+    private readonly eventEmitter: EventEmitter2,
   ) {}
 
   @OnEvent('dossier.update')
@@ -35,6 +37,12 @@ export class DossierWorker {
         data: mergedData as unknown as Prisma.InputJsonValue,
         completeness,
       },
+    });
+
+    this.eventEmitter.emit('dossier.updated', {
+      athleteId,
+      data: mergedData,
+      completeness,
     });
 
     console.log(
