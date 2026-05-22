@@ -12,11 +12,17 @@ import { LoginDto } from './dto/login.dto';
 
 @Injectable()
 export class AuthService {
+  private readonly refreshSecret: string;
+
   constructor(
     private prisma: PrismaService,
     private jwt: JwtService,
     private config: ConfigService,
-  ) {}
+  ) {
+    this.refreshSecret =
+      this.config.get<string>('JWT_REFRESH_SECRET') ||
+      this.config.getOrThrow<string>('JWT_SECRET');
+  }
 
   async register(dto: RegisterDto) {
     const existing = await this.prisma.user.findUnique({
@@ -60,7 +66,7 @@ export class AuthService {
       });
     });
 
-    return this.generateTokens(user.id, user.email, user.role);
+    return this.generateTokens(user.id, user.email, user.role, user.athleteId);
   }
 
   async login(dto: LoginDto) {
@@ -78,7 +84,7 @@ export class AuthService {
       throw new UnauthorizedException('Invalid credentials');
     }
 
-    return this.generateTokens(user.id, user.email, user.role);
+    return this.generateTokens(user.id, user.email, user.role, user.athleteId);
   }
 
   async refresh(refreshToken: string) {
@@ -89,9 +95,7 @@ export class AuthService {
         role: string;
         type: string;
       }>(refreshToken, {
-        secret:
-          this.config.get<string>('JWT_REFRESH_SECRET') ||
-          this.config.get<string>('JWT_SECRET'),
+        secret: this.refreshSecret,
       });
 
       if (payload.type !== 'refresh') {
@@ -106,20 +110,22 @@ export class AuthService {
         throw new UnauthorizedException('User not found');
       }
 
-      return this.generateTokens(user.id, user.email, user.role);
+      return this.generateTokens(user.id, user.email, user.role, user.athleteId);
     } catch {
       throw new UnauthorizedException('Invalid refresh token');
     }
   }
 
-  private generateTokens(userId: string, email: string, role: string) {
+  private generateTokens(userId: string, email: string, role: string, athleteId?: string | null) {
+    const baseClaims = { sub: userId, email, role, ...(athleteId && { athleteId }) };
+
     return {
       access_token: this.jwt.sign(
-        { sub: userId, email, role, type: 'access' },
+        { ...baseClaims, type: 'access' },
         { expiresIn: '30m' },
       ),
       refresh_token: this.jwt.sign(
-        { sub: userId, email, role, type: 'refresh' },
+        { ...baseClaims, type: 'refresh' },
         {
           secret:
             this.config.get<string>('JWT_REFRESH_SECRET') ||

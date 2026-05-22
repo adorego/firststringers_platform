@@ -128,14 +128,11 @@ export default function ChatPage() {
     });
   };
 
-  // Filter out the initial welcome message from jerry (we show the card instead)
-  const userMessages = messages.filter((m) => m.sender === "athlete");
-  const chatMessages = messages.filter((_, i) => {
-    // Skip first message if it's from jerry (the welcome message)
-    if (i === 0 && messages[0]?.sender === "jerry") return false;
-    return true;
-  });
-  const hasUserSent = userMessages.length > 0;
+  // Skip first jerry message (welcome) since we show the card instead
+  const hasUserSent = messages.some((m) => m.sender === "athlete");
+  const visibleMessages = messages.filter(
+    (_, i) => !(i === 0 && messages[0]?.sender === "jerry"),
+  );
 
   return (
     <div className="flex h-full flex-col">
@@ -169,7 +166,7 @@ export default function ChatPage() {
           <JerryWelcomeCard />
 
           {/* Subsequent messages */}
-          {chatMessages.map((msg) => (
+          {visibleMessages.map((msg) => (
             <div
               key={msg.id}
               className={`flex ${msg.sender === "athlete" ? "justify-end" : "justify-start"}`}

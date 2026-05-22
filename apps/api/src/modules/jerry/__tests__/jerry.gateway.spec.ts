@@ -68,13 +68,7 @@ describe('JerryGateway', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     mockServer.to.mockReturnValue(mockSocketRoom);
-    mockJwtService.verify.mockReturnValue({ sub: 'user-uuid-456' });
-    mockPrisma.user.findUnique.mockResolvedValue({
-      id: 'user-uuid-456',
-      email: 'athlete@test.com',
-      role: 'ATHLETE',
-      athleteId: 'athlete-uuid-123',
-    });
+    mockJwtService.verify.mockReturnValue({ sub: 'user-uuid-456', athleteId: 'athlete-uuid-123' });
     mockSession.getSession.mockResolvedValue(makeSession(0));
     mockSession.appendMessage.mockResolvedValue(undefined);
     mockJerryQueue.add.mockResolvedValue(undefined);
@@ -84,15 +78,12 @@ describe('JerryGateway', () => {
   // ── GRUPO 1 — handleConnection ───────────────────────────────────────────
 
   describe('handleConnection', () => {
-    it('debe verificar JWT, buscar usuario y unirse al room correcto', async () => {
+    it('debe verificar JWT y unirse al room correcto', async () => {
       const client = makeSocket(VALID_TOKEN);
 
       await gateway.handleConnection(client);
 
       expect(mockJwtService.verify).toHaveBeenCalledWith(VALID_TOKEN);
-      expect(mockPrisma.user.findUnique).toHaveBeenCalledWith({
-        where: { id: 'user-uuid-456' },
-      });
       expect(client.join).toHaveBeenCalledWith('athlete:athlete-uuid-123');
     });
 
@@ -124,14 +115,9 @@ describe('JerryGateway', () => {
       expect(client.disconnect).toHaveBeenCalled();
     });
 
-    it('debe desconectar si el usuario no tiene athleteId', async () => {
+    it('debe desconectar si el JWT no tiene athleteId', async () => {
       const client = makeSocket(VALID_TOKEN);
-      mockPrisma.user.findUnique.mockResolvedValue({
-        id: 'user-uuid-456',
-        email: 'recruiter@test.com',
-        role: 'RECRUITER',
-        athleteId: null,
-      });
+      mockJwtService.verify.mockReturnValue({ sub: 'user-uuid-456' }); // no athleteId
 
       await gateway.handleConnection(client);
 

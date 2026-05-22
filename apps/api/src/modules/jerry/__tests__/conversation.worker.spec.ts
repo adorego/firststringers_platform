@@ -276,17 +276,9 @@ describe('JerryGateway — appendMessage precedes queue enqueue', () => {
     };
 
     const mockJwtService = {
-      verify: jest.fn().mockReturnValue({ sub: 'user-uuid-1' }),
+      verify: jest.fn().mockReturnValue({ sub: 'user-uuid-1', athleteId: 'athlete-123' }),
     };
-    const mockPrisma = {
-      user: {
-        findUnique: jest.fn().mockResolvedValue({
-          id: 'user-uuid-1',
-          athleteId: 'athlete-123',
-          role: 'ATHLETE',
-        }),
-      },
-    };
+    const mockPrisma = {};
 
     const gateway = new JerryGateway(
       mockJerryQueue as unknown as Queue,

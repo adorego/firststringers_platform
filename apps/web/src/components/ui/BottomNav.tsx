@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { MessageCircle, User } from "lucide-react";
+import { MessageCircle, User, FileText } from "lucide-react";
 
 interface NavItem {
   href: string;
@@ -23,8 +23,6 @@ const jerryIconActive = (
     <div className="h-1.5 w-1.5 rounded-full bg-[#F5F5F0]" />
   </div>
 );
-
-import { FileText } from "lucide-react";
 
 const items: NavItem[] = [
   {

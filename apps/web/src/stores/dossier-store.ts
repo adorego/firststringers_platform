@@ -42,9 +42,11 @@ export const useDossierStore = create<DossierState>((set, get) => ({
   subscribed: false,
 
   subscribe: () => {
-    if (get().subscribed) return;
-
     const socket = getSocket();
+
+    // Remove previous listener to avoid duplicates after reconnect
+    socket.off("dossier_updated");
+
     socket.on(
       "dossier_updated",
       (payload: { data: DossierData; completeness: number }) => {

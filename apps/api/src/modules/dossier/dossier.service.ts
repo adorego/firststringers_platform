@@ -93,7 +93,14 @@ export class DossierService {
             value: availability.preferredRegions?.join(', ') ?? null,
             source: 'jerry',
           },
-          { key: 'gradYear', label: 'Graduation year', value: identity.graduationYear ?? null, source: 'user' },
+          {
+            key: 'scholarshipNeed',
+            label: 'Scholarship need',
+            value: availability.scholarshipNeed !== undefined
+              ? (availability.scholarshipNeed ? 'Yes' : 'No')
+              : null,
+            source: 'user',
+          },
         ]),
       },
     ];

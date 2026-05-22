@@ -52,26 +52,22 @@ export class JerryGateway implements OnGatewayConnection, OnGatewayDisconnect {
         return;
       }
 
-      let payload: { sub: string };
+      let payload: { sub: string; athleteId?: string };
       try {
-        payload = this.jwt.verify<{ sub: string }>(token);
+        payload = this.jwt.verify<{ sub: string; athleteId?: string }>(token);
       } catch {
         client.emit('error', { code: 'UNAUTHENTICATED', message: 'Invalid token' });
         client.disconnect();
         return;
       }
 
-      const user = await this.prisma.user.findUnique({
-        where: { id: payload.sub },
-      });
-
-      if (!user?.athleteId) {
+      if (!payload.athleteId) {
         client.emit('error', { code: 'UNAUTHENTICATED', message: 'Not an athlete' });
         client.disconnect();
         return;
       }
 
-      const athleteId = user.athleteId;
+      const athleteId = payload.athleteId;
       this.connectedAthletes.set(client.id, athleteId);
       client.join(`athlete:${athleteId}`);
 

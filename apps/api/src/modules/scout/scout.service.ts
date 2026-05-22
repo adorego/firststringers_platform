@@ -31,19 +31,21 @@ export interface MatchResult {
 export class ScoutService {
   constructor(private readonly prisma: PrismaService) {}
 
-  async getMatches(): Promise<MatchResult[]> {
+  async getMatches(limit = 20, offset = 0): Promise<MatchResult[]> {
     const athletes = await this.prisma.athlete.findMany({
       where: {
         dossier: { completeness: { gt: 0 } },
       },
       include: { dossier: true },
       orderBy: { dossier: { completeness: 'desc' } },
+      take: Math.min(limit, 100),
+      skip: offset,
     });
 
     return athletes.map((a) => this.toMatchResult(a));
   }
 
-  async search(query: string): Promise<MatchResult[]> {
+  async search(query: string, limit = 20, offset = 0): Promise<MatchResult[]> {
     const q = query.toLowerCase();
 
     const athletes = await this.prisma.athlete.findMany({
@@ -55,6 +57,8 @@ export class ScoutService {
         ],
       },
       include: { dossier: true },
+      take: Math.min(limit, 100),
+      skip: offset,
     });
 
     return athletes.map((a) => this.toMatchResult(a));

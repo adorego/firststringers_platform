@@ -35,10 +35,6 @@ export default function WelcomeBackPage() {
     }
 
     const session = await fetch("/api/auth/session").then((r) => r.json());
-    if (session?.accessToken) {
-      localStorage.setItem("fs_token", session.accessToken);
-    }
-
     const role = session?.user?.role;
     if (role === "recruiter") {
       router.push("/matches");

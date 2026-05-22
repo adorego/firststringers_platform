@@ -26,7 +26,16 @@ export class AthleteService {
 
   async findAll(): Promise<AthleteResponse[]> {
     const athletes = await this.prisma.athlete.findMany({
-      include: { dossier: true },
+      select: {
+        id: true,
+        email: true,
+        name: true,
+        sport: true,
+        position: true,
+        dossier: {
+          select: { data: true, completeness: true, narrative: true },
+        },
+      },
     });
 
     return athletes.map((a) => this.toResponse(a));

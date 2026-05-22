@@ -38,6 +38,9 @@ export const useChatStore = create<ChatState>((set, get) => ({
   connect: (token: string) => {
     const socket = connectSocket(token);
 
+    // Clear previous listeners to prevent duplicates on reconnect
+    socket.off("connected").off("session_resumed").off("message").off("status").off("error").off("disconnect");
+
     socket.on("connected", (payload: { message: string }) => {
       set({
         isConnected: true,

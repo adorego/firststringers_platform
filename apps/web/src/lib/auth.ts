@@ -3,6 +3,7 @@ import CredentialsProvider from "next-auth/providers/credentials";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3001";
 
+// Server-side only — Buffer is not available in browser environments
 function decodeJwtPayload(token: string): { sub: string; email: string; role: string; exp: number } {
   return JSON.parse(Buffer.from(token.split(".")[1], "base64").toString());
 }
