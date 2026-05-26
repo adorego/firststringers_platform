@@ -17,18 +17,19 @@ model Organization {
 }
 
 model Athlete {
-  id             String         @id @default(uuid())
+  id             String               @id @default(uuid())
   organizationId String
-  organization   Organization   @relation(fields: [organizationId], references: [id])
-  email          String         @unique
+  organization   Organization         @relation(fields: [organizationId], references: [id])
+  email          String               @unique
   name           String
   sport          String?
   position       String?
   dossier        Dossier?
   sessions       JerrySession[]
   user           User?
-  createdAt      DateTime       @default(now())
-  updatedAt      DateTime       @updatedAt
+  conversations  DirectConversation[]
+  createdAt      DateTime             @default(now())
+  updatedAt      DateTime             @updatedAt
 }
 
 model Dossier {
@@ -57,13 +58,14 @@ model JerrySession {
 }
 
 model Recruiter {
-  id             String       @id @default(uuid())
+  id             String               @id @default(uuid())
   organizationId String
-  organization   Organization @relation(fields: [organizationId], references: [id])
-  email          String       @unique
+  organization   Organization         @relation(fields: [organizationId], references: [id])
+  email          String               @unique
   name           String
-  createdAt      DateTime     @default(now())
+  createdAt      DateTime             @default(now())
   billyMessages  BillyMessage[]
+  conversations  DirectConversation[]
 }
 
 model User {
@@ -74,6 +76,33 @@ model User {
   athleteId String?  @unique
   athlete   Athlete? @relation(fields: [athleteId], references: [id])
   createdAt DateTime @default(now())
+}
+
+model DirectConversation {
+  id          String          @id @default(uuid())
+  recruiterId String
+  recruiter   Recruiter       @relation(fields: [recruiterId], references: [id])
+  athleteId   String
+  athlete     Athlete         @relation(fields: [athleteId], references: [id])
+  messages    DirectMessage[]
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+
+  @@unique([recruiterId, athleteId])
+  @@map("direct_conversations")
+}
+
+model DirectMessage {
+  id             String             @id @default(uuid())
+  conversationId String
+  conversation   DirectConversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  senderRole     String
+  senderId       String
+  content        String
+  readAt         DateTime?
+  createdAt      DateTime           @default(now())
+
+  @@map("direct_messages")
 }
 
 model BillyMessage {

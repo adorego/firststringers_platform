@@ -24,9 +24,31 @@ export class ScoutService {
     const start = Date.now();
 
     // Solo filtros exactos que existen en el modelo Athlete
-    const where: any = {};
-    if (filters.sport)    where.sport    = { equals: filters.sport, mode: 'insensitive' };
-    if (filters.position) where.position = { equals: filters.position, mode: 'insensitive' };
+     const positionMap: Record<string, string> = {
+        quarterback: 'QB',
+        'wide receiver': 'WR',
+        'running back': 'RB',
+        cornerback: 'CB',
+        'offensive lineman': 'OL',
+        'point guard': 'PG',
+        'small forward': 'SF',
+        'power forward': 'PF',
+        center: 'C',
+        'shooting guard': 'SG',
+        'free safety': 'FS',
+        'strong safety': 'SS',
+        linebacker: 'LB',
+        'defensive end': 'DE',
+        'defensive tackle': 'DT',
+      };
+
+      const normalizedPosition = filters.position
+        ? (positionMap[filters.position.toLowerCase()] ?? filters.position)
+        : undefined;
+
+      const where: any = {};
+      if (filters.sport)       where.sport    = { equals: filters.sport, mode: 'insensitive' };
+      if (normalizedPosition)  where.position = { equals: normalizedPosition, mode: 'insensitive' };
 
     this.logger.log(`Scout query: ${JSON.stringify(where)}`);
 
