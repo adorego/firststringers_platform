@@ -2,7 +2,7 @@ import { getToken } from "next-auth/jwt";
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
-const PUBLIC_PATHS = ["/", "/login", "/register", "/api/auth"];
+const PUBLIC_PATHS = ["/", "/login", "/register", "/welcome", "/api/auth"];
 
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
@@ -14,14 +14,12 @@ export async function middleware(request: NextRequest) {
 
   const token = await getToken({
     req: request,
-    secret: process.env.NEXTAUTH_SECRET ?? "dev-secret-change-in-production",
+    secret: process.env.NEXTAUTH_SECRET!,
   });
 
   // Not authenticated → redirect to login
   if (!token) {
-    const loginUrl = new URL("/login", request.url);
-    loginUrl.searchParams.set("callbackUrl", pathname);
-    return NextResponse.redirect(loginUrl);
+    return NextResponse.redirect(new URL("/welcome", request.url));
   }
 
   const role = token.role as string;
@@ -37,7 +35,9 @@ export async function middleware(request: NextRequest) {
   if (
     pathname.startsWith("/chat") ||
     pathname.startsWith("/dossier") ||
-    pathname.startsWith("/profile")
+    pathname.startsWith("/profile") ||
+    pathname.startsWith("/conversations") ||
+    pathname.startsWith("/dossier")
   ) {
     if (role === "recruiter") {
       return NextResponse.redirect(new URL("/matches", request.url));

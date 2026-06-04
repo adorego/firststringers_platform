@@ -275,8 +275,15 @@ describe('JerryGateway — appendMessage precedes queue enqueue', () => {
       emit: jest.fn(),
     };
 
+    const mockJwtService = {
+      verify: jest.fn().mockReturnValue({ sub: 'user-uuid-1', athleteId: 'athlete-123' }),
+    };
+    const mockPrisma = {};
+
     const gateway = new JerryGateway(
       mockJerryQueue as unknown as Queue,
+      mockJwtService as any,
+      mockPrisma as any,
       mockSessionGateway as unknown as SessionService,
       mockEventEmitterGateway as unknown as EventEmitter2,
     );
@@ -286,7 +293,7 @@ describe('JerryGateway — appendMessage precedes queue enqueue', () => {
       emit: jest.fn(),
       join: jest.fn(),
       disconnect: jest.fn(),
-      handshake: { query: { athleteId: 'athlete-123' } },
+      handshake: { auth: { token: 'valid-token' } },
     };
 
     // Connect so the gateway registers athleteId → socketId

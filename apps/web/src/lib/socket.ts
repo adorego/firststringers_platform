@@ -4,10 +4,17 @@ let socket: Socket | null = null;
 
 export function getSocket(): Socket {
   if (!socket) {
-    socket = io(process.env.NEXT_PUBLIC_WS_URL ?? "http://localhost:3001", {
-      autoConnect: false,
-      transports: ["websocket"],
-    });
+    socket = io(
+      `${process.env.NEXT_PUBLIC_WS_URL ?? "http://localhost:3001"}/jerry`,
+      {
+        autoConnect: false,
+        transports: ["websocket"],
+        reconnection: true,
+        reconnectionAttempts: 5,
+        reconnectionDelay: 1000,
+        reconnectionDelayMax: 10000,
+      },
+    );
   }
   return socket;
 }
@@ -15,8 +22,16 @@ export function getSocket(): Socket {
 export function connectSocket(token: string): Socket {
   const s = getSocket();
   s.auth = { token };
-  s.connect();
+  if (!s.connected) {
+    s.connect();
+  }
   return s;
+}
+
+export function updateSocketToken(token: string): void {
+  if (socket) {
+    socket.auth = { token };
+  }
 }
 
 export function disconnectSocket(): void {

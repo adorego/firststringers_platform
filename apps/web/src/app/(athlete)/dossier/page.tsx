@@ -1,91 +1,173 @@
-import { Card, ProgressBar, Badge } from "@/components/ui";
+"use client";
 
-const sections = [
-  {
-    title: "Personal Info",
-    completed: 4,
-    total: 6,
-    fields: [
-      { label: "Full name", value: "Marcus Johnson" },
-      { label: "Date of birth", value: "June 15, 2008" },
-      { label: "Height", value: "6'1\"" },
-      { label: "Weight", value: "175 lbs" },
-      { label: "Phone", value: null },
-      { label: "Address", value: null },
-    ],
-  },
-  {
-    title: "Academic",
-    completed: 2,
-    total: 4,
-    fields: [
-      { label: "GPA", value: "3.8" },
-      { label: "High School", value: "Lincoln High School" },
-      { label: "SAT Score", value: null },
-      { label: "Graduation Year", value: null },
-    ],
-  },
-  {
-    title: "Athletic Stats",
-    completed: 3,
-    total: 5,
-    fields: [
-      { label: "Sport", value: "Basketball" },
-      { label: "Position", value: "Point Guard" },
-      { label: "Points per game", value: "18.2" },
-      { label: "Assists per game", value: null },
-      { label: "Completion rate", value: null },
-    ],
-  },
-];
+import { useEffect } from "react";
+import { useDossierStore } from "@/stores/dossier-store";
 
-const total = sections.reduce((a, s) => a + s.completed, 0);
-const totalFields = sections.reduce((a, s) => a + s.total, 0);
-const pct = Math.round((total / totalFields) * 100);
+interface DossierSection {
+  title: string;
+  completed: number;
+  total: number;
+  fields: { label: string; value: string | null }[];
+}
+
+function toSection(
+  title: string,
+  fields: { label: string; value: string | null }[],
+): DossierSection {
+  return {
+    title,
+    fields,
+    completed: fields.filter((f) => f.value !== null).length,
+    total: fields.length,
+  };
+}
+
+function buildSections(
+  data: NonNullable<ReturnType<typeof useDossierStore.getState>["data"]>,
+): DossierSection[] {
+  const identity = data.identity ?? {};
+  const performance = data.performance ?? {};
+  const academic = data.academic ?? {};
+  const availability = data.availability ?? {};
+
+  return [
+    toSection("Personal Info", [
+      { label: "Sport", value: identity.sport ?? null },
+      { label: "Position", value: identity.position ?? null },
+      { label: "Nationality", value: identity.nationality ?? null },
+      {
+        label: "Graduation Year",
+        value: identity.graduationYear?.toString() ?? null,
+      },
+    ]),
+    toSection("Athletic Stats", [
+      { label: "League Level", value: performance.leagueLevel ?? null },
+      ...(performance.stats
+        ? Object.entries(performance.stats).map(([key, val]) => ({
+            label: key,
+            value: val?.toString() ?? null,
+          }))
+        : [{ label: "Stats", value: null }]),
+    ]),
+    toSection("Academic", [
+      { label: "GPA", value: academic.gpa?.toString() ?? null },
+      { label: "SAT/ACT", value: academic.satAct?.toString() ?? null },
+      { label: "Intended Major", value: academic.intendedMajor ?? null },
+      {
+        label: "NCAA Eligibility",
+        value:
+          academic.ncaaEligibility !== undefined
+            ? academic.ncaaEligibility
+              ? "Yes"
+              : "No"
+            : null,
+      },
+    ]),
+    toSection("Availability", [
+      {
+        label: "Transfer Portal",
+        value:
+          availability.transferPortal !== undefined
+            ? availability.transferPortal
+              ? "Yes"
+              : "No"
+            : null,
+      },
+      {
+        label: "Preferred Regions",
+        value: availability.preferredRegions?.join(", ") ?? null,
+      },
+      {
+        label: "Scholarship Need",
+        value:
+          availability.scholarshipNeed !== undefined
+            ? availability.scholarshipNeed
+              ? "Yes"
+              : "No"
+            : null,
+      },
+    ]),
+  ];
+}
 
 export default function DossierPage() {
+  const { data, completeness, subscribe } = useDossierStore();
+
+  useEffect(() => {
+    subscribe();
+  }, [subscribe]);
+
+  const sections = data ? buildSections(data) : [];
+  const total = sections.reduce((a, s) => a + s.completed, 0);
+  const totalFields = sections.reduce((a, s) => a + s.total, 0);
+  const pct = Math.round(completeness * 100);
+
   return (
-    <div className="px-8 py-8">
-      <div className="mb-8">
-        <h1 className="text-2xl font-bold text-[#111827]">Your Dossier</h1>
-        <p className="mt-1 text-sm text-fs-muted">
+    <div className="flex h-full flex-col">
+      <header className="px-6 pt-6 pb-4">
+        <h1 className="text-2xl font-bold text-[#2D2D2D]">Your Dossier</h1>
+        <p className="mt-1 text-sm text-[#A0A0A0]">
           {pct}% complete &middot; {total}/{totalFields} fields
         </p>
-        <ProgressBar value={pct} className="mt-3 max-w-md" />
-      </div>
+        {/* Progress bar */}
+        <div className="mt-3 h-2 max-w-md overflow-hidden rounded-full bg-[#E0E0DC]">
+          <div
+            className="h-full rounded-full bg-[#3D3D3D] transition-all"
+            style={{ width: `${pct}%` }}
+          />
+        </div>
+      </header>
 
-      <div className="space-y-6">
-        {sections.map((section) => (
-          <Card key={section.title}>
-            <div className="mb-4 flex items-center justify-between">
-              <h2 className="text-base font-semibold text-[#111827]">
-                {section.title}
-              </h2>
-              <Badge variant={section.completed === section.total ? "active" : "pending"}>
-                {section.completed}/{section.total}
-              </Badge>
+      <div className="flex-1 overflow-y-auto px-6 pb-6">
+        <div className="mx-auto max-w-2xl">
+          {sections.length === 0 ? (
+            <div className="rounded-2xl bg-[#EDEDEA] px-5 py-10">
+              <p className="text-center text-sm text-[#A0A0A0]">
+                Start chatting with Jerry to build your dossier.
+              </p>
             </div>
-            <div className="space-y-3">
-              {section.fields.map((field) => (
-                <div
-                  key={field.label}
-                  className="flex items-center justify-between border-b border-fs-border-gray pb-3 last:border-0"
-                >
-                  <span className="text-sm text-fs-muted">{field.label}</span>
-                  {field.value ? (
-                    <span className="text-sm font-medium text-[#111827]">
-                      {field.value}
+          ) : (
+            <div className="space-y-4">
+              {sections.map((section) => (
+                <div key={section.title} className="rounded-2xl bg-[#EDEDEA] px-5 py-4">
+                  <div className="mb-3 flex items-center justify-between">
+                    <h2 className="text-base font-semibold text-[#2D2D2D]">
+                      {section.title}
+                    </h2>
+                    <span
+                      className={`rounded-full px-2.5 py-0.5 text-xs font-medium ${
+                        section.completed === section.total
+                          ? "bg-[#3D3D3D] text-white"
+                          : "bg-[#E0E0DC] text-[#6B6B6B]"
+                      }`}
+                    >
+                      {section.completed}/{section.total}
                     </span>
-                  ) : (
-                    <span className="text-xs text-fs-muted">
-                      Complete with Jerry
-                    </span>
-                  )}
+                  </div>
+                  <div className="space-y-3">
+                    {section.fields.map((field) => (
+                      <div
+                        key={field.label}
+                        className="flex items-center justify-between border-b border-[#E0E0DC] pb-3 last:border-0 last:pb-0"
+                      >
+                        <span className="text-sm text-[#A0A0A0]">{field.label}</span>
+                        {field.value ? (
+                          <span className="text-sm font-medium text-[#2D2D2D]">
+                            {field.value}
+                          </span>
+                        ) : (
+                          <span className="text-xs text-[#C0C0BC]">
+                            Complete with Jerry
+                          </span>
+                        )}
+                      </div>
+                    ))}
+                  </div>
                 </div>
               ))}
             </div>
-          </Card>
-        ))}
+          )}
+        </div>
       </div>
     </div>
   );
