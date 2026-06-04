@@ -41,6 +41,7 @@ export class DossierWorker {
 
     this.eventEmitter.emit('dossier.updated', {
       athleteId,
+      data: mergedData,
       completeness,
       changedFields,
     } satisfies DossierUpdatedEvent);

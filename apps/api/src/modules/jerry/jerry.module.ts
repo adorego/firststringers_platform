@@ -1,5 +1,7 @@
 import { Module } from '@nestjs/common';
 import { BullModule } from '@nestjs/bull';
+import { AuthModule } from '../auth/auth.module';
+import { JerryController } from './jerry.controller';
 import { JerryGateway } from './jerry.gateway';
 import { SessionService } from './session.service';
 import { ConversationWorker } from './conversation.worker';
@@ -11,10 +13,12 @@ import { PromptBuilderService } from './prompt-builder.service';
 
 @Module({
   imports: [
+    AuthModule,
     BullModule.registerQueue({
       name: 'jerry',
     }),
   ],
+  controllers: [JerryController],
   providers: [
     JerryGateway,
     SessionService,

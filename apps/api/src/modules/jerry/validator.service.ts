@@ -37,8 +37,7 @@ export class ValidatorService {
     if (!data.academic?.intendedMajor) missing.push('intended major');
     if (data.availability?.transferPortal === undefined)
       missing.push('availability');
-    if (!data.availability?.preferredRegions)
-      missing.push('preferred regions');
+    if (!data.availability?.preferredRegions) missing.push('preferred regions');
 
     return missing;
   }

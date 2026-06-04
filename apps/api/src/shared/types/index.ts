@@ -63,6 +63,7 @@ export interface DossierUpdateJob {
 
 export interface DossierUpdatedEvent {
   athleteId: string;
+  data: DossierData;
   completeness: number;
   changedFields: string[];
 }
