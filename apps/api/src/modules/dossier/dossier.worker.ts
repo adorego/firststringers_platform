@@ -1,15 +1,16 @@
 import { Injectable } from '@nestjs/common';
-import { OnEvent } from '@nestjs/event-emitter';
+import { EventEmitter2, OnEvent } from '@nestjs/event-emitter';
 import type { Prisma } from '@firststringers/database';
 import { PrismaService } from '../../shared/prisma/prisma.service';
 import { LLMService } from '../../shared/llm/llm.service';
-import type { DossierUpdateJob, DossierData } from '../../shared/types';
+import type { DossierUpdateJob, DossierData, DossierUpdatedEvent } from '../../shared/types';
 
 @Injectable()
 export class DossierWorker {
   constructor(
     private readonly prisma: PrismaService,
     private readonly llm: LLMService,
+    private readonly eventEmitter: EventEmitter2,
   ) {}
 
   @OnEvent('dossier.update')
@@ -23,6 +24,7 @@ export class DossierWorker {
     const currentData = (current?.data as DossierData) || {};
     const mergedData = this.mergeDeep(currentData, newData);
     const completeness = this.calculateCompleteness(mergedData);
+    const changedFields = this.getChangedFields(currentData, mergedData);
 
     await this.prisma.dossier.upsert({
       where: { athleteId },
@@ -36,6 +38,12 @@ export class DossierWorker {
         completeness,
       },
     });
+
+    this.eventEmitter.emit('dossier.updated', {
+      athleteId,
+      completeness,
+      changedFields,
+    } satisfies DossierUpdatedEvent);
 
     console.log(
       `Dossier updated for ${athleteId} — completeness: ${Math.round(completeness * 100)}%`,
@@ -70,6 +78,15 @@ export class DossierWorker {
     });
 
     console.log(`Narrative generated for athlete ${athleteId}`);
+  }
+
+  private getChangedFields(
+    before: Partial<DossierData>,
+    after: DossierData,
+  ): string[] {
+    return (Object.keys(after) as (keyof DossierData)[]).filter(
+      (key) => JSON.stringify(after[key]) !== JSON.stringify(before[key]),
+    );
   }
 
   private calculateCompleteness(data: DossierData): number {

@@ -61,6 +61,12 @@ export interface DossierUpdateJob {
   newData: Partial<DossierData>;
 }
 
+export interface DossierUpdatedEvent {
+  athleteId: string;
+  completeness: number;
+  changedFields: string[];
+}
+
 export interface ChatParams {
   systemPrompt: string;
   messages: JerryMessage[];
