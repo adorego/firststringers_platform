@@ -73,6 +73,25 @@ function timeAgo(date: string): string {
   return `${days}d ago`;
 }
 
+function TimeAgo({ date }: { date: Date | string }) {
+  const [label, setLabel] = useState('');
+
+  useEffect(() => {
+    const d = typeof date === 'string' ? date : date.toISOString();
+    setLabel(timeAgo(d));
+    const interval = setInterval(() => setLabel(timeAgo(d)), 60000);
+    return () => clearInterval(interval);
+  }, [date]);
+
+  if (!label) return null;
+
+  return (
+    <span className="flex-shrink-0 text-xs text-[#ADA8A5]">
+      {label}
+    </span>
+  );
+}
+
 interface ConnectionsDrawerProps {
   isOpen: boolean;
   onClose: () => void;
@@ -165,9 +184,7 @@ export function ConnectionsDrawer({
                   <div className="flex items-center justify-between">
                     <p className="font-semibold text-[#1A1A1A]">{athlete?.name}</p>
                     {lastMsg && (
-                      <span className="flex-shrink-0 text-xs text-[#ADA8A5]">
-                        {timeAgo(lastMsg.createdAt)}
-                      </span>
+                      <TimeAgo date={lastMsg.createdAt} />
                     )}
                   </div>
                   <p className="text-sm text-[#ADA8A5]">

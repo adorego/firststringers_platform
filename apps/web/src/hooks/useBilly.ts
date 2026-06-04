@@ -43,9 +43,54 @@ export interface SearchCriteria {
   graduationYear?: number;
 }
 
+export interface BillyConversationSummary {
+  id: string;
+  recruiterId: string;
+  title: string;
+  createdAt: string;
+  updatedAt: string;
+  lastMessage?: { role: string; content: string; timestamp: string } | null;
+}
+
 type ConnectionStatus = "connecting" | "connected" | "disconnected" | "error";
 
-export function useBilly(recruiterId: string) {
+// Use || so an empty string (Next.js sometimes replaces undefined vars with "")
+// also falls back to the default, preventing relative-URL fetches.
+const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001";
+
+// ── REST helpers ──────────────────────────────────────────────────────────────
+
+export async function listBillyConversations(
+  recruiterId: string,
+): Promise<BillyConversationSummary[]> {
+  try {
+    const res = await fetch(`${API_URL}/billy/conversations?recruiterId=${recruiterId}`);
+    if (!res.ok) return [];
+    return await res.json();
+  } catch {
+    return [];
+  }
+}
+
+export async function createBillyConversation(
+  recruiterId: string,
+): Promise<{ id: string } | null> {
+  try {
+    const res = await fetch(`${API_URL}/billy/conversations`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ recruiterId }),
+    });
+    if (!res.ok) return null;
+    return await res.json();
+  } catch {
+    return null;
+  }
+}
+
+// ── WebSocket hook ────────────────────────────────────────────────────────────
+
+export function useBilly(recruiterId: string, conversationId: string) {
   const [messages, setMessages] = useState<BillyMessage[]>([]);
   const [status, setStatus] = useState<ConnectionStatus>("connecting");
   const [isTyping, setIsTyping] = useState(false);
@@ -53,14 +98,13 @@ export function useBilly(recruiterId: string) {
   const socketRef = useRef<Socket | null>(null);
 
   useEffect(() => {
-    if (!recruiterId) return;
+    if (!recruiterId || !conversationId) return;
 
-    const socket = io("http://localhost:3001/billy", {
-        query: { recruiterId },
-        withCredentials: true,
-        transports: ["websocket"],
-      }
-    );
+    const socket = io(`${API_URL}/billy`, {
+      query: { recruiterId, conversationId },
+      withCredentials: true,
+      transports: ["websocket"],
+    });
 
     socketRef.current = socket;
 
@@ -76,16 +120,19 @@ export function useBilly(recruiterId: string) {
       ]);
     });
 
-    socket.on("session_resumed", (data: { messages: BillyMessage[]; searchCriteria: SearchCriteria }) => {
-      setMessages(
-        data.messages.map((m) => ({
-          ...m,
-          id: crypto.randomUUID(),
-          timestamp: new Date(m.timestamp),
-        }))
-      );
-      setSearchCriteria(data.searchCriteria || {});
-    });
+    socket.on(
+      "session_resumed",
+      (data: { messages: BillyMessage[]; searchCriteria: SearchCriteria }) => {
+        setMessages(
+          data.messages.map((m) => ({
+            ...m,
+            id: crypto.randomUUID(),
+            timestamp: new Date(m.timestamp),
+          })),
+        );
+        setSearchCriteria(data.searchCriteria || {});
+      },
+    );
 
     socket.on("status", (data: { status: string }) => {
       if (data.status === "typing") setIsTyping(true);
@@ -99,41 +146,14 @@ export function useBilly(recruiterId: string) {
       setMessages((prev) => {
         const last = prev[prev.length - 1];
         if (!last) return prev;
-        return [
-          ...prev.slice(0, -1),
-          { ...last, searchResults: data.results },
-        ];
+        return [...prev.slice(0, -1), { ...last, searchResults: data.results }];
       });
     });
-    socket.on("jerry_pitch", (data: { athleteName: string; pitch: string; athleteId: string }) => {
-      setIsTyping(false);
-      setMessages((prev) => [
-        ...prev,
-        {
-          id: crypto.randomUUID(),
-          role: "assistant",
-          content: `🤖 **Jerry** (${data.athleteName}'s agent):\n\n${data.pitch}`,
-          timestamp: new Date(),
-          athleteId: data.athleteId,
-          options: [
-            {
-              label: `Contact ${data.athleteName}`,
-              action: "contact_athlete",
-              athleteId: data.athleteId,
-              athleteName: data.athleteName,
-            },
-            {
-              label: "Search other options",
-              action: "search_again",
-            },
-          ],
-        },
-      ]);
-    });
+
     return () => {
       socket.disconnect();
     };
-  }, [recruiterId]);
+  }, [recruiterId, conversationId]);
 
   const sendMessage = useCallback((content: string) => {
     if (!socketRef.current || !content.trim()) return;
@@ -147,22 +167,6 @@ export function useBilly(recruiterId: string) {
 
     setMessages((prev) => [...prev, optimisticMsg]);
     socketRef.current.emit("message", { content });
-  }, []);
-
-  const contactJerry = useCallback((athleteId: string, athleteName: string) => {
-    if (!socketRef.current) return;
-
-    // Mensaje optimista del usuario
-    const userMsg: BillyMessage = {
-      id: crypto.randomUUID(),
-      role: "user",
-      content: `Tell me more about ${athleteName} — get Jerry's pitch.`,
-      timestamp: new Date(),
-    };
-    setMessages((prev) => [...prev, userMsg]);
-    setIsTyping(true);
-
-    socketRef.current.emit("contact_jerry", { athleteId });
   }, []);
 
   const handleOption = useCallback((option: MessageOption) => {
@@ -190,9 +194,11 @@ export function useBilly(recruiterId: string) {
         timestamp: new Date(),
       };
       setMessages((prev) => [...prev, msg]);
-      socketRef.current.emit("message", { content: "I'd like to see other athlete options." });
+      socketRef.current.emit("message", {
+        content: "I'd like to see other athlete options.",
+      });
     }
   }, []);
 
-  return { messages, status, isTyping, searchCriteria, sendMessage, contactJerry, handleOption };
+  return { messages, status, isTyping, searchCriteria, sendMessage, handleOption };
 }

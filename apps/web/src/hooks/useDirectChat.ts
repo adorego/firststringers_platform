@@ -29,7 +29,7 @@ export interface DirectConversation {
   updatedAt: string;
 }
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3001";
+const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001";
 
 // ── REST helpers ──────────────────────────────────────────────────────────────
 
@@ -39,7 +39,7 @@ export async function fetchRecruiterConversations(
   try {
     const res = await fetch(`${API_URL}/conversations/recruiter/${recruiterId}`);
     if (!res.ok) return [];
-    return res.json();
+    return await res.json();
   } catch {
     return [];
   }
@@ -56,7 +56,7 @@ export async function createOrGetConversation(
       body: JSON.stringify({ recruiterId, athleteId }),
     });
     if (!res.ok) return null;
-    return res.json();
+    return await res.json();
   } catch {
     return null;
   }

@@ -141,43 +141,48 @@ export function DirectChatPanel({ conversation, onBack }: DirectChatPanelProps) 
 
   return (
     <div
-      className={`fixed right-0 top-0 z-60 flex h-full w-[520px] max-w-[90vw] flex-col bg-[#FAFAF9] shadow-2xl transition-transform duration-300 ease-in-out translate-x-0`}
+      className="fixed inset-0 z-60 flex flex-col bg-[#FAFAF9]"
       style={{ zIndex: 60 }}
     >
-      {/* Header */}
-      <div className="flex items-center gap-4 border-b border-[#E8E3DD] bg-[#FAFAF9] px-5 py-4">
+      {/* Header — safe area top for notch */}
+      <div
+        className="flex flex-shrink-0 items-center gap-3 border-b border-[#E8E3DD] bg-[#FAFAF9] px-3 py-3 sm:gap-4 sm:px-5 sm:py-4"
+        style={{ paddingTop: "max(0.75rem, env(safe-area-inset-top))" }}
+      >
         <button
           onClick={onBack}
-          className="rounded-lg p-1.5 text-[#ADA8A5] transition-colors hover:bg-[#EDEAE5] hover:text-[#1A1A1A]"
+          className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full text-[#ADA8A5] transition-colors hover:bg-[#EDEAE5] hover:text-[#1A1A1A] active:bg-[#EDEAE5]"
         >
-          <ArrowLeft size={18} />
+          <ArrowLeft size={20} />
         </button>
 
-        <div className="flex h-10 w-10 items-center justify-center rounded-full bg-[#EDEAE5] text-sm font-bold text-[#6B6561]">
+        <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-[#EDEAE5] text-sm font-bold text-[#6B6561]">
           {athleteInitials}
         </div>
 
         <div className="flex-1 min-w-0">
-          <p className="font-semibold text-[#1A1A1A] truncate">{athleteName}</p>
+          <p className="font-semibold text-[#1A1A1A] truncate text-sm sm:text-base">
+            {athleteName}
+          </p>
           <p className="text-xs text-[#ADA8A5]">
             {[athlete?.position, athlete?.sport].filter(Boolean).join(" · ")}
           </p>
         </div>
 
-        <div className="flex items-center gap-1.5">
+        <div className="flex flex-shrink-0 items-center gap-1.5">
           <span
             className={`h-2 w-2 rounded-full ${
               connected ? "bg-[#3B6FE8]" : "bg-[#ADA8A5]"
             }`}
           />
-          <span className="text-xs text-[#ADA8A5]">
+          <span className="hidden text-xs text-[#ADA8A5] sm:inline">
             {connected ? "Online" : "Connecting…"}
           </span>
         </div>
       </div>
 
-      {/* Messages */}
-      <div className="flex-1 overflow-y-auto px-5 py-4">
+      {/* Messages — min-h-0 so flex-1 scrolls correctly on mobile */}
+      <div className="min-h-0 flex-1 overflow-y-auto px-3 py-3 sm:px-5 sm:py-4">
         {messages.length === 0 && (
           <div className="flex h-full flex-col items-center justify-center gap-2 text-center">
             <div className="flex h-16 w-16 items-center justify-center rounded-full bg-[#EDEAE5] text-xl font-bold text-[#6B6561]">
@@ -196,7 +201,7 @@ export function DirectChatPanel({ conversation, onBack }: DirectChatPanelProps) 
         {grouped.map(({ date, msgs }) => (
           <div key={date}>
             {/* Date divider */}
-            <div className="my-4 flex items-center gap-3">
+            <div className="my-3 flex items-center gap-3 sm:my-4">
               <div className="flex-1 border-t border-[#E8E3DD]" />
               <span className="text-xs text-[#ADA8A5]">
                 {formatDateDivider(msgs[0].createdAt)}
@@ -205,7 +210,7 @@ export function DirectChatPanel({ conversation, onBack }: DirectChatPanelProps) 
             </div>
 
             {/* Messages for this day */}
-            <div className="flex flex-col gap-1.5">
+            <div className="flex flex-col gap-1">
               {msgs.map((msg, idx) => {
                 const isRecruiter = msg.senderRole === "recruiter";
                 const isLastInGroup =
@@ -219,30 +224,31 @@ export function DirectChatPanel({ conversation, onBack }: DirectChatPanelProps) 
                   >
                     {/* Athlete avatar — only on last in group */}
                     {!isRecruiter && (
-                      <div className="mr-2 flex-shrink-0 self-end">
+                      <div className="mr-1.5 flex-shrink-0 self-end sm:mr-2">
                         {isLastInGroup ? (
-                          <div className="flex h-7 w-7 items-center justify-center rounded-full bg-[#EDEAE5] text-xs font-bold text-[#6B6561]">
+                          <div className="flex h-6 w-6 items-center justify-center rounded-full bg-[#EDEAE5] text-[10px] font-bold text-[#6B6561] sm:h-7 sm:w-7 sm:text-xs">
                             {athleteInitials}
                           </div>
                         ) : (
-                          <div className="h-7 w-7" />
+                          <div className="h-6 w-6 sm:h-7 sm:w-7" />
                         )}
                       </div>
                     )}
 
+                    {/* max-w wider on mobile (like WhatsApp ~78%), narrower on desktop */}
                     <div
-                      className={`max-w-[72%] ${
+                      className={`max-w-[78%] sm:max-w-[55%] ${
                         isRecruiter ? "items-end" : "items-start"
                       } flex flex-col`}
                     >
                       <div
-                        className={`rounded-2xl px-4 py-2.5 ${
+                        className={`rounded-2xl px-3 py-2 sm:rounded-xl sm:px-3 sm:py-1.5 ${
                           isRecruiter
-                            ? "rounded-br-md bg-[#1A1A1A] text-white"
-                            : "rounded-bl-md bg-white text-[#1A1A1A] shadow-sm"
+                            ? "rounded-br-sm bg-[#1A1A1A] text-white"
+                            : "rounded-bl-sm bg-white text-[#1A1A1A] shadow-sm"
                         }`}
                       >
-                        <p className="whitespace-pre-wrap text-sm leading-relaxed">
+                        <p className="whitespace-pre-wrap text-sm leading-snug sm:text-xs">
                           {msg.content}
                         </p>
                       </div>
@@ -250,18 +256,18 @@ export function DirectChatPanel({ conversation, onBack }: DirectChatPanelProps) 
                       {/* Timestamp + read receipt — only on last in group */}
                       {isLastInGroup && (
                         <div
-                          className={`mt-1 flex items-center gap-1 ${
+                          className={`mt-0.5 flex items-center gap-1 ${
                             isRecruiter ? "flex-row-reverse" : "flex-row"
                           }`}
                         >
-                          <span className="text-[11px] text-[#ADA8A5]">
+                          <span className="text-[10px] text-[#ADA8A5]">
                             {formatTime(msg.createdAt)}
                           </span>
                           {isRecruiter &&
                             (msg.readAt ? (
-                              <CheckCheck size={12} className="text-[#3B6FE8]" />
+                              <CheckCheck size={11} className="text-[#3B6FE8]" />
                             ) : (
-                              <Check size={12} className="text-[#ADA8A5]" />
+                              <Check size={11} className="text-[#ADA8A5]" />
                             ))}
                         </div>
                       )}
@@ -276,9 +282,12 @@ export function DirectChatPanel({ conversation, onBack }: DirectChatPanelProps) 
         <div ref={messagesEndRef} />
       </div>
 
-      {/* Input */}
-      <div className="border-t border-[#E8E3DD] bg-[#FAFAF9] px-5 py-4">
-        <div className="flex items-end gap-3">
+      {/* Input — safe area bottom for home indicator */}
+      <div
+        className="flex-shrink-0 border-t border-[#E8E3DD] bg-[#FAFAF9] px-3 py-2 sm:px-5 sm:py-4"
+        style={{ paddingBottom: "max(0.5rem, env(safe-area-inset-bottom))" }}
+      >
+        <div className="flex items-end gap-2 sm:gap-3">
           <textarea
             ref={inputRef}
             value={input}
@@ -287,7 +296,7 @@ export function DirectChatPanel({ conversation, onBack }: DirectChatPanelProps) 
             placeholder="Message…"
             rows={1}
             style={{ maxHeight: "120px" }}
-            className="flex-1 resize-none overflow-y-auto rounded-2xl border border-[#E8E3DD] bg-white px-4 py-2.5 text-sm text-[#1A1A1A] placeholder:text-[#ADA8A5] focus:border-[#ADA8A5] focus:outline-none"
+            className="flex-1 resize-none overflow-y-auto rounded-3xl border border-[#E8E3DD] bg-white px-4 py-2.5 text-sm text-[#1A1A1A] placeholder:text-[#ADA8A5] focus:border-[#ADA8A5] focus:outline-none"
             onInput={(e) => {
               const el = e.currentTarget;
               el.style.height = "auto";
@@ -297,9 +306,9 @@ export function DirectChatPanel({ conversation, onBack }: DirectChatPanelProps) 
           <button
             onClick={handleSend}
             disabled={!input.trim() || !connected}
-            className="mb-0.5 flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full bg-[#1A1A1A] text-white transition-colors hover:bg-[#3B6FE8] disabled:opacity-40"
+            className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-[#1A1A1A] text-white transition-colors hover:bg-[#3B6FE8] active:bg-[#3B6FE8] disabled:opacity-40"
           >
-            <Send size={15} />
+            <Send size={16} />
           </button>
         </div>
       </div>

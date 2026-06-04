@@ -3,10 +3,9 @@ import type { Job } from 'bull';
 import { Logger } from '@nestjs/common';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import OpenAI from 'openai';
-import { PrismaService } from '../../shared/prisma/prisma.service';
 import { BillySessionService } from './billy-session.service';
+import { BillyConversationService } from './billy-conversation.service';
 import { BillyMessage, BillyMessageJob } from '../../shared/types/billy.types';
-import { Prisma } from 'generated/prisma/wasm';
 import { ScoutService } from '../scout/scout.service';
 
 const SYSTEM_PROMPT = `You are Billy, an intelligent sports recruitment assistant helping a coach or recruiter find the right athlete.
@@ -37,7 +36,7 @@ export class BillyWorker {
 
   constructor(
     private readonly session: BillySessionService,
-    private readonly prisma: PrismaService,
+    private readonly conversations: BillyConversationService,
     private readonly eventEmitter: EventEmitter2,
     private readonly scout: ScoutService,
   ) {
@@ -46,12 +45,11 @@ export class BillyWorker {
 
   @Process('process.message')
   async handle(job: Job<BillyMessageJob>) {
-    const { recruiterId, message } = job.data;
+    const { conversationId, recruiterId, message } = job.data;
 
     try {
-      const sessionState = await this.session.getSession(recruiterId);
+      const sessionState = await this.session.getSession(conversationId, recruiterId);
 
-      // Build message history for OpenAI
       const messages = sessionState.messages.map((m) => ({
         role: m.role as 'user' | 'assistant',
         content: m.content,
@@ -59,17 +57,13 @@ export class BillyWorker {
 
       const response = await this.openai.chat.completions.create({
         model: 'gpt-4o-mini',
-        messages: [
-          { role: 'system', content: SYSTEM_PROMPT },
-          ...messages,
-        ],
+        messages: [{ role: 'system', content: SYSTEM_PROMPT }, ...messages],
         temperature: 0.7,
         max_tokens: 300,
       });
 
       const rawContent = response.choices[0].message.content ?? '';
 
-      // Check if search is ready
       const searchMatch = rawContent.match(/\[SEARCH_READY\](.*?)\[\/SEARCH_READY\]/s);
       let visibleContent = rawContent;
       let searchResults: unknown[] | undefined;
@@ -81,53 +75,54 @@ export class BillyWorker {
             query: string;
             filters: Record<string, unknown>;
           };
-          visibleContent = rawContent
-            .replace(/\[SEARCH_READY\].*?\[\/SEARCH_READY\]/s, '')
-            .trim() || "Great! I have everything I need. Launching search...";
+          visibleContent =
+            rawContent.replace(/\[SEARCH_READY\].*?\[\/SEARCH_READY\]/s, '').trim() ||
+            'Great! I have everything I need. Launching search...';
 
           extractedFilters = parsed.filters;
-          await this.session.updateSearchCriteria(recruiterId, parsed.filters as never);
+          await this.session.updateSearchCriteria(conversationId, recruiterId, parsed.filters as never);
           searchResults = await this.runSearch(parsed.filters);
         } catch {
           // keep raw content if parse fails
         }
       }
 
-      // Persist assistant message
       const assistantMessage: BillyMessage = {
         role: 'assistant',
         content: visibleContent,
         timestamp: new Date(),
       };
-      await this.session.appendMessage(recruiterId, assistantMessage);
+      await this.session.appendMessage(conversationId, recruiterId, assistantMessage);
 
-      // Persist to DB
-        try {
-        await this.prisma.billyMessage.createMany({
-            data: [
-            { recruiterId, role: 'user', content: message },
-            {
-                recruiterId,
-                role: 'assistant',
-                content: visibleContent,
-                ...(extractedFilters ? { metadata: extractedFilters as Prisma.InputJsonValue } : {}),
-            },
-            ],
-        });
-        } catch (dbErr) {
-        this.logger.warn(`Could not persist messages for recruiter ${recruiterId}`, dbErr);
+      // Persist full conversation to DB
+      try {
+        const updatedSession = await this.session.getSession(conversationId, recruiterId);
+        await this.conversations.persistMessages(
+          conversationId,
+          updatedSession.messages,
+          updatedSession.searchCriteria,
+        );
+
+        // Auto-title: use first user message if title is still default
+        const firstUserMsg = updatedSession.messages.find((m) => m.role === 'user');
+        if (firstUserMsg && message === firstUserMsg.content) {
+          const title = firstUserMsg.content.slice(0, 50).trim();
+          await this.conversations.updateTitle(conversationId, title);
         }
+      } catch (dbErr) {
+        this.logger.warn(`Could not persist messages for conversation ${conversationId}`, dbErr);
+      }
 
       this.eventEmitter.emit('billy.response', {
-        recruiterId,
+        conversationId,
         message: visibleContent,
         searchCriteria: extractedFilters,
         searchResults,
       });
     } catch (error) {
-      this.logger.error(`Error processing Billy message for recruiter ${recruiterId}`, error);
+      this.logger.error(`Error processing Billy message for conversation ${conversationId}`, error);
       this.eventEmitter.emit('billy.error', {
-        recruiterId,
+        conversationId,
         error: 'Error processing your message. Please try again.',
       });
       throw error;
@@ -138,7 +133,7 @@ export class BillyWorker {
     try {
       this.logger.log(`Running search with filters: ${JSON.stringify(filters)}`);
       const result = await this.scout.search(
-        filters['query'] as string ?? '',
+        (filters['query'] as string) ?? '',
         filters as any,
         5,
       );

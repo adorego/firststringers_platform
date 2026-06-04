@@ -26,6 +26,7 @@ export interface SearchCriteria {
 }
 
 export interface BillySessionState {
+  conversationId: string;
   recruiterId: string;
   messages: BillyMessage[];
   searchCriteria: Partial<SearchCriteria>;
@@ -35,6 +36,7 @@ export interface BillySessionState {
 }
 
 export interface BillyMessageJob {
+  conversationId: string;
   recruiterId: string;
   message: string;
 }

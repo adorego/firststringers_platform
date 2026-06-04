@@ -18,6 +18,11 @@ import { BillySessionService } from './billy-session.service';
 import { BillyMessage, BillyMessageJob } from '../../shared/types/billy.types';
 import { JerryPitchService } from '../jerry/jerry-pitch.service';
 
+interface ClientContext {
+  recruiterId: string;
+  conversationId: string;
+}
+
 @Public()
 @WebSocketGateway({
   cors: {
@@ -31,7 +36,7 @@ export class BillyGateway implements OnGatewayConnection, OnGatewayDisconnect {
   server: Server;
 
   private readonly logger = new Logger(BillyGateway.name);
-  private connectedRecruiters = new Map<string, string>(); // socketId -> recruiterId
+  private clients = new Map<string, ClientContext>(); // socketId -> context
 
   constructor(
     @InjectQueue('billy') private readonly billyQueue: Queue,
@@ -43,62 +48,60 @@ export class BillyGateway implements OnGatewayConnection, OnGatewayDisconnect {
   async handleConnection(client: Socket) {
     try {
       const recruiterId = client.handshake.query.recruiterId as string;
+      const conversationId = client.handshake.query.conversationId as string;
 
-      if (!recruiterId) {
+      if (!recruiterId || !conversationId) {
         client.disconnect();
         return;
       }
 
-      // Evict any stale sockets for this recruiter (e.g. React StrictMode double-mount)
-      for (const [sid, rid] of this.connectedRecruiters.entries()) {
-        if (rid === recruiterId && sid !== client.id) {
+      // Evict stale sockets for this conversation
+      for (const [sid, ctx] of this.clients.entries()) {
+        if (ctx.conversationId === conversationId && sid !== client.id) {
           const stale = this.server.sockets.sockets.get(sid);
-          stale?.leave(`recruiter:${recruiterId}`);
-          this.connectedRecruiters.delete(sid);
+          stale?.leave(`conversation:${conversationId}`);
+          this.clients.delete(sid);
         }
       }
 
-      this.connectedRecruiters.set(client.id, recruiterId);
-      client.join(`recruiter:${recruiterId}`);
+      this.clients.set(client.id, { recruiterId, conversationId });
+      client.join(`conversation:${conversationId}`);
 
       this.logger.log(
-        `Recruiter ${recruiterId} connected — socket ${client.id}`,
+        `Recruiter ${recruiterId} connected on conversation ${conversationId} — socket ${client.id}`,
       );
 
-      const session = await this.session.getSession(recruiterId);
+      const sessionState = await this.session.getSession(conversationId, recruiterId);
 
-      if (session.messages.length > 0) {
-        // Resume existing session — send history
+      if (sessionState.messages.length > 0) {
         client.emit('session_resumed', {
-          messages: session.messages,
-          searchCriteria: session.searchCriteria,
+          messages: sessionState.messages,
+          searchCriteria: sessionState.searchCriteria,
         });
       } else {
-        // New session — send welcome
         const welcomeMessage: BillyMessage = {
           role: 'assistant',
           content:
             "Hi! I'm Billy, your recruiting intelligence agent. Tell me what kind of athlete you're looking for and I'll help you find the best matches. What sport and position are you recruiting for?",
           timestamp: new Date(),
         };
-        await this.session.appendMessage(recruiterId, welcomeMessage);
+        await this.session.appendMessage(conversationId, recruiterId, welcomeMessage);
         client.emit('message', welcomeMessage);
       }
     } catch (err) {
       this.logger.error(`Connection error for socket ${client.id}`, err);
-      client.emit('error', {
-        code: 'CONNECTION_ERROR',
-        message: 'Connection error',
-      });
+      client.emit('error', { code: 'CONNECTION_ERROR', message: 'Connection error' });
       client.disconnect();
     }
   }
 
   handleDisconnect(client: Socket) {
-    const recruiterId = this.connectedRecruiters.get(client.id);
-    this.connectedRecruiters.delete(client.id);
-    if (recruiterId) {
-      this.logger.log(`Recruiter ${recruiterId} disconnected`);
+    const ctx = this.clients.get(client.id);
+    this.clients.delete(client.id);
+    if (ctx) {
+      this.logger.log(
+        `Recruiter ${ctx.recruiterId} disconnected from conversation ${ctx.conversationId}`,
+      );
     }
   }
 
@@ -107,15 +110,13 @@ export class BillyGateway implements OnGatewayConnection, OnGatewayDisconnect {
     @ConnectedSocket() client: Socket,
     @MessageBody() dto: { content: string },
   ) {
-    const recruiterId = this.connectedRecruiters.get(client.id);
-
-    if (!recruiterId) {
-      client.emit('error', {
-        code: 'UNAUTHENTICATED',
-        message: 'Not authenticated',
-      });
+    const ctx = this.clients.get(client.id);
+    if (!ctx) {
+      client.emit('error', { code: 'UNAUTHENTICATED', message: 'Not authenticated' });
       return;
     }
+
+    const { recruiterId, conversationId } = ctx;
 
     try {
       const userMessage: BillyMessage = {
@@ -123,41 +124,30 @@ export class BillyGateway implements OnGatewayConnection, OnGatewayDisconnect {
         content: dto.content,
         timestamp: new Date(),
       };
-      await this.session.appendMessage(recruiterId, userMessage);
+      await this.session.appendMessage(conversationId, recruiterId, userMessage);
 
-      // Signal typing indicator
       client.emit('status', { status: 'typing' });
 
-      const job: BillyMessageJob = {
-        recruiterId,
-        message: dto.content,
-      };
-
+      const job: BillyMessageJob = { conversationId, recruiterId, message: dto.content };
       await this.billyQueue.add('process.message', job, {
         attempts: 1,
         removeOnComplete: true,
         removeOnFail: true,
       });
     } catch (err) {
-      this.logger.error(
-        `Error handling message for recruiter ${recruiterId}`,
-        err,
-      );
-      client.emit('error', {
-        code: 'MESSAGE_ERROR',
-        message: 'Error processing message',
-      });
+      this.logger.error(`Error handling message for conversation ${conversationId}`, err);
+      client.emit('error', { code: 'MESSAGE_ERROR', message: 'Error processing message' });
     }
   }
 
   @OnEvent('billy.response')
   handleBillyResponse(payload: {
-    recruiterId: string;
+    conversationId: string;
     message: string;
     searchCriteria?: Record<string, unknown>;
     searchResults?: unknown[];
   }) {
-    this.server.to(`recruiter:${payload.recruiterId}`).emit('message', {
+    this.server.to(`conversation:${payload.conversationId}`).emit('message', {
       role: 'assistant',
       content: payload.message,
       timestamp: new Date(),
@@ -167,46 +157,39 @@ export class BillyGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
     if (payload.searchCriteria) {
       this.server
-        .to(`recruiter:${payload.recruiterId}`)
+        .to(`conversation:${payload.conversationId}`)
         .emit('criteria_updated', { criteria: payload.searchCriteria });
     }
 
     if (payload.searchResults) {
       this.server
-        .to(`recruiter:${payload.recruiterId}`)
+        .to(`conversation:${payload.conversationId}`)
         .emit('search_results', { results: payload.searchResults });
     }
   }
 
   @OnEvent('billy.error')
-  handleBillyError(payload: { recruiterId: string; error: string }) {
+  handleBillyError(payload: { conversationId: string; error: string }) {
     this.server
-      .to(`recruiter:${payload.recruiterId}`)
+      .to(`conversation:${payload.conversationId}`)
       .emit('error', { code: 'PROCESSING_ERROR', message: payload.error });
   }
+
   @SubscribeMessage('contact_jerry')
   async handleContactJerry(
     @ConnectedSocket() client: Socket,
     @MessageBody() dto: { athleteId: string },
   ) {
-    const recruiterId = this.connectedRecruiters.get(client.id);
-    if (!recruiterId) return;
+    const ctx = this.clients.get(client.id);
+    if (!ctx) return;
 
     try {
       client.emit('status', { status: 'typing' });
-
       const { athleteName, pitch } = await this.jerryPitch.getPitchForRecruiter(dto.athleteId);
-
       client.emit('jerry_pitch', { athleteName, pitch, athleteId: dto.athleteId });
 
-      // Guardar en sesión de Billy
-      const msg = {
-        role: 'assistant' as const,
-        content: pitch,
-        timestamp: new Date(),
-      };
-      await this.session.appendMessage(recruiterId, msg);
-
+      const msg: BillyMessage = { role: 'assistant', content: pitch, timestamp: new Date() };
+      await this.session.appendMessage(ctx.conversationId, ctx.recruiterId, msg);
     } catch (error) {
       this.logger.error('Error getting Jerry pitch', error);
       client.emit('message', {
@@ -216,24 +199,24 @@ export class BillyGateway implements OnGatewayConnection, OnGatewayDisconnect {
       });
     }
   }
+
   @SubscribeMessage('initiate_contact')
   async handleInitiateContact(
     @ConnectedSocket() client: Socket,
     @MessageBody() dto: { athleteId: string; athleteName: string },
   ) {
-    const recruiterId = this.connectedRecruiters.get(client.id);
-    if (!recruiterId) return;
+    const ctx = this.clients.get(client.id);
+    if (!ctx) return;
 
     client.emit('status', { status: 'typing' });
 
-    // Respuesta de Billy confirmando el contacto
-    const msg = {
-      role: 'assistant' as const,
+    const msg: BillyMessage = {
+      role: 'assistant',
       content: `Great choice! I'm initiating contact with ${dto.athleteName}'s team. A private chat will be set up shortly. Is there anything specific you'd like me to mention when reaching out?`,
       timestamp: new Date(),
     };
 
-    await this.session.appendMessage(recruiterId, msg);
+    await this.session.appendMessage(ctx.conversationId, ctx.recruiterId, msg);
     client.emit('message', msg);
   }
 }

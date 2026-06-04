@@ -116,3 +116,16 @@ model BillyMessage {
 
   @@map("billy_messages")
 }
+
+model BillyConversation {
+  id             String   @id @default(uuid())
+  recruiterId    String
+  title          String   @default("New search")
+  messages       Json     @default("[]")
+  searchCriteria Json     @default("{}")
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@index([recruiterId])
+  @@map("billy_conversations")
+}
