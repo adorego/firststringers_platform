@@ -5,6 +5,7 @@ declare module "next-auth" {
     role: "athlete" | "recruiter";
     accessToken: string;
     refreshToken: string;
+    accessTokenExpires: number;
   }
 
   interface Session {
@@ -15,6 +16,7 @@ declare module "next-auth" {
       role: "athlete" | "recruiter";
     };
     accessToken: string;
+    error?: string;
   }
 }
 
@@ -24,5 +26,7 @@ declare module "next-auth/jwt" {
     id: string;
     accessToken: string;
     refreshToken: string;
+    accessTokenExpires: number;
+    error?: string;
   }
 }

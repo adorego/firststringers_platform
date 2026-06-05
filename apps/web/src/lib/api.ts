@@ -9,7 +9,7 @@ import {
   mockFullDossier,
 } from "@/lib/mocks";
 
-const USE_MOCKS = process.env.NEXT_PUBLIC_USE_MOCKS !== "false"; // true by default
+const USE_MOCKS = process.env.NEXT_PUBLIC_USE_MOCKS === "true"; // false by default
 
 // ── Axios instance (used when USE_MOCKS is false) ──────────────────────────
 const http = axios.create({
@@ -17,12 +17,16 @@ const http = axios.create({
   headers: { "Content-Type": "application/json" },
 });
 
+// Token is set from the next-auth session via setAccessToken()
+let _accessToken: string | null = null;
+
+export function setAccessToken(token: string | null) {
+  _accessToken = token;
+}
+
 http.interceptors.request.use((config) => {
-  if (typeof window !== "undefined") {
-    const token = localStorage.getItem("fs_token");
-    if (token) {
-      config.headers.Authorization = `Bearer ${token}`;
-    }
+  if (_accessToken) {
+    config.headers.Authorization = `Bearer ${_accessToken}`;
   }
   return config;
 });
@@ -32,42 +36,18 @@ function delay<T>(data: T, ms = 300): Promise<T> {
   return new Promise((resolve) => setTimeout(() => resolve(data), ms));
 }
 
-// ── Auth types ─────────────────────────────────────────────────────────────
-interface AuthTokens {
-  access_token: string;
-  refresh_token: string;
-}
-
 // ── API methods ────────────────────────────────────────────────────────────
 
 export const api = {
-  // Auth
+  // Auth — registration is a direct HTTP call (before session exists)
   async register(data: {
     email: string;
     password: string;
     name: string;
     role: string;
-  }): Promise<AuthTokens> {
-    const { data: tokens } = await http.post<AuthTokens>("/auth/register", data);
-    localStorage.setItem("fs_token", tokens.access_token);
-    localStorage.setItem("fs_refresh_token", tokens.refresh_token);
+  }): Promise<{ access_token: string; refresh_token: string }> {
+    const { data: tokens } = await http.post<{ access_token: string; refresh_token: string }>("/auth/register", data);
     return tokens;
-  },
-
-  async refresh(): Promise<AuthTokens> {
-    const refreshToken = localStorage.getItem("fs_refresh_token");
-    if (!refreshToken) throw new Error("No refresh token");
-    const { data: tokens } = await http.post<AuthTokens>("/auth/refresh", {
-      refresh_token: refreshToken,
-    });
-    localStorage.setItem("fs_token", tokens.access_token);
-    localStorage.setItem("fs_refresh_token", tokens.refresh_token);
-    return tokens;
-  },
-
-  logout() {
-    localStorage.removeItem("fs_token");
-    localStorage.removeItem("fs_refresh_token");
   },
 
   // Athletes

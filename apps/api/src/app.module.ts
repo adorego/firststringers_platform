@@ -7,8 +7,10 @@ import { PrismaModule } from './shared/prisma/prisma.module';
 import { RedisModule } from './shared/redis/redis.module';
 import { LLMModule } from './shared/llm/llm.module';
 import { AuthModule } from './modules/auth/auth.module';
+import { AthleteModule } from './modules/athlete/athlete.module';
 import { JerryModule } from './modules/jerry/jerry.module';
 import { DossierModule } from './modules/dossier/dossier.module';
+import { ScoutModule } from './modules/scout/scout.module';
 import { JwtAuthGuard } from './modules/auth/auth.guard';
 import { RolesGuard } from './modules/auth/roles.guard';
 import { HealthModule } from './modules/health/health.module';
@@ -30,8 +32,10 @@ import { ConversationsModule } from './modules/conversations/conversations.modul
     RedisModule,
     LLMModule,
     AuthModule,
+    AthleteModule,
     JerryModule,
     DossierModule,
+    ScoutModule,
     HealthModule,
     BillyModule,
     ScoutModule,

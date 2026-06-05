@@ -21,6 +21,7 @@ import {
   Eye,
   HelpCircle,
   LogOut,
+  ClipboardList,
 } from "lucide-react";
 import {
   listBillyConversations,
@@ -296,6 +297,7 @@ interface SidebarProps {
 export function AthleteNav() {
   const items: NavItem[] = [
     { href: "/chat", icon: <MessageSquare size={20} />, label: "Chat" },
+    { href: "/dossier", icon: <ClipboardList size={20} />, label: "Dossier" },
     { href: "/pipeline", icon: <Layers size={20} />, label: "Pipeline" },
     { href: "/profile", icon: <User size={20} />, label: "Profile" },
   ];
