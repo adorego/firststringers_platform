@@ -74,20 +74,17 @@ function timeAgo(date: string): string {
 }
 
 function TimeAgo({ date }: { date: Date | string }) {
-  const [label, setLabel] = useState('');
+  const [, forceUpdate] = useState(0);
 
   useEffect(() => {
-    const d = typeof date === 'string' ? date : date.toISOString();
-    setLabel(timeAgo(d));
-    const interval = setInterval(() => setLabel(timeAgo(d)), 60000);
+    const interval = setInterval(() => forceUpdate((n) => n + 1), 60000);
     return () => clearInterval(interval);
-  }, [date]);
+  }, []);
 
-  if (!label) return null;
-
+  const d = typeof date === 'string' ? date : date.toISOString();
   return (
     <span className="flex-shrink-0 text-xs text-[#ADA8A5]">
-      {label}
+      {timeAgo(d)}
     </span>
   );
 }

@@ -61,10 +61,13 @@ export function DossierPanel({
   openToIntro = false,
 }: DossierPanelProps) {
   const [introState, setIntroState] = useState<IntroState>("idle");
+  const [prevAthleteId, setPrevAthleteId] = useState(athlete?.id);
 
-  useEffect(() => {
+  if (prevAthleteId !== athlete?.id) {
+    setPrevAthleteId(athlete?.id);
     setIntroState(openToIntro ? "confirming" : "idle");
-  }, [athlete?.id]);
+  }
+
   const isOpen = athlete !== null;
 
   // Reset intro flow whenever the panel opens a new athlete or closes

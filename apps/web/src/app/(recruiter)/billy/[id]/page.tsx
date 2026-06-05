@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect } from "react";
 import { ArrowUp } from "lucide-react";
-import { useParams } from "next/navigation";
+import { useParams, useSearchParams, useRouter } from "next/navigation";
 import { useBilly, AthleteResult } from "@/hooks/useBilly";
 import { DossierPanel } from "@/components/recruiter/DossierPanel";
 
@@ -160,17 +160,29 @@ function InputBar({
 
 export default function BillyChatPage() {
   const { id: conversationId } = useParams<{ id: string }>();
+  const searchParams = useSearchParams();
+  const router = useRouter();
 
   const [input, setInput] = useState("");
   const [selectedAthlete, setSelectedAthlete] = useState<AthleteResult | null>(null);
   const [openToIntro, setOpenToIntro] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const hasSentInitialRef = useRef(false);
 
-  const { messages, status, isTyping, sendMessage, handleOption } = useBilly(
+  const { messages, status, isTyping, sessionLoaded, sendMessage, handleOption } = useBilly(
     MOCK_RECRUITER_ID,
     conversationId,
   );
+
+  // Auto-send the ?q= query param as the first message when a new conversation is opened
+  useEffect(() => {
+    const q = searchParams.get("q");
+    if (!q || !sessionLoaded || hasSentInitialRef.current || messages.length > 0) return;
+    hasSentInitialRef.current = true;
+    sendMessage(q);
+    router.replace(`/billy/${conversationId}`);
+  }, [sessionLoaded]);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });

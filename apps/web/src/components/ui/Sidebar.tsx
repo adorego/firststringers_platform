@@ -17,8 +17,6 @@ import {
   Users,
   Share2,
   X,
-  Bell,
-  Eye,
   HelpCircle,
   LogOut,
   ClipboardList,

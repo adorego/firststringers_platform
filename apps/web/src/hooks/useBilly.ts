@@ -94,6 +94,7 @@ export function useBilly(recruiterId: string, conversationId: string) {
   const [messages, setMessages] = useState<BillyMessage[]>([]);
   const [status, setStatus] = useState<ConnectionStatus>("connecting");
   const [isTyping, setIsTyping] = useState(false);
+  const [sessionLoaded, setSessionLoaded] = useState(false);
   const [searchCriteria, setSearchCriteria] = useState<SearchCriteria>({});
   const socketRef = useRef<Socket | null>(null);
 
@@ -131,6 +132,7 @@ export function useBilly(recruiterId: string, conversationId: string) {
           })),
         );
         setSearchCriteria(data.searchCriteria || {});
+        setSessionLoaded(true);
       },
     );
 
@@ -200,5 +202,5 @@ export function useBilly(recruiterId: string, conversationId: string) {
     }
   }, []);
 
-  return { messages, status, isTyping, searchCriteria, sendMessage, handleOption };
+  return { messages, status, isTyping, sessionLoaded, searchCriteria, sendMessage, handleOption };
 }

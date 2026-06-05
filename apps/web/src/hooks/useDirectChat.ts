@@ -126,7 +126,6 @@ export function useDirectChat(
   // Join a conversation room and load its history
   useEffect(() => {
     if (!conversationId || !socketRef.current?.connected) return;
-    setMessages([]);
     socketRef.current.emit("join_conversation", { conversationId });
   }, [conversationId]);
 
