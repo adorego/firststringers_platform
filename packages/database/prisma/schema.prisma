@@ -17,18 +17,19 @@ model Organization {
 }
 
 model Athlete {
-  id             String         @id @default(uuid())
+  id             String               @id @default(uuid())
   organizationId String
-  organization   Organization   @relation(fields: [organizationId], references: [id])
-  email          String         @unique
+  organization   Organization         @relation(fields: [organizationId], references: [id])
+  email          String               @unique
   name           String
   sport          String?
   position       String?
   dossier        Dossier?
   sessions       JerrySession[]
   user           User?
-  createdAt      DateTime       @default(now())
-  updatedAt      DateTime       @updatedAt
+  conversations  DirectConversation[]
+  createdAt      DateTime             @default(now())
+  updatedAt      DateTime             @updatedAt
 }
 
 model Dossier {
@@ -45,21 +46,26 @@ model Dossier {
 
 model JerrySession {
   id        String   @id @default(uuid())
-  athleteId String
+  athleteId String   @unique
   athlete   Athlete  @relation(fields: [athleteId], references: [id])
   messages  Json     @default("[]")
   status    String   @default("active")
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+  currentPitch String?
+  pitchVersion Int      @default(0)
+  lastPitchAt  DateTime? 
 }
 
 model Recruiter {
-  id             String       @id @default(uuid())
+  id             String               @id @default(uuid())
   organizationId String
-  organization   Organization @relation(fields: [organizationId], references: [id])
-  email          String       @unique
+  organization   Organization         @relation(fields: [organizationId], references: [id])
+  email          String               @unique
   name           String
-  createdAt      DateTime     @default(now())
+  createdAt      DateTime             @default(now())
+  billyMessages  BillyMessage[]
+  conversations  DirectConversation[]
 }
 
 model User {
@@ -70,4 +76,56 @@ model User {
   athleteId String?  @unique
   athlete   Athlete? @relation(fields: [athleteId], references: [id])
   createdAt DateTime @default(now())
+}
+
+model DirectConversation {
+  id          String          @id @default(uuid())
+  recruiterId String
+  recruiter   Recruiter       @relation(fields: [recruiterId], references: [id])
+  athleteId   String
+  athlete     Athlete         @relation(fields: [athleteId], references: [id])
+  messages    DirectMessage[]
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+
+  @@unique([recruiterId, athleteId])
+  @@map("direct_conversations")
+}
+
+model DirectMessage {
+  id             String             @id @default(uuid())
+  conversationId String
+  conversation   DirectConversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  senderRole     String
+  senderId       String
+  content        String
+  readAt         DateTime?
+  createdAt      DateTime           @default(now())
+
+  @@map("direct_messages")
+}
+
+model BillyMessage {
+  id          String    @id @default(uuid())
+  recruiterId String
+  recruiter   Recruiter @relation(fields: [recruiterId], references: [id], onDelete: Cascade)
+  role        String
+  content     String
+  metadata    Json?
+  createdAt   DateTime  @default(now())
+
+  @@map("billy_messages")
+}
+
+model BillyConversation {
+  id             String   @id @default(uuid())
+  recruiterId    String
+  title          String   @default("New search")
+  messages       Json     @default("[]")
+  searchCriteria Json     @default("{}")
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@index([recruiterId])
+  @@map("billy_conversations")
 }
