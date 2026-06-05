@@ -77,7 +77,7 @@ export function LearnBillyPanel({ isOpen, onClose }: LearnBillyPanelProps) {
             <p className="text-sm leading-relaxed text-[#3B6FE8]">
               <strong className="font-semibold">Billy</strong> is an AI agent that helps you
               discover and recruit the right athletes through natural conversation. He replaces
-              manual search filters with an intelligent dialogue that understands your program&apos;s
+              manual search filters with an intelligent dialogue that understands your program's
               real needs.
             </p>
           </div>
