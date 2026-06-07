@@ -7,6 +7,9 @@ export type JerryIntent =
   | 'academic'
   | 'personal'
   | 'availability'
+  | 'media'
+  | 'character'
+  | 'recruiting'
   | 'question'
   | 'other';
 
@@ -26,27 +29,74 @@ export interface JerrySessionState {
 }
 
 export interface DossierData {
+  // Section 2: Athlete Identity
   identity?: {
     sport?: string;
     position?: string;
-    nationality?: string;
+    location?: string;
+    school?: string;
+    club?: string;
+    competitiveLevel?: string;
     graduationYear?: number;
+    nationality?: string;
   };
+  // Section 3: Athletic Snapshot
   performance?: {
     stats?: Record<string, number>;
     leagueLevel?: string;
+    physicalProfile?: {
+      height?: string;
+      weight?: string;
+      speed?: string;
+      vertical?: string;
+      dominantSide?: string;
+    };
+    strengths?: string[];
+    physicalStatus?: string;
+    archetype?: string;
     highlightUrls?: string[];
   };
+  // Section 3 cont: Academic
   academic?: {
     gpa?: number;
     satAct?: number;
     intendedMajor?: string;
     ncaaEligibility?: boolean;
+    academicInterests?: string[];
   };
+  // Section 4: Recruiting Direction
   availability?: {
     transferPortal?: boolean;
     preferredRegions?: string[];
     scholarshipNeed?: boolean;
+    timeline?: string;
+    competitiveLevelGoal?: string;
+    goals?: string[];
+    limitations?: string[];
+    relocationOpenness?: string;
+    nonNegotiables?: string[];
+  };
+  // Section 5: Representation Assets
+  media?: {
+    highlightUrls?: string[];
+    clipUrls?: string[];
+    socialMedia?: {
+      instagram?: string;
+      twitter?: string;
+      hudl?: string;
+      other?: string;
+    };
+    references?: string[];
+  };
+  // Section 6: Competitive Identity & Growth Signals
+  character?: {
+    mentality?: string;
+    leadership?: string;
+    coachability?: string;
+    resilience?: string;
+    motivation?: string;
+    growthAreas?: string[];
+    selfRepresentation?: string;
   };
 }
 
@@ -80,7 +130,9 @@ export type ConversationStrategyType =
   | 'answer_and_redirect'
   | 'clarify'
   | 'strategic_ask'
+  | 'section_transition'
   | 'narrative_focus'
+  | 'activation'
   | 'reset';
 
 export interface ConversationStrategy {

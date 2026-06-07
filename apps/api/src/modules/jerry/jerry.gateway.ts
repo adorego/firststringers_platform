@@ -47,7 +47,10 @@ export class JerryGateway implements OnGatewayConnection, OnGatewayDisconnect {
       const token = client.handshake.auth.token as string | undefined;
 
       if (!token) {
-        client.emit('error', { code: 'UNAUTHENTICATED', message: 'Token required' });
+        client.emit('error', {
+          code: 'UNAUTHENTICATED',
+          message: 'Token required',
+        });
         client.disconnect();
         return;
       }
@@ -56,13 +59,19 @@ export class JerryGateway implements OnGatewayConnection, OnGatewayDisconnect {
       try {
         payload = this.jwt.verify<{ sub: string; athleteId?: string }>(token);
       } catch {
-        client.emit('error', { code: 'UNAUTHENTICATED', message: 'Invalid token' });
+        client.emit('error', {
+          code: 'UNAUTHENTICATED',
+          message: 'Invalid token',
+        });
         client.disconnect();
         return;
       }
 
       if (!payload.athleteId) {
-        client.emit('error', { code: 'UNAUTHENTICATED', message: 'Not an athlete' });
+        client.emit('error', {
+          code: 'UNAUTHENTICATED',
+          message: 'Not an athlete',
+        });
         client.disconnect();
         return;
       }

@@ -95,7 +95,16 @@ export class LLMService {
         {
           role: 'system',
           content: `Classify the athlete's message into exactly one of these categories:
-            stats, academic, personal, availability, question, other.
+            stats, academic, personal, availability, media, character, recruiting, question, other.
+            - stats: athletic performance, metrics, records, game statistics
+            - academic: GPA, test scores, major, academic interests
+            - personal: name, sport, position, location, school, club, graduation year
+            - availability: transfer portal, regions, scholarship needs
+            - media: highlights, clips, social media, references, training content
+            - character: mentality, leadership, coachability, resilience, motivation, growth
+            - recruiting: goals, timeline, target programs, competitive level preferences, limitations
+            - question: athlete asking a question
+            - other: anything else
             Respond with ONLY the category, no explanation or punctuation.`,
         },
         {
@@ -113,6 +122,9 @@ export class LLMService {
       'academic',
       'personal',
       'availability',
+      'media',
+      'character',
+      'recruiting',
       'question',
       'other',
     ];
@@ -135,6 +147,22 @@ export class LLMService {
                 additionalProperties: { type: 'number' },
               },
               leagueLevel: { type: 'string' },
+              physicalProfile: {
+                type: 'object',
+                properties: {
+                  height: { type: 'string' },
+                  weight: { type: 'string' },
+                  speed: { type: 'string' },
+                  vertical: { type: 'string' },
+                  dominantSide: { type: 'string' },
+                },
+              },
+              strengths: {
+                type: 'array',
+                items: { type: 'string' },
+              },
+              physicalStatus: { type: 'string' },
+              archetype: { type: 'string' },
             },
           },
         },
@@ -149,6 +177,10 @@ export class LLMService {
               satAct: { type: 'number' },
               intendedMajor: { type: 'string' },
               ncaaEligibility: { type: 'boolean' },
+              academicInterests: {
+                type: 'array',
+                items: { type: 'string' },
+              },
               graduationYear: { type: 'number' },
             },
           },
@@ -162,6 +194,10 @@ export class LLMService {
             properties: {
               sport: { type: 'string' },
               position: { type: 'string' },
+              location: { type: 'string' },
+              school: { type: 'string' },
+              club: { type: 'string' },
+              competitiveLevel: { type: 'string' },
               nationality: { type: 'string' },
               graduationYear: { type: 'number' },
             },
@@ -180,6 +216,88 @@ export class LLMService {
                 items: { type: 'string' },
               },
               scholarshipNeed: { type: 'boolean' },
+              timeline: { type: 'string' },
+              relocationOpenness: { type: 'string' },
+              nonNegotiables: {
+                type: 'array',
+                items: { type: 'string' },
+              },
+            },
+          },
+        },
+      },
+      media: {
+        type: 'object',
+        properties: {
+          media: {
+            type: 'object',
+            properties: {
+              highlightUrls: {
+                type: 'array',
+                items: { type: 'string' },
+              },
+              clipUrls: {
+                type: 'array',
+                items: { type: 'string' },
+              },
+              socialMedia: {
+                type: 'object',
+                properties: {
+                  instagram: { type: 'string' },
+                  twitter: { type: 'string' },
+                  hudl: { type: 'string' },
+                  other: { type: 'string' },
+                },
+              },
+              references: {
+                type: 'array',
+                items: { type: 'string' },
+              },
+            },
+          },
+        },
+      },
+      character: {
+        type: 'object',
+        properties: {
+          character: {
+            type: 'object',
+            properties: {
+              mentality: { type: 'string' },
+              leadership: { type: 'string' },
+              coachability: { type: 'string' },
+              resilience: { type: 'string' },
+              motivation: { type: 'string' },
+              growthAreas: {
+                type: 'array',
+                items: { type: 'string' },
+              },
+              selfRepresentation: { type: 'string' },
+            },
+          },
+        },
+      },
+      recruiting: {
+        type: 'object',
+        properties: {
+          availability: {
+            type: 'object',
+            properties: {
+              timeline: { type: 'string' },
+              competitiveLevelGoal: { type: 'string' },
+              goals: {
+                type: 'array',
+                items: { type: 'string' },
+              },
+              limitations: {
+                type: 'array',
+                items: { type: 'string' },
+              },
+              relocationOpenness: { type: 'string' },
+              nonNegotiables: {
+                type: 'array',
+                items: { type: 'string' },
+              },
             },
           },
         },

@@ -64,21 +64,19 @@ export class ScoutService {
     return athletes.map((a) => this.toMatchResult(a));
   }
 
-  private toMatchResult(
-    athlete: {
-      id: string;
-      email: string;
-      name: string;
-      sport: string | null;
-      position: string | null;
-      createdAt: Date;
-      dossier: {
-        data: unknown;
-        completeness: number;
-        narrative: string | null;
-      } | null;
-    },
-  ): MatchResult {
+  private toMatchResult(athlete: {
+    id: string;
+    email: string;
+    name: string;
+    sport: string | null;
+    position: string | null;
+    createdAt: Date;
+    dossier: {
+      data: unknown;
+      completeness: number;
+      narrative: string | null;
+    } | null;
+  }): MatchResult {
     const data = (athlete.dossier?.data as DossierData) || {};
     const completeness = athlete.dossier?.completeness ?? 0;
 
@@ -89,9 +87,9 @@ export class ScoutService {
 
     const fitScore = Math.round(
       athleticScore * 0.35 +
-      academicScore * 0.25 +
-      regionScore * 0.20 +
-      positionScore * 0.20,
+        academicScore * 0.25 +
+        regionScore * 0.2 +
+        positionScore * 0.2,
     );
 
     // Consider athletes created in the last 7 days as "new"
@@ -122,14 +120,20 @@ export class ScoutService {
         { category: 'Region Fit', score: regionScore },
         { category: 'Position Need', score: positionScore },
       ],
-      aiSummary: athlete.dossier?.narrative ?? 'Dossier in progress — not enough data for AI summary.',
+      aiSummary:
+        athlete.dossier?.narrative ??
+        'Dossier in progress — not enough data for AI summary.',
       isNew: athlete.createdAt > sevenDaysAgo,
     };
   }
 
   private scoreAthletics(data: DossierData): number {
     let score = 40; // base
-    if (data.performance?.stats && Object.keys(data.performance.stats).length > 0) score += 30;
+    if (
+      data.performance?.stats &&
+      Object.keys(data.performance.stats).length > 0
+    )
+      score += 30;
     if (data.performance?.leagueLevel) score += 15;
     if (data.performance?.highlightUrls?.length) score += 15;
     return Math.min(score, 100);

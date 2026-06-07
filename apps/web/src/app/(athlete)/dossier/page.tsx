@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
+import { useSession } from "next-auth/react";
 import { useDossierStore } from "@/stores/dossier-store";
 
 interface DossierSection {
@@ -29,25 +30,45 @@ function buildSections(
   const performance = data.performance ?? {};
   const academic = data.academic ?? {};
   const availability = data.availability ?? {};
+  const media = data.media ?? {};
+  const character = data.character ?? {};
 
   return [
-    toSection("Personal Info", [
+    toSection("Athlete Identity", [
       { label: "Sport", value: identity.sport ?? null },
       { label: "Position", value: identity.position ?? null },
-      { label: "Nationality", value: identity.nationality ?? null },
+      { label: "Location", value: identity.location ?? null },
+      { label: "School", value: identity.school ?? null },
+      { label: "Club / Team", value: identity.club ?? null },
+      { label: "Competitive Level", value: identity.competitiveLevel ?? null },
       {
         label: "Graduation Year",
         value: identity.graduationYear?.toString() ?? null,
       },
     ]),
-    toSection("Athletic Stats", [
+    toSection("Athletic Snapshot", [
+      { label: "Height", value: performance.physicalProfile?.height ?? null },
+      { label: "Weight", value: performance.physicalProfile?.weight ?? null },
+      {
+        label: "Dominant Side",
+        value: performance.physicalProfile?.dominantSide ?? null,
+      },
       { label: "League Level", value: performance.leagueLevel ?? null },
       ...(performance.stats
         ? Object.entries(performance.stats).map(([key, val]) => ({
             label: key,
             value: val?.toString() ?? null,
           }))
-        : [{ label: "Stats", value: null }]),
+        : []),
+      {
+        label: "Strengths",
+        value: performance.strengths?.join(", ") ?? null,
+      },
+      {
+        label: "Physical Status",
+        value: performance.physicalStatus ?? null,
+      },
+      { label: "Player Archetype", value: performance.archetype ?? null },
     ]),
     toSection("Academic", [
       { label: "GPA", value: academic.gpa?.toString() ?? null },
@@ -62,8 +83,29 @@ function buildSections(
               : "No"
             : null,
       },
+      {
+        label: "Academic Interests",
+        value: academic.academicInterests?.join(", ") ?? null,
+      },
     ]),
-    toSection("Availability", [
+    toSection("Recruiting Direction", [
+      {
+        label: "Target Level",
+        value: availability.competitiveLevelGoal ?? null,
+      },
+      {
+        label: "Recruiting Goals",
+        value: availability.goals?.join(", ") ?? null,
+      },
+      { label: "Timeline", value: availability.timeline ?? null },
+      {
+        label: "Preferred Regions",
+        value: availability.preferredRegions?.join(", ") ?? null,
+      },
+      {
+        label: "Relocation Openness",
+        value: availability.relocationOpenness ?? null,
+      },
       {
         label: "Transfer Portal",
         value:
@@ -74,10 +116,6 @@ function buildSections(
             : null,
       },
       {
-        label: "Preferred Regions",
-        value: availability.preferredRegions?.join(", ") ?? null,
-      },
-      {
         label: "Scholarship Need",
         value:
           availability.scholarshipNeed !== undefined
@@ -86,16 +124,64 @@ function buildSections(
               : "No"
             : null,
       },
+      {
+        label: "Non-negotiables",
+        value: availability.nonNegotiables?.join(", ") ?? null,
+      },
+      {
+        label: "Limitations",
+        value: availability.limitations?.join(", ") ?? null,
+      },
+    ]),
+    toSection("Representation Assets", [
+      {
+        label: "Highlights",
+        value: media.highlightUrls?.join(", ") ?? null,
+      },
+      { label: "Clips", value: media.clipUrls?.join(", ") ?? null },
+      { label: "Instagram", value: media.socialMedia?.instagram ?? null },
+      { label: "Twitter/X", value: media.socialMedia?.twitter ?? null },
+      { label: "Hudl", value: media.socialMedia?.hudl ?? null },
+      {
+        label: "References",
+        value: media.references?.join(", ") ?? null,
+      },
+    ]),
+    toSection("Competitive Identity", [
+      {
+        label: "Self-Representation",
+        value: character.selfRepresentation ?? null,
+      },
+      {
+        label: "Growth Areas",
+        value: character.growthAreas?.join(", ") ?? null,
+      },
+      { label: "Mentality", value: character.mentality ?? null },
+      { label: "Leadership", value: character.leadership ?? null },
+      { label: "Coachability", value: character.coachability ?? null },
+      { label: "Resilience", value: character.resilience ?? null },
+      { label: "Motivation", value: character.motivation ?? null },
     ]),
   ];
 }
 
 export default function DossierPage() {
-  const { data, completeness, subscribe } = useDossierStore();
+  const { data: session } = useSession();
+  const data = useDossierStore((s) => s.data);
+  const completeness = useDossierStore((s) => s.completeness);
+  const subscribe = useDossierStore((s) => s.subscribe);
+  const fetchDossier = useDossierStore((s) => s.fetchDossier);
 
   useEffect(() => {
     subscribe();
   }, [subscribe]);
+
+  useEffect(() => {
+    const token = session?.accessToken;
+    if (token && !useDossierStore.getState().data) {
+      fetchDossier(token);
+    }
+  }, [session?.accessToken, fetchDossier]);
 
   const sections = data ? buildSections(data) : [];
   const total = sections.reduce((a, s) => a + s.completed, 0);

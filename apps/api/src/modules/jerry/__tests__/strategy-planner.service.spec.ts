@@ -141,9 +141,9 @@ describe('StrategyPlannerService', () => {
       expect(result.targetField).toBe('GPA');
     });
 
-    it('returns "narrative_focus" when all fields are complete', () => {
+    it('returns "activation" when all fields are complete', () => {
       const result = service.decide(makeCtx({ missingFields: [] }));
-      expect(result.type).toBe('narrative_focus');
+      expect(result.type).toBe('activation');
     });
   });
 
@@ -159,6 +159,7 @@ describe('StrategyPlannerService', () => {
       const result = service.decide(
         makeCtx({
           intent: 'stats',
+          missingFields: ['strengths', 'physical status'],
           extractedData: { performance: { leagueLevel: 'NCAA D1' } },
         }),
       );
@@ -183,21 +184,21 @@ describe('StrategyPlannerService', () => {
   // ── Edge cases ───────────────────────────────────────────────────────────
 
   describe('edge cases', () => {
-    it('returns "narrative_focus" when missingFields is empty even if intent === "question"', () => {
+    it('returns "activation" when missingFields is empty even if intent === "question"', () => {
       const result = service.decide(
         makeCtx({ missingFields: [], intent: 'question' }),
       );
-      expect(result.type).toBe('narrative_focus');
+      expect(result.type).toBe('activation');
     });
 
-    it('returns "narrative_focus" when missingFields is empty even if there is extractedData', () => {
+    it('returns "activation" when missingFields is empty even if there is extractedData', () => {
       const result = service.decide(
         makeCtx({
           missingFields: [],
           extractedData: { identity: { sport: 'soccer' } },
         }),
       );
-      expect(result.type).toBe('narrative_focus');
+      expect(result.type).toBe('activation');
     });
   });
 });

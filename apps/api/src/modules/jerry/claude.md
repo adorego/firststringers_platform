@@ -20,7 +20,8 @@ No es un chatbot — es un agente con estado, memoria y estrategia.
 10. emit jerry.response → respuesta al WebSocket
 ## Estrategias de conversacion
 welcome, confirm_and_probe, answer_and_redirect,
-clarify, strategic_ask, narrative_focus, reset
+clarify, strategic_ask, section_transition,
+narrative_focus, activation, reset
 ## Cuando agregar una nueva estrategia
 Agregar en strategy-planner.service.ts, luego en
 prompt-builder.service.ts, luego el test correspondiente.
