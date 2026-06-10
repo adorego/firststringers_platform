@@ -1,7 +1,16 @@
-import { Controller, Get, Param, ForbiddenException } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Patch,
+  Body,
+  Param,
+  ForbiddenException,
+  NotFoundException,
+} from '@nestjs/common';
 import { AthleteService } from './athlete.service';
 import { Roles } from '../auth/roles.decorator';
 import { CurrentUser } from '../auth/current-user.decorator';
+import { UpdateProfileDto } from './dto/update-profile.dto';
 
 @Controller('athletes')
 export class AthleteController {
@@ -11,6 +20,27 @@ export class AthleteController {
   @Roles('RECRUITER')
   findAll() {
     return this.athleteService.findAll();
+  }
+
+  @Get('me')
+  getMe(
+    @CurrentUser() user: { id: string; role: string; athleteId: string | null },
+  ) {
+    if (!user.athleteId) {
+      throw new NotFoundException('No athlete profile linked to this user');
+    }
+    return this.athleteService.findOne(user.athleteId);
+  }
+
+  @Patch('me')
+  updateMe(
+    @CurrentUser() user: { id: string; role: string; athleteId: string | null },
+    @Body() dto: UpdateProfileDto,
+  ) {
+    if (!user.athleteId) {
+      throw new NotFoundException('No athlete profile linked to this user');
+    }
+    return this.athleteService.updateProfile(user.athleteId, dto);
   }
 
   @Get(':id')
