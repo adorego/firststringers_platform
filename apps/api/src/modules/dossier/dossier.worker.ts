@@ -54,7 +54,7 @@ export class DossierWorker {
       `Dossier updated for ${athleteId} — completeness: ${Math.round(completeness * 100)}%`,
     );
 
-    if (completeness >= 0.75 && !current?.narrative) {
+    if (completeness >= 0.75) {
       await this.generateNarrative(athleteId, mergedData);
     }
   }
@@ -65,9 +65,9 @@ export class DossierWorker {
   ): Promise<void> {
     const narrative = await this.llm.chat({
       systemPrompt: `You are an elite sports representation agent.
-        Generate a compelling, honest, and specific recruitment pitch
-        for this athlete. Highlight concrete strengths, trajectory,
-        and development potential. Maximum 3 paragraphs in English.`,
+Generate a compelling, honest, and specific recruitment pitch
+for this athlete. Highlight concrete strengths, trajectory,
+and development potential. Maximum 3 paragraphs in English.`,
       messages: [
         {
           role: 'user',
@@ -81,6 +81,9 @@ export class DossierWorker {
       where: { athleteId },
       data: { narrative },
     });
+
+    // Disparar generación del pitch de Jerry
+    this.eventEmitter.emit('dossier.updated', { athleteId });
 
     console.log(`Narrative generated for athlete ${athleteId}`);
   }

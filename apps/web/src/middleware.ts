@@ -2,7 +2,7 @@ import { getToken } from "next-auth/jwt";
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
-const PUBLIC_PATHS = ["/", "/login", "/register", "/welcome", "/api/auth"];
+const PUBLIC_PATHS = ["/", "/login", "/register", "/api/auth", "/billy", "/chat", "/matches", "/profile", "/dossier", "/search", "/pipeline", "/connections", "/introductions"];
 
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;

@@ -14,6 +14,8 @@ import { ScoutModule } from './modules/scout/scout.module';
 import { JwtAuthGuard } from './modules/auth/auth.guard';
 import { RolesGuard } from './modules/auth/roles.guard';
 import { HealthModule } from './modules/health/health.module';
+import { BillyModule } from './modules/billy/billy.module';
+import { ConversationsModule } from './modules/conversations/conversations.module';
 
 @Module({
   imports: [
@@ -34,6 +36,8 @@ import { HealthModule } from './modules/health/health.module';
     DossierModule,
     ScoutModule,
     HealthModule,
+    BillyModule,
+    ConversationsModule,
   ],
   providers: [
     { provide: APP_GUARD, useClass: JwtAuthGuard },

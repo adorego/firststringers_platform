@@ -29,3 +29,10 @@ coverage/
 
 # Turbo
 .turbo/
+
+#VS Code
+.vscode/
+
+# Claude
+.claude/
+.claude/settings.local.json
