@@ -4,7 +4,13 @@ import CredentialsProvider from "next-auth/providers/credentials";
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3001";
 
 // Server-side only — Buffer is not available in browser environments
-function decodeJwtPayload(token: string): { sub: string; email: string; role: string; exp: number } {
+function decodeJwtPayload(token: string): {
+  sub: string;
+  email: string;
+  role: string;
+  athleteId: string | null;
+  exp: number;
+} {
   return JSON.parse(Buffer.from(token.split(".")[1], "base64").toString());
 }
 
@@ -66,6 +72,7 @@ export const authOptions: NextAuthOptions = {
             email: payload.email,
             name: payload.email,
             role: payload.role.toLowerCase() as "athlete" | "recruiter",
+            athleteId: payload.athleteId ?? null,
             accessToken: data.access_token,
             refreshToken: data.refresh_token,
             accessTokenExpires: payload.exp * 1000,
@@ -85,6 +92,7 @@ export const authOptions: NextAuthOptions = {
       if (user) {
         token.id = user.id;
         token.role = user.role;
+        token.athleteId = user.athleteId;
         token.accessToken = user.accessToken;
         token.refreshToken = user.refreshToken;
         token.accessTokenExpires = user.accessTokenExpires;
@@ -113,6 +121,7 @@ export const authOptions: NextAuthOptions = {
       if (session.user) {
         session.user.id = token.id;
         session.user.role = token.role as "athlete" | "recruiter";
+        session.user.athleteId = token.athleteId ?? null;
       }
       session.accessToken = token.accessToken;
       session.error = token.error as string | undefined;
