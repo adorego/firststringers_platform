@@ -54,6 +54,19 @@ export class AthleteService {
     return this.toResponse(athlete);
   }
 
+  async updateProfile(
+    athleteId: string,
+    data: { name: string },
+  ): Promise<AthleteResponse> {
+    const athlete = await this.prisma.athlete.update({
+      where: { id: athleteId },
+      data: { name: data.name.trim() },
+      include: { dossier: true },
+    });
+
+    return this.toResponse(athlete);
+  }
+
   private toResponse(athlete: {
     id: string;
     email: string;
