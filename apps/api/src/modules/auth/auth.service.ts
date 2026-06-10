@@ -110,14 +110,29 @@ export class AuthService {
         throw new UnauthorizedException('User not found');
       }
 
-      return this.generateTokens(user.id, user.email, user.role, user.athleteId);
+      return this.generateTokens(
+        user.id,
+        user.email,
+        user.role,
+        user.athleteId,
+      );
     } catch {
       throw new UnauthorizedException('Invalid refresh token');
     }
   }
 
-  private generateTokens(userId: string, email: string, role: string, athleteId?: string | null) {
-    const baseClaims = { sub: userId, email, role, ...(athleteId && { athleteId }) };
+  private generateTokens(
+    userId: string,
+    email: string,
+    role: string,
+    athleteId?: string | null,
+  ) {
+    const baseClaims = {
+      sub: userId,
+      email,
+      role,
+      ...(athleteId && { athleteId }),
+    };
 
     return {
       access_token: this.jwt.sign(

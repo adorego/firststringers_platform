@@ -37,7 +37,7 @@ export class JerryController {
 
     return messages.map((msg, i) => ({
       id: `${session.id}-${i}`,
-      sender: msg.role === 'user' ? 'athlete' as const : 'jerry' as const,
+      sender: msg.role === 'user' ? ('athlete' as const) : ('jerry' as const),
       content: msg.content,
       timestamp: new Date(msg.timestamp).toISOString(),
       isAiGenerated: msg.role === 'assistant',

@@ -1,10 +1,10 @@
 import { Module } from '@nestjs/common';
-import { DossierController } from './dossier.controller';
+import { DossierController, DossierMeController } from './dossier.controller';
 import { DossierService } from './dossier.service';
 import { DossierWorker } from './dossier.worker';
 
 @Module({
-  controllers: [DossierController],
+  controllers: [DossierController, DossierMeController],
   providers: [DossierService, DossierWorker],
   exports: [DossierService],
 })

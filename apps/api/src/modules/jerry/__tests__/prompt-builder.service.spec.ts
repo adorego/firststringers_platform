@@ -17,10 +17,11 @@ describe('PromptBuilderService', () => {
   });
 
   describe('strategy: welcome', () => {
-    it('includes introduction instruction and asks about sport/position', () => {
+    it('includes introduction instruction and Jerry identity', () => {
       const result = service.build({ type: 'welcome' });
-      expect(result).toContain('Introduce yourself briefly');
+      expect(result).toContain('Introduce yourself');
       expect(result).toContain('sport');
+      expect(result).toContain('representation agent');
     });
   });
 
@@ -32,7 +33,7 @@ describe('PromptBuilderService', () => {
       };
       const result = service.build(strategy);
       expect(result).toContain('"GPA"');
-      expect(result).toContain('Confirm what you understood');
+      expect(result).toContain('Acknowledge what they said');
     });
 
     it('uses generic instruction when there is no targetField', () => {
@@ -78,7 +79,7 @@ describe('PromptBuilderService', () => {
       };
       const result = service.build(strategy);
       expect(result).toContain('"sport"');
-      expect(result).toContain('Only that information');
+      expect(result).toContain('foundation');
     });
 
     it('uses generic instruction when there is no targetField', () => {
@@ -94,6 +95,33 @@ describe('PromptBuilderService', () => {
       const result = service.build({ type: 'narrative_focus' });
       expect(result).toContain('dossier is complete');
       expect(result).toContain('recruitment narrative');
+    });
+  });
+
+  describe('strategy: section_transition', () => {
+    it('includes summary and transition instruction with targetField', () => {
+      const strategy: ConversationStrategy = {
+        type: 'section_transition',
+        targetField: 'physical profile',
+      };
+      const result = service.build(strategy);
+      expect(result).toContain('summarize');
+      expect(result).toContain('transition');
+    });
+
+    it('uses generic instruction when there is no targetField', () => {
+      const strategy: ConversationStrategy = { type: 'section_transition' };
+      const result = service.build(strategy);
+      expect(result).toContain('Summarize');
+      expect(result).not.toContain('undefined');
+    });
+  });
+
+  describe('strategy: activation', () => {
+    it('delivers the final activation message', () => {
+      const result = service.build({ type: 'activation' });
+      expect(result).toContain('COMPLETE');
+      expect(result).toContain('profile is now live');
     });
   });
 

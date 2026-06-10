@@ -3,7 +3,11 @@ import { EventEmitter2, OnEvent } from '@nestjs/event-emitter';
 import type { Prisma } from '@firststringers/database';
 import { PrismaService } from '../../shared/prisma/prisma.service';
 import { LLMService } from '../../shared/llm/llm.service';
-import type { DossierUpdateJob, DossierData, DossierUpdatedEvent } from '../../shared/types';
+import type {
+  DossierUpdateJob,
+  DossierData,
+  DossierUpdatedEvent,
+} from '../../shared/types';
 
 @Injectable()
 export class DossierWorker {
@@ -95,15 +99,39 @@ and development potential. Maximum 3 paragraphs in English.`,
 
   private calculateCompleteness(data: DossierData): number {
     const checks = [
+      // Section 2: Athlete Identity
       !!data.identity?.sport,
       !!data.identity?.position,
       !!data.identity?.graduationYear,
+      !!data.identity?.location,
+      !!data.identity?.school,
+      !!data.identity?.competitiveLevel,
+      // Section 3: Athletic Snapshot
+      !!data.performance?.physicalProfile?.height,
+      !!data.performance?.physicalProfile?.dominantSide,
       !!data.performance?.stats,
       !!data.performance?.leagueLevel,
+      !!data.performance?.strengths?.length,
+      !!data.performance?.physicalStatus,
+      // Section 4: Recruiting Direction
+      !!data.availability?.competitiveLevelGoal,
+      !!data.availability?.goals?.length,
+      !!data.availability?.timeline,
+      !!data.availability?.preferredRegions?.length,
+      !!data.availability?.relocationOpenness,
       !!data.academic?.gpa,
       !!data.academic?.intendedMajor,
-      data.availability?.transferPortal !== undefined,
-      !!data.availability?.preferredRegions,
+      !!data.availability?.nonNegotiables?.length,
+      // Section 5: Visibility & Assets
+      !!data.media?.highlightUrls?.length,
+      !!data.media?.clipUrls?.length,
+      !!data.media?.socialMedia,
+      !!data.media?.references?.length,
+      !!data.character?.selfRepresentation,
+      // Section 6: Competitive Identity
+      !!data.character?.growthAreas?.length,
+      !!data.character?.mentality,
+      !!data.character?.motivation,
     ];
 
     const filled = checks.filter(Boolean).length;

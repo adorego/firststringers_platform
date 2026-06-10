@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../shared/prisma/prisma.service';
 import { BillyMessage, SearchCriteria } from '../../shared/types/billy.types';
-import { Prisma } from 'generated/prisma/wasm';
+import type { Prisma } from '@firststringers/database';
 
 export interface BillyConversationSummary {
   id: string;

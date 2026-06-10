@@ -68,7 +68,10 @@ describe('JerryGateway', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     mockServer.to.mockReturnValue(mockSocketRoom);
-    mockJwtService.verify.mockReturnValue({ sub: 'user-uuid-456', athleteId: 'athlete-uuid-123' });
+    mockJwtService.verify.mockReturnValue({
+      sub: 'user-uuid-456',
+      athleteId: 'athlete-uuid-123',
+    });
     mockSession.getSession.mockResolvedValue(makeSession(0));
     mockSession.appendMessage.mockResolvedValue(undefined);
     mockJerryQueue.add.mockResolvedValue(undefined);
@@ -110,7 +113,10 @@ describe('JerryGateway', () => {
 
       expect(client.emit).toHaveBeenCalledWith(
         'error',
-        expect.objectContaining({ code: 'UNAUTHENTICATED', message: 'Invalid token' }),
+        expect.objectContaining({
+          code: 'UNAUTHENTICATED',
+          message: 'Invalid token',
+        }),
       );
       expect(client.disconnect).toHaveBeenCalled();
     });
@@ -123,7 +129,10 @@ describe('JerryGateway', () => {
 
       expect(client.emit).toHaveBeenCalledWith(
         'error',
-        expect.objectContaining({ code: 'UNAUTHENTICATED', message: 'Not an athlete' }),
+        expect.objectContaining({
+          code: 'UNAUTHENTICATED',
+          message: 'Not an athlete',
+        }),
       );
       expect(client.disconnect).toHaveBeenCalled();
     });
@@ -278,10 +287,7 @@ describe('JerryGateway', () => {
     });
 
     it('no lanza ni emite nada si el socket que desconecta nunca se conectó', () => {
-      const unknownSocket = makeSocket(
-        VALID_TOKEN,
-        'never-connected-socket',
-      );
+      const unknownSocket = makeSocket(VALID_TOKEN, 'never-connected-socket');
       expect(() => gateway.handleDisconnect(unknownSocket)).not.toThrow();
       expect(mockEventEmitter.emit).not.toHaveBeenCalled();
     });

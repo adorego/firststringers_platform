@@ -54,20 +54,18 @@ export class AthleteService {
     return this.toResponse(athlete);
   }
 
-  private toResponse(
-    athlete: {
-      id: string;
-      email: string;
-      name: string;
-      sport: string | null;
-      position: string | null;
-      dossier: {
-        data: unknown;
-        completeness: number;
-        narrative: string | null;
-      } | null;
-    },
-  ): AthleteResponse {
+  private toResponse(athlete: {
+    id: string;
+    email: string;
+    name: string;
+    sport: string | null;
+    position: string | null;
+    dossier: {
+      data: unknown;
+      completeness: number;
+      narrative: string | null;
+    } | null;
+  }): AthleteResponse {
     const data = (athlete.dossier?.data as DossierData) || {};
 
     return {

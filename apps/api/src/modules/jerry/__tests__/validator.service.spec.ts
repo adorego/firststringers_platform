@@ -14,12 +14,46 @@ const mockPrisma = {
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 const fullDossier: DossierData = {
-  identity: { sport: 'Football', position: 'QB', graduationYear: 2025 },
-  performance: { stats: { td: 28 }, leagueLevel: 'D1' },
+  identity: {
+    sport: 'Football',
+    position: 'QB',
+    graduationYear: 2025,
+    location: 'Dallas, TX',
+    school: 'Highland Park HS',
+    competitiveLevel: 'Varsity',
+  },
+  performance: {
+    stats: { td: 28 },
+    leagueLevel: 'D1',
+    strengths: ['arm strength', 'pocket presence'],
+    physicalProfile: {
+      height: '6\'2"',
+      weight: '195 lbs',
+      dominantSide: 'Right',
+    },
+    physicalStatus: 'Healthy, no injuries',
+  },
   academic: { gpa: 3.7, intendedMajor: 'Business' },
   availability: {
     transferPortal: false,
     preferredRegions: ['Midwest'],
+    competitiveLevelGoal: 'D1',
+    goals: ['Start as freshman'],
+    timeline: 'This year',
+    relocationOpenness: 'Open to anywhere',
+    nonNegotiables: ['Strong academics'],
+  },
+  media: {
+    highlightUrls: ['https://hudl.com/highlights/123'],
+    clipUrls: ['https://youtube.com/clip/456'],
+    socialMedia: { instagram: '@qb1' },
+    references: ['Coach Smith'],
+  },
+  character: {
+    mentality: 'Competitive and composed under pressure',
+    motivation: 'Want to play at the highest level',
+    growthAreas: ['Deep ball accuracy'],
+    selfRepresentation: 'A composed leader who performs under pressure',
   },
 };
 
@@ -43,7 +77,7 @@ describe('ValidatorService', () => {
   // ── getMissingFields ────────────────────────────────────────────────────────
 
   describe('getMissingFields', () => {
-    it('does NOT add "availability" when transferPortal is defined as false', async () => {
+    it('returns an empty array for a fully complete dossier', async () => {
       mockPrisma.dossier.findUnique.mockResolvedValue({
         athleteId: 'x',
         data: fullDossier,
@@ -51,27 +85,10 @@ describe('ValidatorService', () => {
 
       const result = await service.getMissingFields('x');
 
-      expect(result).not.toContain('availability');
-    });
-
-    it('returns an empty array for a fully complete dossier', async () => {
-      const completeDossier: DossierData = {
-        identity: { sport: 'Football', position: 'QB', graduationYear: 2025 },
-        performance: { stats: { td: 28 }, leagueLevel: 'D1' },
-        academic: { gpa: 3.7, intendedMajor: 'Business' },
-        availability: { transferPortal: true, preferredRegions: ['Midwest'] },
-      };
-      mockPrisma.dossier.findUnique.mockResolvedValue({
-        athleteId: 'x',
-        data: completeDossier,
-      });
-
-      const result = await service.getMissingFields('x');
-
       expect(result).toEqual([]);
     });
 
-    it('returns all 9 required fields when the dossier is null', async () => {
+    it('returns all 28 required fields when the dossier is null', async () => {
       mockPrisma.dossier.findUnique.mockResolvedValue(null);
 
       const result = await service.getMissingFields('x');
@@ -80,23 +97,41 @@ describe('ValidatorService', () => {
         'sport',
         'position',
         'graduation year',
+        'location',
+        'school',
+        'competitive level',
+        'physical profile',
+        'dominant side',
         'stats',
         'league level',
+        'strengths',
+        'physical status',
+        'competitive level goal',
+        'goals',
+        'timeline',
+        'preferred regions',
+        'relocation openness',
         'GPA',
         'intended major',
-        'availability',
-        'preferred regions',
+        'non-negotiables',
+        'highlights',
+        'clips',
+        'social media',
+        'references',
+        'self-representation',
+        'growth areas',
+        'mentality',
+        'motivation',
       ]);
-      expect(result).toHaveLength(9);
+      expect(result).toHaveLength(28);
     });
   });
 
   // ── getCompleteness ─────────────────────────────────────────────────────────
 
   describe('getCompleteness', () => {
-    it('is consistent with getMissingFields for a partial dossier (5 of 9)', async () => {
+    it('is consistent with getMissingFields for a partial dossier (5 of 28)', async () => {
       // Complete: sport, position, graduation year, stats, league level (5)
-      // Missing: GPA, intended major, availability, preferred regions (4)
       const partialDossier: DossierData = {
         identity: { sport: 'Football', position: 'QB', graduationYear: 2025 },
         performance: { stats: { td: 28 }, leagueLevel: 'D1' },
@@ -108,7 +143,7 @@ describe('ValidatorService', () => {
 
       const completeness = await service.getCompleteness('x');
 
-      expect(completeness).toBeCloseTo(5 / 9, 5);
+      expect(completeness).toBeCloseTo(5 / 28, 5);
     });
   });
 });
