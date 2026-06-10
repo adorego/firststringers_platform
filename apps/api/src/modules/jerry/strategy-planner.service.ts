@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import {
   ConversationStrategy,
+  DossierData,
   JerryMessage,
   StrategyContext,
 } from '../../shared/types';
@@ -92,7 +93,16 @@ export class StrategyPlannerService {
     }
 
     if (extractedData && Object.keys(extractedData).length > 0) {
-      const nextField = this.pickNextField(missingFields, session.messages);
+      // missingFields comes from the DB BEFORE this turn's extraction is
+      // merged — subtract the fields just covered so we don't re-ask them
+      const covered = this.fieldsCoveredByExtraction(extractedData);
+      const effectiveMissing = missingFields.filter((f) => !covered.has(f));
+
+      if (effectiveMissing.length === 0) {
+        return { type: 'activation' };
+      }
+
+      const nextField = this.pickNextField(effectiveMissing, session.messages);
 
       // Check if we just crossed a section boundary
       const transition = this.detectSectionTransition(nextField);
@@ -104,10 +114,9 @@ export class StrategyPlannerService {
         };
       }
 
-      const topKey = Object.keys(extractedData)[0];
       return {
         type: 'confirm_and_probe',
-        targetField: topKey,
+        targetField: nextField,
         confirmedData: extractedData,
       };
     }
@@ -131,7 +140,7 @@ export class StrategyPlannerService {
       (msg) =>
         msg.role === 'user' &&
         FRUSTRATION_KEYWORDS.some((kw) =>
-          msg.content.toLowerCase().includes(kw),
+          (msg.content ?? '').toLowerCase().includes(kw),
         ),
     );
   }
@@ -153,15 +162,47 @@ export class StrategyPlannerService {
     return sorted.find((f) => f !== lastAsked) ?? sorted[0];
   }
 
-  private pickNextFieldFromList(
-    missingFields: string[],
-  ): string | undefined {
-    if (missingFields.length === 0) return undefined;
-    return [...missingFields].sort((a, b) => {
-      const ai = FIELD_PRIORITY.indexOf(a);
-      const bi = FIELD_PRIORITY.indexOf(b);
-      return (ai === -1 ? 999 : ai) - (bi === -1 ? 999 : bi);
-    })[0];
+  // Maps extracted dossier data to the field labels it satisfies,
+  // mirroring ValidatorService.calculateMissingFields
+  private fieldsCoveredByExtraction(data: Partial<DossierData>): Set<string> {
+    const covered = new Set<string>();
+
+    if (data.identity?.sport) covered.add('sport');
+    if (data.identity?.position) covered.add('position');
+    if (data.identity?.graduationYear) covered.add('graduation year');
+    if (data.identity?.location) covered.add('location');
+    if (data.identity?.school) covered.add('school');
+    if (data.identity?.competitiveLevel) covered.add('competitive level');
+    if (data.performance?.physicalProfile?.height)
+      covered.add('physical profile');
+    if (data.performance?.physicalProfile?.dominantSide)
+      covered.add('dominant side');
+    if (data.performance?.stats) covered.add('stats');
+    if (data.performance?.leagueLevel) covered.add('league level');
+    if (data.performance?.strengths?.length) covered.add('strengths');
+    if (data.performance?.physicalStatus) covered.add('physical status');
+    if (data.availability?.competitiveLevelGoal)
+      covered.add('competitive level goal');
+    if (data.availability?.goals?.length) covered.add('goals');
+    if (data.availability?.timeline) covered.add('timeline');
+    if (data.availability?.preferredRegions?.length)
+      covered.add('preferred regions');
+    if (data.availability?.relocationOpenness)
+      covered.add('relocation openness');
+    if (data.academic?.gpa) covered.add('GPA');
+    if (data.academic?.intendedMajor) covered.add('intended major');
+    if (data.availability?.nonNegotiables?.length)
+      covered.add('non-negotiables');
+    if (data.media?.highlightUrls?.length) covered.add('highlights');
+    if (data.media?.clipUrls?.length) covered.add('clips');
+    if (data.media?.socialMedia) covered.add('social media');
+    if (data.media?.references?.length) covered.add('references');
+    if (data.character?.selfRepresentation) covered.add('self-representation');
+    if (data.character?.growthAreas?.length) covered.add('growth areas');
+    if (data.character?.mentality) covered.add('mentality');
+    if (data.character?.motivation) covered.add('motivation');
+
+    return covered;
   }
 
   private getLastAskedField(

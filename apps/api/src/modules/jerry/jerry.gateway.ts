@@ -127,6 +127,14 @@ export class JerryGateway implements OnGatewayConnection, OnGatewayDisconnect {
       return;
     }
 
+    if (!dto?.content || typeof dto.content !== 'string') {
+      client.emit('error', {
+        code: 'INVALID_PAYLOAD',
+        message: 'Message content is required',
+      });
+      return;
+    }
+
     try {
       const userMessage: JerryMessage = {
         role: 'user',

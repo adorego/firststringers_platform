@@ -1,4 +1,5 @@
 import { Processor, Process } from '@nestjs/bull';
+import { Logger } from '@nestjs/common';
 import type { Job } from 'bull';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { SessionService } from './session.service';
@@ -12,6 +13,8 @@ import { MessageJob, JerryMessage } from '../../shared/types';
 
 @Processor('jerry')
 export class ConversationWorker {
+  private readonly logger = new Logger(ConversationWorker.name);
+
   constructor(
     private readonly session: SessionService,
     private readonly intentClassifier: IntentClassifierService,
@@ -67,6 +70,7 @@ export class ConversationWorker {
         message: response,
       });
     } catch (error) {
+      this.logger.error(`Error processing message for athlete ${athleteId}`, error);
       this.eventEmitter.emit('jerry.error', {
         athleteId,
         error: 'Hubo un problema procesando tu mensaje. Intenta de nuevo.',
