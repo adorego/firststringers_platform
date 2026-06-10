@@ -96,7 +96,7 @@ export class LLMService {
           role: 'system',
           content: `Classify the athlete's message into exactly one of these categories:
             stats, academic, personal, availability, media, character, recruiting, question, other.
-            - stats: athletic performance, metrics, records, game statistics
+            - stats: athletic performance, metrics, records, game statistics, physical measurables (height, weight, dominant side), injury/physical status
             - academic: GPA, test scores, major, academic interests
             - personal: name, sport, position, location, school, club, graduation year
             - availability: transfer portal, regions, scholarship needs
@@ -200,6 +200,20 @@ export class LLMService {
               competitiveLevel: { type: 'string' },
               nationality: { type: 'string' },
               graduationYear: { type: 'number' },
+            },
+          },
+          performance: {
+            type: 'object',
+            properties: {
+              physicalProfile: {
+                type: 'object',
+                properties: {
+                  height: { type: 'string' },
+                  weight: { type: 'string' },
+                  dominantSide: { type: 'string' },
+                },
+              },
+              physicalStatus: { type: 'string' },
             },
           },
         },

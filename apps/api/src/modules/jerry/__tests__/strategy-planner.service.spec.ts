@@ -164,6 +164,22 @@ describe('StrategyPlannerService', () => {
         }),
       );
       expect(result.type).toBe('confirm_and_probe');
+      // targetField is the NEXT missing field, not the extracted section
+      expect(result.targetField).toBe('strengths');
+    });
+
+    it('does not re-ask a field that was just covered by the extraction', () => {
+      const result = service.decide(
+        makeCtx({
+          intent: 'stats',
+          missingFields: ['strengths', 'physical status'],
+          extractedData: {
+            performance: { strengths: ['finishing'], physicalStatus: 'healthy' },
+          },
+        }),
+      );
+      // Both missing fields were just covered → onboarding complete
+      expect(result.type).toBe('activation');
     });
 
     it('returns "strategic_ask" when intent === "other" and no data was extracted', () => {

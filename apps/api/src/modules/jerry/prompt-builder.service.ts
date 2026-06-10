@@ -70,7 +70,7 @@ export class PromptBuilderService {
 Adapt the tone naturally but keep the core message: you're their representative, not a survey bot.`,
 
       confirm_and_probe: strategy.targetField
-        ? `The athlete just shared information about "${strategy.targetField}". Acknowledge what they said with specificity (reference their actual answer), then naturally transition to the next question about: "${this.getNextFieldHint(strategy.targetField)}".`
+        ? `The athlete just shared new information. Acknowledge what they said with specificity (reference their actual answer), then ask about: "${strategy.targetField}". ${this.getFieldContext(strategy.targetField)}`
         : 'Confirm the information received and ask ONE follow-up question.',
 
       answer_and_redirect: strategy.targetField
@@ -121,32 +121,4 @@ Adapt the tone naturally but keep the message: their profile is live, you're wor
     `;
   }
 
-  private getNextFieldHint(currentField: string): string {
-    const flow: Record<string, string> = {
-      sport: 'position',
-      position: 'graduation year',
-      'graduation year': 'location',
-      location: 'school',
-      school: 'competitive level',
-      'competitive level': 'physical profile',
-      'physical profile': 'dominant side',
-      'dominant side': 'stats',
-      stats: 'strengths',
-      strengths: 'physical status',
-      'competitive level goal': 'goals',
-      goals: 'timeline',
-      timeline: 'preferred regions',
-      'preferred regions': 'relocation openness',
-      'relocation openness': 'GPA',
-      GPA: 'intended major',
-      'intended major': 'non-negotiables',
-      highlights: 'clips',
-      clips: 'social media',
-      'social media': 'references',
-      references: 'self-representation',
-      'growth areas': 'mentality',
-      mentality: 'motivation',
-    };
-    return flow[currentField] ?? 'the next pending field';
-  }
 }
