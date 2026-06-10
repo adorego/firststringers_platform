@@ -59,10 +59,13 @@ services:
     build:
       context: .
       dockerfile: apps/web/Dockerfile
+      args:
+        - NEXTAUTH_SECRET=${AUTH_SECRET}
     ports:
       - "3000:3000"
     environment:
       - NEXT_PUBLIC_API_URL=http://localhost:3001
+      - NEXTAUTH_SECRET=${AUTH_SECRET}
     depends_on:
       - api
     volumes:
