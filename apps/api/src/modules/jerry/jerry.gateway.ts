@@ -192,4 +192,45 @@ export class JerryGateway implements OnGatewayConnection, OnGatewayDisconnect {
       completeness: payload.completeness,
     });
   }
+
+  // Billy initiated a recruiter→athlete contact: Jerry informs his athlete
+  @OnEvent('contact.initiated')
+  async handleContactInitiated(payload: {
+    athleteId: string;
+    recruiterName: string;
+    organizationName?: string;
+    conversationId: string;
+  }) {
+    try {
+      const from = payload.organizationName
+        ? `${payload.recruiterName} from ${payload.organizationName}`
+        : payload.recruiterName;
+
+      const message: JerryMessage = {
+        role: 'assistant',
+        content: `Good news — ${from} wants to connect with you. I've opened a direct conversation in your inbox so you two can talk. Take a look when you're ready, and remember: I'm in your corner if you want to talk it through first.`,
+        timestamp: new Date(),
+      };
+
+      await this.session.appendMessage(payload.athleteId, message);
+
+      this.server.to(`athlete:${payload.athleteId}`).emit('message', message);
+      this.server
+        .to(`athlete:${payload.athleteId}`)
+        .emit('recruiter_contact', {
+          conversationId: payload.conversationId,
+          recruiterName: payload.recruiterName,
+          organizationName: payload.organizationName,
+        });
+
+      this.logger.log(
+        `Jerry notified athlete ${payload.athleteId} of contact from ${from}`,
+      );
+    } catch (err) {
+      this.logger.error(
+        `Failed to notify athlete ${payload.athleteId} of recruiter contact`,
+        err,
+      );
+    }
+  }
 }

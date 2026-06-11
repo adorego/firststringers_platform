@@ -17,6 +17,7 @@ import type { Queue } from 'bull';
 import { BillySessionService } from './billy-session.service';
 import { BillyMessage, BillyMessageJob } from '../../shared/types/billy.types';
 import { JerryPitchService } from '../jerry/jerry-pitch.service';
+import { ConversationsService } from '../conversations/conversations.service';
 
 interface ClientContext {
   recruiterId: string;
@@ -43,6 +44,7 @@ export class BillyGateway implements OnGatewayConnection, OnGatewayDisconnect {
     private readonly session: BillySessionService,
     private readonly eventEmitter: EventEmitter2,
     private readonly jerryPitch: JerryPitchService,
+    private readonly conversations: ConversationsService,
   ) {}
 
   async handleConnection(client: Socket) {
@@ -206,17 +208,54 @@ export class BillyGateway implements OnGatewayConnection, OnGatewayDisconnect {
     @MessageBody() dto: { athleteId: string; athleteName: string },
   ) {
     const ctx = this.clients.get(client.id);
-    if (!ctx) return;
+    if (!ctx || !dto?.athleteId) return;
 
     client.emit('status', { status: 'typing' });
 
-    const msg: BillyMessage = {
-      role: 'assistant',
-      content: `Great choice! I'm initiating contact with ${dto.athleteName}'s team. A private chat will be set up shortly. Is there anything specific you'd like me to mention when reaching out?`,
-      timestamp: new Date(),
-    };
+    try {
+      // Actually open the direct conversation recruiter ↔ athlete
+      const conversation = await this.conversations.getOrCreateConversation(
+        ctx.recruiterId,
+        dto.athleteId,
+      );
 
-    await this.session.appendMessage(ctx.conversationId, ctx.recruiterId, msg);
-    client.emit('message', msg);
+      const athleteName = conversation.athlete?.name ?? dto.athleteName;
+      const recruiterName = conversation.recruiter?.name ?? 'A recruiter';
+      const organizationName = conversation.recruiter?.organization?.name;
+
+      // Tell Jerry so he can inform his athlete
+      this.eventEmitter.emit('contact.initiated', {
+        athleteId: dto.athleteId,
+        athleteName,
+        recruiterId: ctx.recruiterId,
+        recruiterName,
+        organizationName,
+        conversationId: conversation.id,
+      });
+
+      const msg: BillyMessage = {
+        role: 'assistant',
+        content: `Done — I've opened a private conversation with ${athleteName}. Jerry, their representative, is letting them know right now. You can start chatting from your Connections panel whenever you're ready.`,
+        timestamp: new Date(),
+      };
+
+      await this.session.appendMessage(ctx.conversationId, ctx.recruiterId, msg);
+      client.emit('message', msg);
+      client.emit('contact_initiated', {
+        conversationId: conversation.id,
+        athleteId: dto.athleteId,
+        athleteName,
+      });
+    } catch (error) {
+      this.logger.error(
+        `Error initiating contact with athlete ${dto.athleteId}`,
+        error,
+      );
+      client.emit('message', {
+        role: 'assistant',
+        content: `I couldn't set up the conversation with ${dto.athleteName} right now. Please try again in a moment.`,
+        timestamp: new Date(),
+      });
+    }
   }
 }

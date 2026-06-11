@@ -42,7 +42,14 @@ export class ConversationsService {
       update: {},
       include: {
         athlete: { select: { id: true, name: true, sport: true, position: true } },
-        recruiter: { select: { id: true, name: true, email: true } },
+        recruiter: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+            organization: { select: { name: true } },
+          },
+        },
       },
     });
   }
