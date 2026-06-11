@@ -6,8 +6,6 @@ import { useDossierStore } from "@/stores/dossier-store";
 
 interface DossierSection {
   title: string;
-  completed: number;
-  total: number;
   fields: { label: string; value: string | null }[];
 }
 
@@ -15,12 +13,7 @@ function toSection(
   title: string,
   fields: { label: string; value: string | null }[],
 ): DossierSection {
-  return {
-    title,
-    fields,
-    completed: fields.filter((f) => f.value !== null).length,
-    total: fields.length,
-  };
+  return { title, fields };
 }
 
 function buildSections(
@@ -165,10 +158,21 @@ function buildSections(
   ];
 }
 
+function timeAgo(iso: string): string {
+  const diffMs = Date.now() - new Date(iso).getTime();
+  const minutes = Math.floor(diffMs / 60_000);
+  if (minutes < 1) return "just now";
+  if (minutes < 60) return `${minutes}m ago`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `${hours}h ago`;
+  const days = Math.floor(hours / 24);
+  return `${days}d ago`;
+}
+
 export default function DossierPage() {
   const { data: session } = useSession();
   const data = useDossierStore((s) => s.data);
-  const completeness = useDossierStore((s) => s.completeness);
+  const lastUpdated = useDossierStore((s) => s.lastUpdated);
   const subscribe = useDossierStore((s) => s.subscribe);
   const fetchDossier = useDossierStore((s) => s.fetchDossier);
 
@@ -184,24 +188,15 @@ export default function DossierPage() {
   }, [session?.accessToken, fetchDossier]);
 
   const sections = data ? buildSections(data) : [];
-  const total = sections.reduce((a, s) => a + s.completed, 0);
-  const totalFields = sections.reduce((a, s) => a + s.total, 0);
-  const pct = Math.round(completeness * 100);
 
   return (
     <div className="flex h-full flex-col">
       <header className="px-6 pt-6 pb-4">
         <h1 className="text-2xl font-bold text-[#2D2D2D]">Your Dossier</h1>
         <p className="mt-1 text-sm text-[#A0A0A0]">
-          {pct}% complete &middot; {total}/{totalFields} fields
+          Growing with every conversation
+          {lastUpdated ? <> &middot; Updated {timeAgo(lastUpdated)}</> : null}
         </p>
-        {/* Progress bar */}
-        <div className="mt-3 h-2 max-w-md overflow-hidden rounded-full bg-[#E0E0DC]">
-          <div
-            className="h-full rounded-full bg-[#3D3D3D] transition-all"
-            style={{ width: `${pct}%` }}
-          />
-        </div>
       </header>
 
       <div className="flex-1 overflow-y-auto px-6 pb-6">
@@ -216,19 +211,10 @@ export default function DossierPage() {
             <div className="space-y-4">
               {sections.map((section) => (
                 <div key={section.title} className="rounded-2xl bg-[#EDEDEA] px-5 py-4">
-                  <div className="mb-3 flex items-center justify-between">
+                  <div className="mb-3">
                     <h2 className="text-base font-semibold text-[#2D2D2D]">
                       {section.title}
                     </h2>
-                    <span
-                      className={`rounded-full px-2.5 py-0.5 text-xs font-medium ${
-                        section.completed === section.total
-                          ? "bg-[#3D3D3D] text-white"
-                          : "bg-[#E0E0DC] text-[#6B6B6B]"
-                      }`}
-                    >
-                      {section.completed}/{section.total}
-                    </span>
                   </div>
                   <div className="space-y-3">
                     {section.fields.map((field) => (
@@ -243,7 +229,7 @@ export default function DossierPage() {
                           </span>
                         ) : (
                           <span className="text-xs text-[#C0C0BC]">
-                            Complete with Jerry
+                            Tell Jerry
                           </span>
                         )}
                       </div>

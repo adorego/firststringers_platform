@@ -131,7 +131,7 @@ export type ConversationStrategyType =
   | 'clarify'
   | 'strategic_ask'
   | 'section_transition'
-  | 'narrative_focus'
+  | 'continuous'
   | 'activation'
   | 'reset';
 

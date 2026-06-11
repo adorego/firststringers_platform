@@ -90,11 +90,20 @@ describe('PromptBuilderService', () => {
     });
   });
 
-  describe('strategy: narrative_focus', () => {
-    it('indicates the dossier is complete and asks to refine the narrative', () => {
-      const result = service.build({ type: 'narrative_focus' });
-      expect(result).toContain('dossier is complete');
-      expect(result).toContain('recruitment narrative');
+  describe('strategy: continuous', () => {
+    it('instructs Jerry to be a proactive companion, never a form', () => {
+      const result = service.build({ type: 'continuous' });
+      expect(result).toContain('ONGOING RELATIONSHIP');
+      expect(result).toContain('NEVER as a field to fill');
+      expect(result).toContain('never "done"');
+    });
+
+    it('includes the orientation hint when targetField is present', () => {
+      const result = service.build({
+        type: 'continuous',
+        targetField: 'highlights',
+      });
+      expect(result).toContain('"highlights"');
     });
   });
 
@@ -118,10 +127,11 @@ describe('PromptBuilderService', () => {
   });
 
   describe('strategy: activation', () => {
-    it('delivers the final activation message', () => {
+    it('marks the representable threshold and the start of the continuous relationship', () => {
       const result = service.build({ type: 'activation' });
-      expect(result).toContain('COMPLETE');
-      expect(result).toContain('profile is now live');
+      expect(result).toContain('REPRESENTABLE threshold');
+      expect(result).toContain('enough to start representing you');
+      expect(result).toContain('check-in question');
     });
   });
 

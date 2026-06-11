@@ -21,7 +21,15 @@ No es un chatbot — es un agente con estado, memoria y estrategia.
 ## Estrategias de conversacion
 welcome, confirm_and_probe, answer_and_redirect,
 clarify, strategic_ask, section_transition,
-narrative_focus, activation, reset
+continuous, activation, reset
+
+## Representable > Completo (vision de Abel)
+El onboarding "termina" cuando Jerry tiene los REPRESENTABLE_FIELDS
+(identidad + snapshot atletico + objetivos), NO el 100% de los campos.
+activation se dispara UNA vez (el turno que cruza el umbral) y despues
+todo corre en modo continuous: Jerry proactivo, orientacion conversacional,
+nunca lenguaje de formulario. La completitud es interna (pitch, Billy),
+jamas visible para el atleta.
 ## Cuando agregar una nueva estrategia
 Agregar en strategy-planner.service.ts, luego en
 prompt-builder.service.ts, luego el test correspondiente.
