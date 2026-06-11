@@ -18,6 +18,7 @@ import { BillySessionService } from './billy-session.service';
 import { BillyMessage, BillyMessageJob } from '../../shared/types/billy.types';
 import { JerryPitchService } from '../jerry/jerry-pitch.service';
 import { ConversationsService } from '../conversations/conversations.service';
+import { RecruiterService } from '../recruiter/recruiter.service';
 
 interface ClientContext {
   recruiterId: string;
@@ -45,6 +46,7 @@ export class BillyGateway implements OnGatewayConnection, OnGatewayDisconnect {
     private readonly eventEmitter: EventEmitter2,
     private readonly jerryPitch: JerryPitchService,
     private readonly conversations: ConversationsService,
+    private readonly recruiterService: RecruiterService,
   ) {}
 
   async handleConnection(client: Socket) {
@@ -73,22 +75,30 @@ export class BillyGateway implements OnGatewayConnection, OnGatewayDisconnect {
         `Recruiter ${recruiterId} connected on conversation ${conversationId} — socket ${client.id}`,
       );
 
-      const sessionState = await this.session.getSession(conversationId, recruiterId);
+      const recruiter = await this.recruiterService.findById(recruiterId);
+      const isOnboarding = !recruiter?.onboardingCompleted;
+
+      const sessionState = await this.session.getSession(conversationId, recruiterId, isOnboarding);
 
       if (sessionState.messages.length > 0) {
         client.emit('session_resumed', {
           messages: sessionState.messages,
           searchCriteria: sessionState.searchCriteria,
+          isOnboarding: sessionState.isOnboarding,
         });
       } else {
         const welcomeMessage: BillyMessage = {
           role: 'assistant',
-          content:
-            "Hi! I'm Billy, your recruiting intelligence agent. Tell me what kind of athlete you're looking for and I'll help you find the best matches. What sport and position are you recruiting for?",
+          content: isOnboarding
+            ? `Hi${recruiter?.name ? ` ${recruiter.name}` : ''}! I'm Billy. Before we start finding athletes, I'd love to learn a bit about your program so I can make the best recommendations — and introduce athletes to you properly.\n\nFirst up: what university or institution do you represent?`
+            : "Hi! I'm Billy, your recruiting intelligence agent. Tell me what kind of athlete you're looking for and I'll help you find the best matches. What sport and position are you recruiting for?",
           timestamp: new Date(),
         };
         await this.session.appendMessage(conversationId, recruiterId, welcomeMessage);
         client.emit('message', welcomeMessage);
+        if (isOnboarding) {
+          client.emit('onboarding_started', {});
+        }
       }
     } catch (err) {
       this.logger.error(`Connection error for socket ${client.id}`, err);
@@ -213,8 +223,8 @@ export class BillyGateway implements OnGatewayConnection, OnGatewayDisconnect {
     client.emit('status', { status: 'typing' });
 
     try {
-      // Actually open the direct conversation recruiter ↔ athlete
-      const conversation = await this.conversations.getOrCreateConversation(
+      // Create a pending connection request
+      const conversation = await this.conversations.createRequest(
         ctx.recruiterId,
         dto.athleteId,
       );
@@ -223,7 +233,10 @@ export class BillyGateway implements OnGatewayConnection, OnGatewayDisconnect {
       const recruiterName = conversation.recruiter?.name ?? 'A recruiter';
       const organizationName = conversation.recruiter?.organization?.name;
 
-      // Tell Jerry so he can inform his athlete
+      const recruiterProfile = await this.recruiterService.findById(ctx.recruiterId);
+      const pitch = recruiterProfile?.pitch ?? undefined;
+
+      // Tell Jerry so he can inform the athlete
       this.eventEmitter.emit('contact.initiated', {
         athleteId: dto.athleteId,
         athleteName,
@@ -231,11 +244,12 @@ export class BillyGateway implements OnGatewayConnection, OnGatewayDisconnect {
         recruiterName,
         organizationName,
         conversationId: conversation.id,
+        pitch,
       });
 
       const msg: BillyMessage = {
         role: 'assistant',
-        content: `Done — I've opened a private conversation with ${athleteName}. Jerry, their representative, is letting them know right now. You can start chatting from your Connections panel whenever you're ready.`,
+        content: `Done — I've sent a connection request to ${athleteName}. Jerry is letting them know right now. Once they accept, the conversation will open in your Connections panel.`,
         timestamp: new Date(),
       };
 

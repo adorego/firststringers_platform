@@ -3,9 +3,8 @@
 import { useState } from "react";
 import { ChevronRight, ArrowUp } from "lucide-react";
 import { useRouter } from "next/navigation";
+import { useSession } from "next-auth/react";
 import { createBillyConversation } from "@/hooks/useBilly";
-
-const MOCK_RECRUITER_ID = "e0b6c0c8-2b27-4521-9b26-46ace16b4983";
 
 const SUGGESTIONS = [
   "Find developmental OL prospects in Florida",
@@ -16,6 +15,8 @@ const SUGGESTIONS = [
 
 export default function BillyLandingPage() {
   const router = useRouter();
+  const { data: session } = useSession();
+  const recruiterId = session?.user?.recruiterId ?? "e0b6c0c8-2b27-4521-9b26-46ace16b4983";
   const [input, setInput] = useState("");
   const [isCreating, setIsCreating] = useState(false);
 
@@ -23,7 +24,7 @@ export default function BillyLandingPage() {
     if (isCreating) return;
     setIsCreating(true);
     try {
-      const conv = await createBillyConversation(MOCK_RECRUITER_ID);
+      const conv = await createBillyConversation(recruiterId);
       if (!conv) return;
       router.push(`/billy/${conv.id}${initialMessage ? `?q=${encodeURIComponent(initialMessage)}` : ""}`);
     } finally {
@@ -53,7 +54,7 @@ export default function BillyLandingPage() {
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={handleKeyDown}
-            placeholder="Mike, tell me what kind of athlete fits your program."
+            placeholder={`${session?.user?.name || "Recruiter"}, tell me what kind of athlete fits your program.`}
             rows={3}
             className="w-full resize-none bg-transparent px-5 pt-5 pb-2 text-sm text-[#1A1A1A] placeholder:text-[#ADA8A5] focus:outline-none"
           />

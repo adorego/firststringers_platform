@@ -98,6 +98,23 @@ export const api = {
     return data;
   },
 
+  async getRecruiterProfile(): Promise<{
+    id: string;
+    name: string;
+    email: string;
+    university: string | null;
+    location: string | null;
+    scholarshipType: string | null;
+    sport: string | null;
+    division: string | null;
+    gender: string | null;
+    openings: number | null;
+    pitch: string | null;
+  }> {
+    const { data } = await http.get("/recruiter/profile");
+    return data;
+  },
+
   async searchAthletes(query: string): Promise<MatchResult[]> {
     if (USE_MOCKS) {
       const q = query.toLowerCase();

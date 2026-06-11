@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, ForbiddenException, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../../shared/prisma/prisma.service';
 
 @Injectable()
@@ -23,7 +23,7 @@ export class ConversationsService {
 
   async getConversationsForAthlete(athleteId: string) {
     return this.prisma.directConversation.findMany({
-      where: { athleteId },
+      where: { athleteId, status: 'accepted' },
       include: {
         recruiter: { select: { id: true, name: true, email: true } },
         messages: {
@@ -35,10 +35,28 @@ export class ConversationsService {
     });
   }
 
-  async getOrCreateConversation(recruiterId: string, athleteId: string) {
+  async getPendingRequestsForAthlete(athleteId: string) {
+    return this.prisma.directConversation.findMany({
+      where: { athleteId, status: 'pending' },
+      include: {
+        recruiter: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+            pitch: true,
+            organization: { select: { name: true } },
+          },
+        },
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+  }
+
+  async createRequest(recruiterId: string, athleteId: string) {
     return this.prisma.directConversation.upsert({
       where: { recruiterId_athleteId: { recruiterId, athleteId } },
-      create: { recruiterId, athleteId },
+      create: { recruiterId, athleteId, status: 'pending' },
       update: {},
       include: {
         athlete: { select: { id: true, name: true, sport: true, position: true } },
@@ -51,6 +69,41 @@ export class ConversationsService {
           },
         },
       },
+    });
+  }
+
+  // Keep for internal use (e.g. existing conversations REST endpoint)
+  async getOrCreateConversation(recruiterId: string, athleteId: string) {
+    return this.createRequest(recruiterId, athleteId);
+  }
+
+  async acceptRequest(conversationId: string, athleteId: string) {
+    const conv = await this.prisma.directConversation.findUnique({
+      where: { id: conversationId },
+    });
+    if (!conv) throw new NotFoundException('Conversation not found');
+    if (conv.athleteId !== athleteId) throw new ForbiddenException('Not your conversation');
+    if (conv.status === 'accepted') return conv;
+
+    return this.prisma.directConversation.update({
+      where: { id: conversationId },
+      data: { status: 'accepted' },
+      include: {
+        recruiter: { select: { id: true, name: true, email: true } },
+      },
+    });
+  }
+
+  async declineRequest(conversationId: string, athleteId: string) {
+    const conv = await this.prisma.directConversation.findUnique({
+      where: { id: conversationId },
+    });
+    if (!conv) throw new NotFoundException('Conversation not found');
+    if (conv.athleteId !== athleteId) throw new ForbiddenException('Not your conversation');
+
+    return this.prisma.directConversation.update({
+      where: { id: conversationId },
+      data: { status: 'declined' },
     });
   }
 
@@ -71,6 +124,14 @@ export class ConversationsService {
     senderRole: 'recruiter' | 'athlete',
     content: string,
   ) {
+    const conv = await this.prisma.directConversation.findUnique({
+      where: { id: conversationId },
+      select: { status: true },
+    });
+    if (!conv || conv.status !== 'accepted') {
+      throw new ForbiddenException('Conversation is not active');
+    }
+
     const message = await this.prisma.directMessage.create({
       data: { conversationId, senderId, senderRole, content },
     });

@@ -8,7 +8,9 @@ function decodeJwtPayload(token: string): {
   sub: string;
   email: string;
   role: string;
+  name: string;
   athleteId: string | null;
+  recruiterId: string | null;
   exp: number;
 } {
   return JSON.parse(Buffer.from(token.split(".")[1], "base64").toString());
@@ -70,9 +72,10 @@ export const authOptions: NextAuthOptions = {
           return {
             id: payload.sub,
             email: payload.email,
-            name: payload.email,
+            name: payload.name ?? payload.email,
             role: payload.role.toLowerCase() as "athlete" | "recruiter",
             athleteId: payload.athleteId ?? null,
+            recruiterId: payload.recruiterId ?? null,
             accessToken: data.access_token,
             refreshToken: data.refresh_token,
             accessTokenExpires: payload.exp * 1000,
@@ -93,6 +96,7 @@ export const authOptions: NextAuthOptions = {
         token.id = user.id;
         token.role = user.role;
         token.athleteId = user.athleteId;
+        token.recruiterId = user.recruiterId;
         token.accessToken = user.accessToken;
         token.refreshToken = user.refreshToken;
         token.accessTokenExpires = user.accessTokenExpires;
@@ -122,6 +126,7 @@ export const authOptions: NextAuthOptions = {
         session.user.id = token.id;
         session.user.role = token.role as "athlete" | "recruiter";
         session.user.athleteId = token.athleteId ?? null;
+        session.user.recruiterId = token.recruiterId ?? null;
       }
       session.accessToken = token.accessToken;
       session.error = token.error as string | undefined;

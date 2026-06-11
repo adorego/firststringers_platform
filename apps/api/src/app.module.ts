@@ -16,6 +16,7 @@ import { RolesGuard } from './modules/auth/roles.guard';
 import { HealthModule } from './modules/health/health.module';
 import { BillyModule } from './modules/billy/billy.module';
 import { ConversationsModule } from './modules/conversations/conversations.module';
+import { RecruiterModule } from './modules/recruiter/recruiter.module';
 
 @Module({
   imports: [
@@ -38,6 +39,7 @@ import { ConversationsModule } from './modules/conversations/conversations.modul
     HealthModule,
     BillyModule,
     ConversationsModule,
+    RecruiterModule,
   ],
   providers: [
     { provide: APP_GUARD, useClass: JwtAuthGuard },

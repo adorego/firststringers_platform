@@ -34,13 +34,9 @@ export default function WelcomeBackPage() {
       return;
     }
 
-    const session = await fetch("/api/auth/session").then((r) => r.json());
-    const role = session?.user?.role;
-    if (role === "recruiter") {
-      router.push("/matches");
-    } else {
-      router.push("/chat");
-    }
+    // Full page navigation so the middleware can read the fresh session cookie
+    // and redirect recruiter → /billy, athlete → /chat
+    window.location.href = "/chat";
   }
 
   const inputBase =

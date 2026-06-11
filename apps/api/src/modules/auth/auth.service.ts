@@ -37,9 +37,9 @@ export class AuthService {
 
     const user = await this.prisma.$transaction(async (tx) => {
       let athleteId: string | undefined;
+      let recruiterId: string | undefined;
 
       if (dto.role === 'ATHLETE') {
-        // Get or create the default organization for self-registered athletes
         const defaultOrg = await tx.organization.upsert({
           where: { id: 'default-org' },
           update: {},
@@ -56,22 +56,44 @@ export class AuthService {
         athleteId = athlete.id;
       }
 
+      if (dto.role === 'RECRUITER') {
+        const defaultOrg = await tx.organization.upsert({
+          where: { id: 'default-org' },
+          update: {},
+          create: { id: 'default-org', name: 'First Stringers' },
+        });
+
+        const recruiter = await tx.recruiter.create({
+          data: {
+            email: dto.email,
+            name: dto.name,
+            organizationId: defaultOrg.id,
+          },
+        });
+        recruiterId = recruiter.id;
+      }
+
       return tx.user.create({
         data: {
           email: dto.email,
           password: hashedPassword,
           role: dto.role || 'ATHLETE',
           athleteId,
+          recruiterId,
         },
       });
     });
 
-    return this.generateTokens(user.id, user.email, user.role, user.athleteId);
+    return this.generateTokens(user.id, user.email, user.role, dto.name, user.athleteId, user.recruiterId);
   }
 
   async login(dto: LoginDto) {
     const user = await this.prisma.user.findUnique({
       where: { email: dto.email },
+      include: {
+        athlete: { select: { name: true } },
+        recruiter: { select: { name: true } },
+      },
     });
 
     if (!user) {
@@ -84,7 +106,8 @@ export class AuthService {
       throw new UnauthorizedException('Invalid credentials');
     }
 
-    return this.generateTokens(user.id, user.email, user.role, user.athleteId);
+    const name = user.athlete?.name ?? user.recruiter?.name ?? user.email;
+    return this.generateTokens(user.id, user.email, user.role, name, user.athleteId, user.recruiterId);
   }
 
   async refresh(refreshToken: string) {
@@ -93,6 +116,7 @@ export class AuthService {
         sub: string;
         email: string;
         role: string;
+        name: string;
         type: string;
       }>(refreshToken, {
         secret: this.refreshSecret,
@@ -104,18 +128,18 @@ export class AuthService {
 
       const user = await this.prisma.user.findUnique({
         where: { id: payload.sub },
+        include: {
+          athlete: { select: { name: true } },
+          recruiter: { select: { name: true } },
+        },
       });
 
       if (!user) {
         throw new UnauthorizedException('User not found');
       }
 
-      return this.generateTokens(
-        user.id,
-        user.email,
-        user.role,
-        user.athleteId,
-      );
+      const name = user.athlete?.name ?? user.recruiter?.name ?? payload.name ?? user.email;
+      return this.generateTokens(user.id, user.email, user.role, name, user.athleteId, user.recruiterId);
     } catch {
       throw new UnauthorizedException('Invalid refresh token');
     }
@@ -125,13 +149,17 @@ export class AuthService {
     userId: string,
     email: string,
     role: string,
+    name: string,
     athleteId?: string | null,
+    recruiterId?: string | null,
   ) {
     const baseClaims = {
       sub: userId,
       email,
       role,
+      name,
       ...(athleteId && { athleteId }),
+      ...(recruiterId && { recruiterId }),
     };
 
     return {

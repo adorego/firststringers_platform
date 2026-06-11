@@ -7,8 +7,9 @@ import { BillySessionService } from './billy-session.service';
 import { BillyConversationService } from './billy-conversation.service';
 import { BillyMessage, BillyMessageJob } from '../../shared/types/billy.types';
 import { ScoutService } from '../scout/scout.service';
+import { RecruiterService } from '../recruiter/recruiter.service';
 
-const SYSTEM_PROMPT = `You are Billy, an intelligent sports recruitment assistant helping a coach or recruiter find the right athlete.
+const SEARCH_SYSTEM_PROMPT = `You are Billy, an intelligent sports recruitment assistant helping a coach or recruiter find the right athlete.
 
 Your job is to gather the following information through natural conversation:
 1. Sport (football, basketball, soccer, baseball, etc.)
@@ -27,7 +28,38 @@ Rules:
 - When you have enough information, respond with a JSON block at the end of your message in this exact format:
   [SEARCH_READY]{"query": "the full natural language query", "filters": {"sport": "...", "position": "...", "minGpa": 0.0, "graduationYear": 0, "transferPortal": true/false, "ncaaEligible": true/false}}[/SEARCH_READY]
 - If the user says they want to search now, generate the search immediately
+- If the recruiter asks about their own profile, program, or saved information, respond with the details from the "Recruiter profile on file" section in a clean, readable format — do NOT search for athletes in this case
+- If the recruiter asks to update or change any of their profile fields (university, location, scholarshipType, sport, division, gender, openings), confirm the change in plain text and append the update tag with ONLY the changed fields:
+  [PROFILE_UPDATE]{"sport": "basketball"}[/PROFILE_UPDATE]
 - Keep a friendly, professional tone`;
+
+const ONBOARDING_SYSTEM_PROMPT = `You are Billy, a recruiting intelligence assistant for First Stringers. A recruiter just created their account and you need to learn about their program to help them find the right athletes and introduce those athletes properly.
+
+Collect the following information through natural, friendly conversation — one question at a time:
+1. University or institution they represent (MOST IMPORTANT)
+2. Location / city and state (MOST IMPORTANT)
+3. Scholarship available: full scholarship, partial scholarship, or financial aid only (MOST IMPORTANT)
+4. Primary sport they recruit for (optional — they can skip)
+5. Gender of athletes they recruit: male, female, or both (optional)
+6. Division level: D1, D2, D3, NAIA, JUCO (optional — they can skip)
+7. Number of open spots/vacancies they have (optional)
+
+Rules:
+- Ask ONE question at a time, conversationally
+- Max 2 sentences per message
+- Be warm and encouraging — this is their first experience with the platform
+- If they say they don't know or want to skip any optional question, gracefully move on
+- Never be pushy about the optional ones (sport, gender, division, openings)
+- After collecting at least university, location, and scholarship type, wrap up
+- When you have enough to proceed, your ENTIRE response must look EXACTLY like this example (replace with real values):
+
+  You're all set! Welcome to First Stringers — let's find you some great athletes.
+  [PROFILE_READY]{"university": "State University", "location": "Austin, TX", "scholarshipType": "full"}[/PROFILE_READY]
+
+- The visible part (before [PROFILE_READY]) must be 1-2 warm sentences of PLAIN TEXT only — no JSON, no code fences, no backticks, no "profile summary", no data recap of any kind.
+- The [PROFILE_READY] tag contains ONLY the JSON object and nothing else. It is invisible to the recruiter.
+- Only include fields the recruiter actually provided — omit nulls
+- Keep a warm, professional tone`;
 
 @Processor('billy')
 export class BillyWorker {
@@ -39,6 +71,7 @@ export class BillyWorker {
     private readonly conversations: BillyConversationService,
     private readonly eventEmitter: EventEmitter2,
     private readonly scout: ScoutService,
+    private readonly recruiterService: RecruiterService,
   ) {
     this.openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
   }
@@ -50,75 +83,11 @@ export class BillyWorker {
     try {
       const sessionState = await this.session.getSession(conversationId, recruiterId);
 
-      const messages = sessionState.messages.map((m) => ({
-        role: m.role as 'user' | 'assistant',
-        content: m.content,
-      }));
-
-      const response = await this.openai.chat.completions.create({
-        model: 'gpt-4o-mini',
-        messages: [{ role: 'system', content: SYSTEM_PROMPT }, ...messages],
-        temperature: 0.7,
-        max_tokens: 300,
-      });
-
-      const rawContent = response.choices[0].message.content ?? '';
-
-      const searchMatch = rawContent.match(/\[SEARCH_READY\](.*?)\[\/SEARCH_READY\]/s);
-      let visibleContent = rawContent;
-      let searchResults: unknown[] | undefined;
-      let extractedFilters: Record<string, unknown> | undefined;
-
-      if (searchMatch) {
-        try {
-          const parsed = JSON.parse(searchMatch[1]) as {
-            query: string;
-            filters: Record<string, unknown>;
-          };
-          visibleContent =
-            rawContent.replace(/\[SEARCH_READY\].*?\[\/SEARCH_READY\]/s, '').trim() ||
-            'Great! I have everything I need. Launching search...';
-
-          extractedFilters = parsed.filters;
-          await this.session.updateSearchCriteria(conversationId, recruiterId, parsed.filters as never);
-          searchResults = await this.runSearch(parsed.filters);
-        } catch {
-          // keep raw content if parse fails
-        }
+      if (sessionState.isOnboarding) {
+        return this.handleOnboarding(conversationId, recruiterId, message, sessionState.messages);
       }
 
-      const assistantMessage: BillyMessage = {
-        role: 'assistant',
-        content: visibleContent,
-        timestamp: new Date(),
-      };
-      await this.session.appendMessage(conversationId, recruiterId, assistantMessage);
-
-      // Persist full conversation to DB
-      try {
-        const updatedSession = await this.session.getSession(conversationId, recruiterId);
-        await this.conversations.persistMessages(
-          conversationId,
-          updatedSession.messages,
-          updatedSession.searchCriteria,
-        );
-
-        // Auto-title: use first user message if title is still default
-        const firstUserMsg = updatedSession.messages.find((m) => m.role === 'user');
-        if (firstUserMsg && message === firstUserMsg.content) {
-          const title = firstUserMsg.content.slice(0, 50).trim();
-          await this.conversations.updateTitle(conversationId, title);
-        }
-      } catch (dbErr) {
-        this.logger.warn(`Could not persist messages for conversation ${conversationId}`, dbErr);
-      }
-
-      this.eventEmitter.emit('billy.response', {
-        conversationId,
-        message: visibleContent,
-        searchCriteria: extractedFilters,
-        searchResults,
-      });
+      return this.handleSearch(conversationId, recruiterId, message, sessionState);
     } catch (error) {
       this.logger.error(`Error processing Billy message for conversation ${conversationId}`, error);
       this.eventEmitter.emit('billy.error', {
@@ -126,6 +95,238 @@ export class BillyWorker {
         error: 'Error processing your message. Please try again.',
       });
       throw error;
+    }
+  }
+
+  private async handleSearch(
+    conversationId: string,
+    recruiterId: string,
+    message: string,
+    sessionState: Awaited<ReturnType<BillySessionService['getSession']>>,
+  ) {
+    const messages = sessionState.messages.map((m) => ({
+      role: m.role as 'user' | 'assistant',
+      content: m.content,
+    }));
+
+    const recruiter = await this.recruiterService.findById(recruiterId);
+
+    const profileLines = [
+      recruiter?.university && `- University: ${recruiter.university}`,
+      recruiter?.location && `- Location: ${recruiter.location}`,
+      recruiter?.scholarshipType && `- Scholarship: ${recruiter.scholarshipType}`,
+      recruiter?.sport && `- Sport: ${recruiter.sport}`,
+      recruiter?.division && `- Division: ${recruiter.division}`,
+      recruiter?.gender && `- Athletes: ${recruiter.gender}`,
+      recruiter?.openings && `- Open spots: ${recruiter.openings}`,
+    ].filter(Boolean).join('\n');
+
+    const profileContext = profileLines
+      ? `\n\nThis recruiter's program profile (use this when they ask about their profile, program, or saved info):\n${profileLines}`
+      : '';
+
+    const response = await this.openai.chat.completions.create({
+      model: 'gpt-4o-mini',
+      messages: [
+        { role: 'system', content: SEARCH_SYSTEM_PROMPT + profileContext },
+        ...messages,
+      ],
+      temperature: 0.7,
+      max_tokens: 300,
+    });
+
+    const rawContent = response.choices[0].message.content ?? '';
+
+    const searchMatch = rawContent.match(/\[SEARCH_READY\](.*?)\[\/SEARCH_READY\]/s);
+    const updateMatch = rawContent.match(/\[PROFILE_UPDATE\](.*?)\[\/PROFILE_UPDATE\]/s);
+    let visibleContent = rawContent;
+    let searchResults: unknown[] | undefined;
+    let extractedFilters: Record<string, unknown> | undefined;
+
+    if (updateMatch) {
+      try {
+        const updatedFields = JSON.parse(updateMatch[1]) as Record<string, unknown>;
+        visibleContent = rawContent.replace(/\[PROFILE_UPDATE\].*?\[\/PROFILE_UPDATE\]/s, '').trim();
+        await this.recruiterService.updateProfile(recruiterId, {
+          university: updatedFields['university'] as string | undefined,
+          location: updatedFields['location'] as string | undefined,
+          scholarshipType: updatedFields['scholarshipType'] as string | undefined,
+          sport: updatedFields['sport'] as string | undefined,
+          gender: updatedFields['gender'] as string | undefined,
+          division: updatedFields['division'] as string | undefined,
+          openings: updatedFields['openings'] as number | undefined,
+        });
+      } catch (err) {
+        this.logger.warn(`Could not apply profile update for recruiter ${recruiterId}`, err);
+      }
+    }
+
+    if (searchMatch) {
+      try {
+        const parsed = JSON.parse(searchMatch[1]) as {
+          query: string;
+          filters: Record<string, unknown>;
+        };
+        visibleContent =
+          rawContent.replace(/\[SEARCH_READY\].*?\[\/SEARCH_READY\]/s, '').trim() ||
+          'Great! I have everything I need. Launching search...';
+
+        extractedFilters = parsed.filters;
+        await this.session.updateSearchCriteria(conversationId, recruiterId, parsed.filters as never);
+        searchResults = await this.runSearch(parsed.filters);
+      } catch {
+        // keep raw content if parse fails
+      }
+    }
+
+    const assistantMessage: BillyMessage = {
+      role: 'assistant',
+      content: visibleContent,
+      timestamp: new Date(),
+    };
+    await this.session.appendMessage(conversationId, recruiterId, assistantMessage);
+
+    try {
+      const updatedSession = await this.session.getSession(conversationId, recruiterId);
+      await this.conversations.persistMessages(
+        conversationId,
+        updatedSession.messages,
+        updatedSession.searchCriteria,
+      );
+
+      const firstUserMsg = updatedSession.messages.find((m) => m.role === 'user');
+      if (firstUserMsg && message === firstUserMsg.content) {
+        const title = firstUserMsg.content.slice(0, 50).trim();
+        await this.conversations.updateTitle(conversationId, title);
+      }
+    } catch (dbErr) {
+      this.logger.warn(`Could not persist messages for conversation ${conversationId}`, dbErr);
+    }
+
+    this.eventEmitter.emit('billy.response', {
+      conversationId,
+      message: visibleContent,
+      searchCriteria: extractedFilters,
+      searchResults,
+    });
+  }
+
+  private async handleOnboarding(
+    conversationId: string,
+    recruiterId: string,
+    message: string,
+    history: BillyMessage[],
+  ) {
+    const messages = history.map((m) => ({
+      role: m.role as 'user' | 'assistant',
+      content: m.content,
+    }));
+
+    const response = await this.openai.chat.completions.create({
+      model: 'gpt-4o-mini',
+      messages: [{ role: 'system', content: ONBOARDING_SYSTEM_PROMPT }, ...messages],
+      temperature: 0.7,
+      max_tokens: 300,
+    });
+
+    const rawContent = response.choices[0].message.content ?? '';
+
+    const profileMatch = rawContent.match(/\[PROFILE_READY\](.*?)\[\/PROFILE_READY\]/s);
+    let visibleContent = rawContent;
+
+    // Always strip code fences before showing any message (model sometimes leaks them)
+    visibleContent = visibleContent.replace(/```[\w]*\s*[\s\S]*?```/g, '').replace(/\s+/g, ' ').trim();
+
+    if (profileMatch) {
+      try {
+        const profileData = JSON.parse(profileMatch[1]) as Record<string, unknown>;
+        const summaryLines: string[] = [];
+        if (profileData['university']) summaryLines.push(`🏫 University: ${profileData['university']}`);
+        if (profileData['location']) summaryLines.push(`📍 Location: ${profileData['location']}`);
+        if (profileData['scholarshipType']) summaryLines.push(`🎓 Scholarship: ${profileData['scholarshipType']}`);
+        if (profileData['sport']) summaryLines.push(`🏆 Sport: ${profileData['sport']}`);
+        if (profileData['division']) summaryLines.push(`📊 Division: ${profileData['division']}`);
+        if (profileData['gender']) summaryLines.push(`👥 Athletes: ${profileData['gender']}`);
+        if (profileData['openings']) summaryLines.push(`🔢 Open spots: ${profileData['openings']}`);
+        visibleContent = `You're all set! Here's your program profile:\n\n${summaryLines.join('\n')}\n\nWelcome to First Stringers — let's find your next great athlete.`;
+
+        const pitch = await this.generateRecruiterPitch(profileData);
+
+        await this.recruiterService.updateProfile(recruiterId, {
+          university: profileData.university as string | undefined,
+          location: profileData.location as string | undefined,
+          scholarshipType: profileData.scholarshipType as string | undefined,
+          sport: profileData.sport as string | undefined,
+          gender: profileData.gender as string | undefined,
+          division: profileData.division as string | undefined,
+          openings: profileData.openings as number | undefined,
+          onboardingCompleted: true,
+          pitch,
+        });
+
+        // Flip the session out of onboarding mode
+        await this.session.setOnboardingComplete(conversationId, recruiterId);
+
+        this.eventEmitter.emit('billy.onboarding_complete', { recruiterId, conversationId });
+      } catch (err) {
+        this.logger.warn(`Could not parse or save onboarding profile for recruiter ${recruiterId}`, err);
+      }
+    }
+
+    const assistantMessage: BillyMessage = {
+      role: 'assistant',
+      content: visibleContent,
+      timestamp: new Date(),
+    };
+    await this.session.appendMessage(conversationId, recruiterId, assistantMessage);
+
+    try {
+      const updatedSession = await this.session.getSession(conversationId, recruiterId);
+      await this.conversations.persistMessages(conversationId, updatedSession.messages, {});
+    } catch (dbErr) {
+      this.logger.warn(`Could not persist onboarding messages for conversation ${conversationId}`, dbErr);
+    }
+
+    this.eventEmitter.emit('billy.response', {
+      conversationId,
+      message: visibleContent,
+      onboardingComplete: !!profileMatch,
+    });
+  }
+
+  private async generateRecruiterPitch(profile: Record<string, unknown>): Promise<string> {
+    const lines = [
+      profile['university'] && `University: ${profile['university']}`,
+      profile['location'] && `Location: ${profile['location']}`,
+      profile['scholarshipType'] && `Scholarship: ${profile['scholarshipType']}`,
+      profile['sport'] && `Sport: ${profile['sport']}`,
+      profile['division'] && `Division: ${profile['division']}`,
+      profile['openings'] && `Open spots: ${profile['openings']}`,
+    ]
+      .filter(Boolean)
+      .join('\n');
+
+    try {
+      const response = await this.openai.chat.completions.create({
+        model: 'gpt-4o-mini',
+        messages: [
+          {
+            role: 'system',
+            content:
+              'Write a 2–3 sentence introduction for a college sports recruiter that will be shown to an athlete receiving a connection request. Be specific, warm, and professional. Highlight what makes the program attractive to a prospective athlete. No quotes, no bullet points — flowing text only.',
+          },
+          {
+            role: 'user',
+            content: `Program details:\n${lines}`,
+          },
+        ],
+        temperature: 0.7,
+        max_tokens: 150,
+      });
+      return response.choices[0].message.content?.trim() ?? '';
+    } catch (err) {
+      this.logger.warn('Could not generate recruiter pitch', err);
+      return '';
     }
   }
 

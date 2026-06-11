@@ -2,12 +2,17 @@
 
 import { useState } from "react";
 import { signIn } from "next-auth/react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { api } from "@/lib/api";
 
 export default function WelcomePage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const role = (searchParams.get("role") === "recruiter" ? "recruiter" : "athlete") as
+    | "athlete"
+    | "recruiter";
+
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -34,7 +39,7 @@ export default function WelcomePage() {
         email,
         password,
         name,
-        role: "ATHLETE",
+        role: role.toUpperCase(),
       });
 
       const res = await signIn("credentials", {
@@ -48,7 +53,8 @@ export default function WelcomePage() {
         return;
       }
 
-      router.push("/chat");
+      // Full navigation so middleware can read the session and route by role
+      window.location.href = role === "recruiter" ? "/billy" : "/chat";
     } catch (err: unknown) {
       if (
         err &&
@@ -87,6 +93,33 @@ export default function WelcomePage() {
           together.
         </p>
 
+        {/* Role selector — updates URL */}
+        <div className="mt-8 w-full">
+          <p className="mb-3 text-center text-xs text-[#A0A0A0]">I am a</p>
+          <div className="flex gap-2 rounded-2xl bg-[#EDEDEA] p-1">
+            <Link
+              href="/welcome?role=athlete"
+              className={`flex-1 rounded-xl py-2.5 text-center text-sm font-medium transition-colors ${
+                role === "athlete"
+                  ? "bg-[#3D3D3D] text-white shadow-sm"
+                  : "text-[#6B6B6B] hover:text-[#2D2D2D]"
+              }`}
+            >
+              Athlete
+            </Link>
+            <Link
+              href="/welcome?role=recruiter"
+              className={`flex-1 rounded-xl py-2.5 text-center text-sm font-medium transition-colors ${
+                role === "recruiter"
+                  ? "bg-[#3D3D3D] text-white shadow-sm"
+                  : "text-[#6B6B6B] hover:text-[#2D2D2D]"
+              }`}
+            >
+              Recruiter
+            </Link>
+          </div>
+        </div>
+
         {/* Error */}
         {error && (
           <div className="mt-6 w-full rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
@@ -95,7 +128,7 @@ export default function WelcomePage() {
         )}
 
         {/* Form */}
-        <form onSubmit={handleContinue} className="mt-10 w-full space-y-4">
+        <form onSubmit={handleContinue} className="mt-6 w-full space-y-4">
           {/* Name */}
           <div>
             <label

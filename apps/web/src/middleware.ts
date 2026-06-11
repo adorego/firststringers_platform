@@ -2,12 +2,18 @@ import { getToken } from "next-auth/jwt";
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
-const PUBLIC_PATHS = ["/", "/welcome", "/login", "/register", "/api/auth", "/billy", "/chat", "/matches", "/profile", "/dossier", "/search", "/pipeline", "/connections", "/introductions"];
+// Always public — no auth needed
+const PUBLIC_PATHS = ["/", "/welcome", "/login", "/register", "/api/auth"];
+
+// Routes only athletes should access
+const ATHLETE_PATHS = ["/chat", "/dossier", "/profile", "/conversations", "/pipeline", "/updates"];
+// Routes only recruiters should access
+const RECRUITER_PATHS = ["/billy", "/matches", "/search", "/connections", "/introductions"];
 
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
-  // Allow public paths
+  // Let truly public paths through without any auth check
   if (PUBLIC_PATHS.some((p) => pathname === p || pathname.startsWith(p + "/"))) {
     return NextResponse.next();
   }
@@ -19,29 +25,19 @@ export async function middleware(request: NextRequest) {
 
   // Not authenticated → redirect to login
   if (!token) {
-    return NextResponse.redirect(new URL("/welcome", request.url));
+    return NextResponse.redirect(new URL("/welcome/returning", request.url));
   }
 
-  const role = token.role as string;
+  const role = (token.role as string)?.toLowerCase();
 
-  // Athlete trying to access recruiter routes
-  if (pathname.startsWith("/search") || pathname.startsWith("/matches")) {
-    if (role === "athlete") {
-      return NextResponse.redirect(new URL("/chat", request.url));
-    }
+  // Recruiter on an athlete-only route → /billy
+  if (role === "recruiter" && ATHLETE_PATHS.some((p) => pathname.startsWith(p))) {
+    return NextResponse.redirect(new URL("/billy", request.url));
   }
 
-  // Recruiter trying to access athlete routes
-  if (
-    pathname.startsWith("/chat") ||
-    pathname.startsWith("/dossier") ||
-    pathname.startsWith("/profile") ||
-    pathname.startsWith("/conversations") ||
-    pathname.startsWith("/dossier")
-  ) {
-    if (role === "recruiter") {
-      return NextResponse.redirect(new URL("/matches", request.url));
-    }
+  // Athlete on a recruiter-only route → /chat
+  if (role === "athlete" && RECRUITER_PATHS.some((p) => pathname.startsWith(p))) {
+    return NextResponse.redirect(new URL("/chat", request.url));
   }
 
   return NextResponse.next();

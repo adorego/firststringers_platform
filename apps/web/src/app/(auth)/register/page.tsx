@@ -34,11 +34,12 @@ export default function RegisterPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const prefillEmail = searchParams.get("email") ?? "";
+  const prefillRole = searchParams.get("role") === "recruiter" ? "recruiter" : "athlete";
 
   const [name, setName] = useState("");
   const [email, setEmail] = useState(prefillEmail);
   const [password, setPassword] = useState("");
-  const [role, setRole] = useState<"athlete" | "recruiter">("athlete");
+  const [role, setRole] = useState<"athlete" | "recruiter">(prefillRole);
   const [errors, setErrors] = useState<FormErrors>({});
   const [serverError, setServerError] = useState("");
   const [loading, setLoading] = useState(false);
@@ -75,7 +76,7 @@ export default function RegisterPage() {
       }
 
       if (role === "recruiter") {
-        router.push("/matches");
+        router.push("/billy");
       } else {
         router.push("/chat");
       }

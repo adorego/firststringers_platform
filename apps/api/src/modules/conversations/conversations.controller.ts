@@ -2,6 +2,7 @@ import {
   Controller,
   Get,
   Post,
+  Patch,
   Body,
   Param,
   NotFoundException,
@@ -14,7 +15,7 @@ import { ConversationsService } from './conversations.service';
 export class ConversationsController {
   constructor(private readonly conversationsService: ConversationsService) {}
 
-  // Authenticated: athleteId comes from the JWT, not the URL
+  // Athlete: accepted conversations only
   @Get('me')
   getMine(
     @CurrentUser() user: { id: string; role: string; athleteId: string | null },
@@ -22,9 +23,42 @@ export class ConversationsController {
     if (!user.athleteId) {
       throw new NotFoundException('No athlete profile linked to this user');
     }
-    return this.conversationsService.getConversationsForAthlete(
-      user.athleteId,
-    );
+    return this.conversationsService.getConversationsForAthlete(user.athleteId);
+  }
+
+  // Athlete: pending connection requests
+  @Get('me/requests')
+  getPendingRequests(
+    @CurrentUser() user: { id: string; role: string; athleteId: string | null },
+  ) {
+    if (!user.athleteId) {
+      throw new NotFoundException('No athlete profile linked to this user');
+    }
+    return this.conversationsService.getPendingRequestsForAthlete(user.athleteId);
+  }
+
+  // Athlete: accept a connection request
+  @Patch(':id/accept')
+  acceptRequest(
+    @Param('id') id: string,
+    @CurrentUser() user: { id: string; role: string; athleteId: string | null },
+  ) {
+    if (!user.athleteId) {
+      throw new NotFoundException('No athlete profile linked to this user');
+    }
+    return this.conversationsService.acceptRequest(id, user.athleteId);
+  }
+
+  // Athlete: decline a connection request
+  @Patch(':id/decline')
+  declineRequest(
+    @Param('id') id: string,
+    @CurrentUser() user: { id: string; role: string; athleteId: string | null },
+  ) {
+    if (!user.athleteId) {
+      throw new NotFoundException('No athlete profile linked to this user');
+    }
+    return this.conversationsService.declineRequest(id, user.athleteId);
   }
 
   @Public()

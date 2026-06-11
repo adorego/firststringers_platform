@@ -4,6 +4,7 @@ declare module "next-auth" {
   interface User {
     role: "athlete" | "recruiter";
     athleteId: string | null;
+    recruiterId: string | null;
     accessToken: string;
     refreshToken: string;
     accessTokenExpires: number;
@@ -16,6 +17,7 @@ declare module "next-auth" {
       email: string;
       role: "athlete" | "recruiter";
       athleteId: string | null;
+      recruiterId: string | null;
     };
     accessToken: string;
     error?: string;
@@ -27,6 +29,7 @@ declare module "next-auth/jwt" {
     role: string;
     id: string;
     athleteId: string | null;
+    recruiterId: string | null;
     accessToken: string;
     refreshToken: string;
     accessTokenExpires: number;

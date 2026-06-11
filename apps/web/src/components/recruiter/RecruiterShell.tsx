@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { Menu } from "lucide-react";
+import { useSession } from "next-auth/react";
 import { RecruiterSidebar } from "@/components/ui/Sidebar";
 import { PipelineDrawer } from "@/components/recruiter/PipelineDrawer";
 import { ConnectionsDrawer } from "@/components/recruiter/ConnectionsDrawer";
@@ -11,9 +12,9 @@ import { IntroductionsDrawer } from "@/components/recruiter/IntroductionsDrawer"
 import { DossierPanel } from "@/components/recruiter/DossierPanel";
 import { AthleteResult } from "@/hooks/useBilly";
 
-const MOCK_RECRUITER_ID = "e0b6c0c8-2b27-4521-9b26-46ace16b4983";
-
 export function RecruiterShell({ children }: { children: React.ReactNode }) {
+  const { data: session } = useSession();
+  const recruiterId = session?.user?.recruiterId ?? "e0b6c0c8-2b27-4521-9b26-46ace16b4983";
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [pipelineOpen, setPipelineOpen] = useState(false);
   const [connectionsOpen, setConnectionsOpen] = useState(false);
@@ -48,7 +49,7 @@ export function RecruiterShell({ children }: { children: React.ReactNode }) {
       )}
 
       <RecruiterSidebar
-        recruiterId={MOCK_RECRUITER_ID}
+        recruiterId={recruiterId}
         isOpen={sidebarOpen}
         onClose={closeSidebar}
         onPipelineClick={() => {
@@ -92,7 +93,7 @@ export function RecruiterShell({ children }: { children: React.ReactNode }) {
       <ConnectionsDrawer
         isOpen={connectionsOpen && !activeConversation}
         onClose={handleCloseConnections}
-        recruiterId={MOCK_RECRUITER_ID}
+        recruiterId={recruiterId}
         onSelectConversation={handleSelectConversation}
       />
 
