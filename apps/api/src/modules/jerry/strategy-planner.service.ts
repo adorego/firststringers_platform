@@ -55,27 +55,64 @@ const SECTION_FIRST_FIELDS = new Set([
 const FRUSTRATION_KEYWORDS = ["don't know", 'not sure', 'stop', 'quit'];
 const FRUSTRATION_WINDOW = 4;
 
+// "Representable > Completo": Jerry can start representing the athlete once
+// he knows enough — identity, initial athletic snapshot and general goals.
+// The dossier keeps growing forever; this is just the activation threshold.
+const REPRESENTABLE_FIELDS = new Set([
+  'sport',
+  'position',
+  'graduation year',
+  'location',
+  'school',
+  'stats',
+  'strengths',
+  'competitive level goal',
+  'goals',
+]);
+
 @Injectable()
 export class StrategyPlannerService {
   decide(ctx: StrategyContext): ConversationStrategy {
     const { intent, missingFields, extractedData, session } = ctx;
 
+    // missingFields reflects the DB BEFORE this turn's extraction is merged
+    const representableMissing = missingFields.filter((f) =>
+      REPRESENTABLE_FIELDS.has(f),
+    );
+    const alreadyRepresentable = representableMissing.length === 0;
+
     if (session.messages.length <= 1) {
-      return { type: 'welcome' };
+      // A representable athlete returning after the session expired gets a
+      // proactive check-in, not the onboarding welcome
+      return alreadyRepresentable ? { type: 'continuous' } : { type: 'welcome' };
     }
 
     if (this.detectFrustration(session.messages)) {
       return { type: 'reset' };
     }
 
-    if (missingFields.length === 0) {
-      return { type: 'activation' };
+    const covered = extractedData
+      ? this.fieldsCoveredByExtraction(extractedData)
+      : new Set<string>();
+    const effectiveMissing = missingFields.filter((f) => !covered.has(f));
+
+    // Activation fires exactly on the turn that crosses the representable
+    // threshold — once. After that the athlete is always "representable"
+    // and conversations run in continuous mode.
+    const crossedThreshold =
+      !alreadyRepresentable &&
+      representableMissing.every((f) => covered.has(f)) &&
+      extractedData !== null &&
+      Object.keys(extractedData ?? {}).length > 0;
+
+    if (crossedThreshold) {
+      return { type: 'activation', confirmedData: extractedData ?? undefined };
     }
 
     if (intent === 'question') {
       return {
         type: 'answer_and_redirect',
-        targetField: this.pickNextField(missingFields, session.messages),
+        targetField: this.pickNextField(effectiveMissing, session.messages),
       };
     }
 
@@ -92,16 +129,21 @@ export class StrategyPlannerService {
       return { type: 'clarify' };
     }
 
+    // ── Continuous mode: onboarding is over, Jerry accompanies ──
+    if (alreadyRepresentable) {
+      return {
+        type: 'continuous',
+        confirmedData:
+          extractedData && Object.keys(extractedData).length > 0
+            ? extractedData
+            : undefined,
+        // Orientation hint (conversational, never a form field)
+        targetField: this.pickNextField(effectiveMissing, session.messages),
+      };
+    }
+
+    // ── Onboarding mode ──
     if (extractedData && Object.keys(extractedData).length > 0) {
-      // missingFields comes from the DB BEFORE this turn's extraction is
-      // merged — subtract the fields just covered so we don't re-ask them
-      const covered = this.fieldsCoveredByExtraction(extractedData);
-      const effectiveMissing = missingFields.filter((f) => !covered.has(f));
-
-      if (effectiveMissing.length === 0) {
-        return { type: 'activation' };
-      }
-
       const nextField = this.pickNextField(effectiveMissing, session.messages);
 
       // Check if we just crossed a section boundary

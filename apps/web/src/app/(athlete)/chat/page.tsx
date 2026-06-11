@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import { useSession, signOut } from "next-auth/react";
-import { Send, Video, Radar, TrendingUp, Shield } from "lucide-react";
+import { Send, Radar, TrendingUp, Shield } from "lucide-react";
 import { useChatStore } from "@/stores/chat-store";
 import { useDossierStore } from "@/stores/dossier-store";
 
@@ -237,7 +237,7 @@ export default function ChatPage() {
         </div>
       </div>
 
-      {/* Input + FAB */}
+      {/* Input */}
       <div className="px-6 pb-3">
         <div className="mx-auto max-w-2xl">
           <div className="flex items-center gap-3 rounded-2xl border border-[#E0E0DC] bg-white px-4 py-2.5">
@@ -260,12 +260,6 @@ export default function ChatPage() {
               className="flex h-8 w-8 items-center justify-center rounded-full bg-[#EDEDEA] text-[#6B6B6B] transition-colors hover:bg-[#E0E0DC] disabled:opacity-40"
             >
               <Send size={16} />
-            </button>
-          </div>
-          <div className="mt-2 flex justify-end">
-            <button className="flex items-center gap-2 rounded-full bg-[#3D3D3D] px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-[#2D2D2D]">
-              <Video size={14} />
-              Direct to Jerry
             </button>
           </div>
         </div>

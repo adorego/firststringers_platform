@@ -28,7 +28,8 @@ function makeSession(messages: JerryMessage[] = []): JerrySessionState {
 function makeCtx(overrides: Partial<StrategyContext> = {}): StrategyContext {
   return {
     intent: 'other',
-    missingFields: ['GPA'],
+    // 'sport' is a representable field → default context is in ONBOARDING mode
+    missingFields: ['sport', 'GPA'],
     extractedData: null,
     session: makeSession([
       makeMessage('user', 'Hello'),
@@ -141,9 +142,75 @@ describe('StrategyPlannerService', () => {
       expect(result.targetField).toBe('GPA');
     });
 
-    it('returns "activation" when all fields are complete', () => {
-      const result = service.decide(makeCtx({ missingFields: [] }));
+    it('returns "continuous" when the athlete is already representable', () => {
+      // No representable fields missing → onboarding is over
+      const result = service.decide(makeCtx({ missingFields: ['GPA'] }));
+      expect(result.type).toBe('continuous');
+    });
+  });
+
+  // ── Activation: Representable > Completo ─────────────────────────────────
+
+  describe('activation', () => {
+    it('fires exactly when the extraction covers the last representable field', () => {
+      const result = service.decide(
+        makeCtx({
+          intent: 'recruiting',
+          missingFields: ['goals', 'GPA'],
+          extractedData: { availability: { goals: ['Play D1'] } },
+        }),
+      );
       expect(result.type).toBe('activation');
+    });
+
+    it('does NOT fire again once the athlete is already representable', () => {
+      const result = service.decide(
+        makeCtx({
+          intent: 'academic',
+          missingFields: ['GPA'],
+          extractedData: { academic: { gpa: 3.8 } },
+        }),
+      );
+      expect(result.type).toBe('continuous');
+    });
+
+    it('does NOT fire while representable fields are still missing', () => {
+      const result = service.decide(
+        makeCtx({
+          intent: 'personal',
+          missingFields: ['sport', 'goals'],
+          extractedData: { identity: { sport: 'soccer' } },
+        }),
+      );
+      expect(result.type).not.toBe('activation');
+    });
+  });
+
+  // ── Continuous mode ──────────────────────────────────────────────────────
+
+  describe('continuous mode', () => {
+    it('returns "continuous" with confirmedData when a representable athlete shares new info', () => {
+      const result = service.decide(
+        makeCtx({
+          intent: 'academic',
+          missingFields: ['GPA', 'intended major'],
+          extractedData: { academic: { intendedMajor: 'Business' } },
+        }),
+      );
+      expect(result.type).toBe('continuous');
+      expect(result.confirmedData).toEqual({
+        academic: { intendedMajor: 'Business' },
+      });
+    });
+
+    it('greets a returning representable athlete with "continuous", not "welcome"', () => {
+      const result = service.decide(
+        makeCtx({
+          missingFields: ['clips'],
+          session: makeSession([]),
+        }),
+      );
+      expect(result.type).toBe('continuous');
     });
   });
 
@@ -178,7 +245,7 @@ describe('StrategyPlannerService', () => {
           },
         }),
       );
-      // Both missing fields were just covered → onboarding complete
+      // 'strengths' was the last representable field missing → activation
       expect(result.type).toBe('activation');
     });
 
@@ -200,21 +267,21 @@ describe('StrategyPlannerService', () => {
   // ── Edge cases ───────────────────────────────────────────────────────────
 
   describe('edge cases', () => {
-    it('returns "activation" when missingFields is empty even if intent === "question"', () => {
+    it('still answers questions in continuous mode', () => {
       const result = service.decide(
         makeCtx({ missingFields: [], intent: 'question' }),
       );
-      expect(result.type).toBe('activation');
+      expect(result.type).toBe('answer_and_redirect');
     });
 
-    it('returns "activation" when missingFields is empty even if there is extractedData', () => {
+    it('returns "continuous" when nothing is missing and data was extracted', () => {
       const result = service.decide(
         makeCtx({
           missingFields: [],
           extractedData: { identity: { sport: 'soccer' } },
         }),
       );
-      expect(result.type).toBe('activation');
+      expect(result.type).toBe('continuous');
     });
   });
 });

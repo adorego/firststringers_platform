@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { MessageCircle, User, FileText } from "lucide-react";
+import { MessageCircle, User, NotebookTabs } from "lucide-react";
 
 interface NavItem {
   href: string;
@@ -39,8 +39,8 @@ const items: NavItem[] = [
   },
   {
     href: "/dossier",
-    icon: <FileText size={22} />,
-    activeIcon: <FileText size={22} />,
+    icon: <NotebookTabs size={22} />,
+    activeIcon: <NotebookTabs size={22} />,
     label: "Dossier",
   },
   {
