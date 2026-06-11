@@ -7,12 +7,14 @@ import { BillyConversationService } from './billy-conversation.service';
 import { BillyConversationController } from './billy-conversation.controller';
 import { ScoutModule } from '../scout/scout.module';
 import { JerryModule } from '../jerry/jerry.module';
+import { ConversationsModule } from '../conversations/conversations.module';
 
 @Module({
   imports: [
     BullModule.registerQueue({ name: 'billy' }),
     ScoutModule,
     JerryModule,
+    ConversationsModule,
   ],
   controllers: [BillyConversationController],
   providers: [
