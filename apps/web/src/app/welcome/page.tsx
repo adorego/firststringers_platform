@@ -17,6 +17,7 @@ export default function WelcomePage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [agreed, setAgreed] = useState(false);
+  const [ageConfirmed, setAgeConfirmed] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -25,7 +26,8 @@ export default function WelcomePage() {
     name.trim().length > 0 &&
     email.trim().length > 0 &&
     password.length >= 8 &&
-    agreed;
+    agreed &&
+    (role === "recruiter" || ageConfirmed);
 
   async function handleContinue(e: React.FormEvent) {
     e.preventDefault();
@@ -86,16 +88,18 @@ export default function WelcomePage() {
 
         {/* Heading */}
         <h1 className="text-center text-3xl font-bold tracking-tight text-[#2D2D2D]">
-          Your journey starts here
+          {role === "recruiter"
+            ? "Find the right athletes"
+            : "Every athlete deserves representation"}
         </h1>
         <p className="mt-3 text-center text-base text-[#6B6B6B]">
-          Every athlete deserves representation. Let&apos;s build your story
-          together.
+          {role === "recruiter"
+            ? "Create your account and start recruiting with First Stringers."
+            : "Create your account and start your journey with First Stringers."}
         </p>
 
         {/* Role selector — updates URL */}
         <div className="mt-8 w-full">
-          <p className="mb-3 text-center text-xs text-[#A0A0A0]">I am a</p>
           <div className="flex gap-2 rounded-2xl bg-[#EDEDEA] p-1">
             <Link
               href="/welcome?role=athlete"
@@ -192,6 +196,41 @@ export default function WelcomePage() {
             </div>
           </div>
 
+          {/* Age confirmation — athletes only */}
+          {role === "athlete" && (
+            <div className="flex items-start gap-3">
+              <button
+                type="button"
+                onClick={() => setAgeConfirmed(!ageConfirmed)}
+                className={`mt-0.5 flex h-5 w-5 flex-shrink-0 items-center justify-center rounded border transition-colors ${
+                  ageConfirmed
+                    ? "border-[#3D3D3D] bg-[#3D3D3D]"
+                    : "border-[#C0C0BC] bg-white"
+                }`}
+                aria-label="Confirm age"
+              >
+                {ageConfirmed && (
+                  <svg
+                    className="h-3 w-3 text-white"
+                    viewBox="0 0 12 12"
+                    fill="none"
+                  >
+                    <path
+                      d="M2 6l3 3 5-5"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    />
+                  </svg>
+                )}
+              </button>
+              <p className="text-sm leading-snug text-[#6B6B6B]">
+                I confirm that I am 13 years of age or older.
+              </p>
+            </div>
+          )}
+
           {/* T&C Checkbox */}
           <div className="flex items-start gap-3">
             <button
@@ -233,10 +272,12 @@ export default function WelcomePage() {
             </p>
           </div>
 
-          {/* Age notice */}
-          <p className="text-xs text-[#A0A0A0]">
-            First Stringers is available for athletes ages 13 and older.
-          </p>
+          {/* Age notice — athletes only */}
+          {role === "athlete" && (
+            <p className="text-xs text-[#A0A0A0]">
+              First Stringers is available for athletes ages 13 and older.
+            </p>
+          )}
 
           {/* Continue button */}
           <button
