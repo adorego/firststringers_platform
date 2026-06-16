@@ -36,16 +36,17 @@ export class AuthService {
     const hashedPassword = await bcrypt.hash(dto.password, 12);
 
     const user = await this.prisma.$transaction(async (tx) => {
+      // Get or create the default organization for self-registered users
+      const defaultOrg = await tx.organization.upsert({
+        where: { id: 'default-org' },
+        update: {},
+        create: { id: 'default-org', name: 'First Stringers' },
+      });
+
       let athleteId: string | undefined;
+      let recruiterId: string | undefined;
 
       if (dto.role === 'ATHLETE') {
-        // Get or create the default organization for self-registered athletes
-        const defaultOrg = await tx.organization.upsert({
-          where: { id: 'default-org' },
-          update: {},
-          create: { id: 'default-org', name: 'First Stringers' },
-        });
-
         const athlete = await tx.athlete.create({
           data: {
             email: dto.email,
@@ -54,6 +55,15 @@ export class AuthService {
           },
         });
         athleteId = athlete.id;
+      } else if (dto.role === 'RECRUITER') {
+        const recruiter = await tx.recruiter.create({
+          data: {
+            email: dto.email,
+            name: dto.name,
+            organizationId: defaultOrg.id,
+          },
+        });
+        recruiterId = recruiter.id;
       }
 
       return tx.user.create({
@@ -62,11 +72,12 @@ export class AuthService {
           password: hashedPassword,
           role: dto.role || 'ATHLETE',
           athleteId,
+          recruiterId,
         },
       });
     });
 
-    return this.generateTokens(user.id, user.email, user.role, user.athleteId);
+    return this.generateTokens(user.id, user.email, user.role, user.athleteId, user.recruiterId);
   }
 
   async login(dto: LoginDto) {
@@ -84,7 +95,7 @@ export class AuthService {
       throw new UnauthorizedException('Invalid credentials');
     }
 
-    return this.generateTokens(user.id, user.email, user.role, user.athleteId);
+    return this.generateTokens(user.id, user.email, user.role, user.athleteId, user.recruiterId);
   }
 
   async refresh(refreshToken: string) {
@@ -115,6 +126,7 @@ export class AuthService {
         user.email,
         user.role,
         user.athleteId,
+        user.recruiterId,
       );
     } catch {
       throw new UnauthorizedException('Invalid refresh token');
@@ -126,12 +138,14 @@ export class AuthService {
     email: string,
     role: string,
     athleteId?: string | null,
+    recruiterId?: string | null,
   ) {
     const baseClaims = {
       sub: userId,
       email,
       role,
       ...(athleteId && { athleteId }),
+      ...(recruiterId && { recruiterId }),
     };
 
     return {
