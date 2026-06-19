@@ -1,4 +1,8 @@
-import { Injectable, ForbiddenException, NotFoundException } from '@nestjs/common';
+import {
+  Injectable,
+  ForbiddenException,
+  NotFoundException,
+} from '@nestjs/common';
 import { PrismaService } from '../../shared/prisma/prisma.service';
 
 @Injectable()
@@ -53,7 +57,35 @@ export class ConversationsService {
     });
   }
 
+  async assertRecruiterCanContact(recruiterId: string): Promise<void> {
+    const recruiter = await this.prisma.recruiter.findUnique({
+      where: { id: recruiterId },
+      select: {
+        onboardingCompleted: true,
+        verificationStatus: true,
+      },
+    });
+
+    if (!recruiter) {
+      throw new NotFoundException('Recruiter not found');
+    }
+
+    if (!recruiter.onboardingCompleted) {
+      throw new ForbiddenException(
+        'Complete your onboarding with Billy before contacting athletes',
+      );
+    }
+
+    if (recruiter.verificationStatus !== 'verified') {
+      throw new ForbiddenException(
+        'Your account must be verified before contacting athletes',
+      );
+    }
+  }
+
   async createRequest(recruiterId: string, athleteId: string) {
+    await this.assertRecruiterCanContact(recruiterId);
+
     return this.prisma.directConversation.upsert({
       where: { recruiterId_athleteId: { recruiterId, athleteId } },
       create: { recruiterId, athleteId, status: 'pending' },
