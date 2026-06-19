@@ -4,6 +4,7 @@ import {
   closeTestApp,
   truncateAll,
   getApp,
+  getPrisma,
 } from './helpers/test-app';
 import {
   registerAthlete,
@@ -91,6 +92,59 @@ describe('Auth (e2e)', () => {
         .post('/auth/login')
         .send({ email: 'nope@test.com', password: 'Pass1234!' })
         .expect(401);
+    });
+  });
+
+  describe('Email verification', () => {
+    it('new user starts unverified', async () => {
+      await registerAthlete('Verify Test', 'verify@test.com');
+      const prisma = getPrisma();
+
+      const user = await prisma.user.findUnique({
+        where: { email: 'verify@test.com' },
+      });
+      expect(user?.emailVerified).toBe(false);
+    });
+
+    it('send-otp creates a code and verify-email rejects a wrong one', async () => {
+      const auth = await registerAthlete('OTP Test', 'otp@test.com');
+
+      await request(getApp().getHttpServer())
+        .post('/auth/send-otp')
+        .set('Authorization', `Bearer ${auth.access_token}`)
+        .expect(201);
+
+      // A code exists in the DB
+      const prisma = getPrisma();
+      const count = await prisma.verificationCode.count({
+        where: { user: { email: 'otp@test.com' } },
+      });
+      expect(count).toBeGreaterThanOrEqual(1);
+
+      // Wrong code is rejected
+      await request(getApp().getHttpServer())
+        .post('/auth/verify-email')
+        .set('Authorization', `Bearer ${auth.access_token}`)
+        .send({ code: '000000' })
+        .expect(400);
+    });
+
+    it('send-otp is idempotent for already-verified users', async () => {
+      const auth = await registerAthlete('Verified', 'done@test.com');
+      const prisma = getPrisma();
+
+      // Manually mark as verified
+      await prisma.user.update({
+        where: { email: 'done@test.com' },
+        data: { emailVerified: true },
+      });
+
+      const res = await request(getApp().getHttpServer())
+        .post('/auth/send-otp')
+        .set('Authorization', `Bearer ${auth.access_token}`)
+        .expect(201);
+
+      expect(res.body.sent).toBe(true);
     });
   });
 

@@ -59,6 +59,7 @@ export async function truncateAll(): Promise<void> {
       "User",
       "Athlete",
       "Recruiter",
+      "VerificationCode",
       "Organization"
     CASCADE
   `);

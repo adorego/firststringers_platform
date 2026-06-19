@@ -55,8 +55,8 @@ export default function WelcomePage() {
         return;
       }
 
-      // Full navigation so middleware can read the session and route by role
-      window.location.href = role === "recruiter" ? "/billy" : "/chat";
+      // Redirect to email verification
+      window.location.href = `/welcome/verify?contact=${encodeURIComponent(email)}&role=${role}`;
     } catch (err: unknown) {
       if (
         err &&
