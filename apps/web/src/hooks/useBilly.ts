@@ -88,6 +88,35 @@ export async function createBillyConversation(
   }
 }
 
+export async function renameBillyConversation(
+  conversationId: string,
+  title: string,
+): Promise<boolean> {
+  try {
+    const res = await fetch(`${API_URL}/billy/conversations/${conversationId}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ title }),
+    });
+    return res.ok;
+  } catch {
+    return false;
+  }
+}
+
+export async function deleteBillyConversation(
+  conversationId: string,
+): Promise<boolean> {
+  try {
+    const res = await fetch(`${API_URL}/billy/conversations/${conversationId}`, {
+      method: "DELETE",
+    });
+    return res.ok || res.status === 204;
+  } catch {
+    return false;
+  }
+}
+
 // ── WebSocket hook ────────────────────────────────────────────────────────────
 
 export function useBilly(recruiterId: string, conversationId: string) {

@@ -58,15 +58,25 @@ model JerrySession {
 }
 
 model Recruiter {
-  id             String               @id @default(uuid())
-  organizationId String
-  organization   Organization         @relation(fields: [organizationId], references: [id])
-  email          String               @unique
-  name           String
-  createdAt      DateTime             @default(now())
-  billyMessages  BillyMessage[]
-  conversations  DirectConversation[]
-  user           User?
+  id                  String               @id @default(uuid())
+  organizationId      String
+  organization        Organization         @relation(fields: [organizationId], references: [id])
+  email               String               @unique
+  name                String
+  // Program info collected during Billy onboarding
+  university          String?
+  location            String?
+  scholarshipType     String?              // "full" | "partial" | "financial_aid"
+  sport               String?
+  gender              String?              // "male" | "female" | "both"
+  division            String?              // "D1" | "D2" | "D3" | "NAIA" | "JUCO"
+  openings            Int?
+  onboardingCompleted Boolean              @default(false)
+  pitch               String?
+  createdAt           DateTime             @default(now())
+  user                User?
+  billyMessages       BillyMessage[]
+  conversations       DirectConversation[]
 }
 
 model User {
@@ -87,6 +97,7 @@ model DirectConversation {
   recruiter   Recruiter       @relation(fields: [recruiterId], references: [id])
   athleteId   String
   athlete     Athlete         @relation(fields: [athleteId], references: [id])
+  status      String          @default("pending") // "pending" | "accepted" | "declined"
   messages    DirectMessage[]
   createdAt   DateTime        @default(now())
   updatedAt   DateTime        @updatedAt

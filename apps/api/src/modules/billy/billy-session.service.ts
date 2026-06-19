@@ -18,7 +18,7 @@ export class BillySessionService {
     private readonly conversations: BillyConversationService,
   ) {}
 
-  async getSession(conversationId: string, recruiterId: string): Promise<BillySessionState> {
+  async getSession(conversationId: string, recruiterId: string, isOnboarding = false): Promise<BillySessionState> {
     const key = this.buildKey(conversationId);
     const data = await this.redis.get(key);
 
@@ -40,6 +40,7 @@ export class BillySessionService {
       messages,
       searchCriteria,
       missingFields: ['sport', 'position', 'leagueLevel'],
+      isOnboarding,
       createdAt: new Date(),
       updatedAt: new Date(),
     };
@@ -68,6 +69,12 @@ export class BillySessionService {
     const session = await this.getSession(conversationId, recruiterId);
     session.searchCriteria = { ...session.searchCriteria, ...newCriteria };
     session.updatedAt = new Date();
+    await this.saveSession(conversationId, session);
+  }
+
+  async setOnboardingComplete(conversationId: string, recruiterId: string): Promise<void> {
+    const session = await this.getSession(conversationId, recruiterId);
+    session.isOnboarding = false;
     await this.saveSession(conversationId, session);
   }
 

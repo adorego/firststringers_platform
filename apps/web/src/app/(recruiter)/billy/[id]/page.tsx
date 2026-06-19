@@ -2,11 +2,10 @@
 
 import { useState, useRef, useEffect } from "react";
 import { ArrowUp } from "lucide-react";
-import { useParams } from "next/navigation";
+import { useParams, useSearchParams } from "next/navigation";
+import { useSession } from "next-auth/react";
 import { useBilly, AthleteResult } from "@/hooks/useBilly";
 import { DossierPanel } from "@/components/recruiter/DossierPanel";
-
-const MOCK_RECRUITER_ID = "e0b6c0c8-2b27-4521-9b26-46ace16b4983";
 
 // ─── Sub-components ──────────────────────────────────────────────────────────
 
@@ -160,17 +159,30 @@ function InputBar({
 
 export default function BillyChatPage() {
   const { id: conversationId } = useParams<{ id: string }>();
+  const searchParams = useSearchParams();
+  const initialQuery = searchParams.get("q");
+  const { data: session } = useSession();
+  const recruiterId = session?.user?.recruiterId ?? "e0b6c0c8-2b27-4521-9b26-46ace16b4983";
 
   const [input, setInput] = useState("");
   const [selectedAthlete, setSelectedAthlete] = useState<AthleteResult | null>(null);
   const [openToIntro, setOpenToIntro] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const autoSentRef = useRef(false);
 
   const { messages, status, isTyping, sendMessage, handleOption } = useBilly(
-    MOCK_RECRUITER_ID,
+    recruiterId,
     conversationId,
   );
+
+  // Auto-send the suggestion from the landing page once connected
+  useEffect(() => {
+    if (initialQuery && status === "connected" && !autoSentRef.current) {
+      autoSentRef.current = true;
+      sendMessage(initialQuery);
+    }
+  }, [initialQuery, status, sendMessage]);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });

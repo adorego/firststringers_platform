@@ -77,4 +77,8 @@ export class BillyConversationService {
       data: { title },
     });
   }
+
+  async delete(conversationId: string): Promise<void> {
+    await this.prisma.billyConversation.delete({ where: { id: conversationId } });
+  }
 }

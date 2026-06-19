@@ -31,6 +31,7 @@ export interface BillySessionState {
   messages: BillyMessage[];
   searchCriteria: Partial<SearchCriteria>;
   missingFields: string[];
+  isOnboarding: boolean;
   createdAt: Date;
   updatedAt: Date;
 }

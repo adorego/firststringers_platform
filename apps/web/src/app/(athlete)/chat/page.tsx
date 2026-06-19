@@ -2,9 +2,10 @@
 
 import { useState, useEffect, useRef } from "react";
 import { useSession, signOut } from "next-auth/react";
-import { Send, Radar, TrendingUp, Shield } from "lucide-react";
+import { Send, Video, Radar, TrendingUp, Shield, Check, X } from "lucide-react";
 import { useChatStore } from "@/stores/chat-store";
 import { useDossierStore } from "@/stores/dossier-store";
+import type { ConnectionRequest } from "@/stores/chat-store";
 
 function JerryWelcomeCard() {
   return (
@@ -77,6 +78,73 @@ function JerryWelcomeCard() {
   );
 }
 
+function ConnectionRequestCard({
+  request,
+  token,
+}: {
+  request: ConnectionRequest;
+  token: string;
+}) {
+  const acceptRequest = useChatStore((s) => s.acceptRequest);
+  const declineRequest = useChatStore((s) => s.declineRequest);
+  const [busy, setBusy] = useState(false);
+
+  const from = request.organizationName
+    ? `${request.recruiterName} · ${request.organizationName}`
+    : request.recruiterName;
+
+  const handle = async (action: "accept" | "decline") => {
+    setBusy(true);
+    if (action === "accept") {
+      await acceptRequest(request.conversationId, token);
+    } else {
+      await declineRequest(request.conversationId, token);
+    }
+    setBusy(false);
+  };
+
+  return (
+    <div className="flex justify-center">
+      <div className="w-full max-w-lg overflow-hidden rounded-2xl border border-[#E0E0DC] bg-white">
+        <div className="px-5 py-4">
+          <p className="text-xs font-medium uppercase tracking-wide text-[#A0A0A0]">
+            Connection request
+          </p>
+          <p className="mt-1 text-sm font-semibold text-[#2D2D2D]">{from}</p>
+          {request.pitch ? (
+            <p className="mt-2 text-sm leading-relaxed text-[#4B4B4B]">
+              {request.pitch}
+            </p>
+          ) : (
+            <p className="mt-1 text-sm text-[#6B6B6B]">
+              wants to connect with you directly.
+            </p>
+          )}
+        </div>
+        <div className="flex border-t border-[#E8E8E4]">
+          <button
+            onClick={() => handle("decline")}
+            disabled={busy}
+            className="flex flex-1 items-center justify-center gap-2 py-3 text-sm text-[#A0A0A0] transition-colors hover:bg-[#FAFAFA] hover:text-[#E53E3E] disabled:opacity-40"
+          >
+            <X size={15} />
+            Decline
+          </button>
+          <div className="w-px bg-[#E8E8E4]" />
+          <button
+            onClick={() => handle("accept")}
+            disabled={busy}
+            className="flex flex-1 items-center justify-center gap-2 py-3 text-sm font-medium text-[#2D2D2D] transition-colors hover:bg-[#F5F5F0] disabled:opacity-40"
+          >
+            <Check size={15} />
+            Accept
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function ChatPage() {
   const { data: session } = useSession();
   const [input, setInput] = useState("");
@@ -86,6 +154,7 @@ export default function ChatPage() {
   const isConnected = useChatStore((s) => s.isConnected);
   const isTyping = useChatStore((s) => s.isTyping);
   const error = useChatStore((s) => s.error);
+  const pendingRequests = useChatStore((s) => s.pendingRequests);
   const sendMessage = useChatStore((s) => s.sendMessage);
   const clearError = useChatStore((s) => s.clearError);
 
@@ -216,6 +285,15 @@ export default function ChatPage() {
               </div>
             </div>
           )}
+
+          {/* Connection request cards */}
+          {pendingRequests.map((req) => (
+            <ConnectionRequestCard
+              key={req.conversationId}
+              request={req}
+              token={session?.accessToken as string}
+            />
+          ))}
 
           {/* Typing indicator */}
           {isTyping && (

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useSession } from "next-auth/react";
 import { X, MapPin, TrendingUp, ArrowLeft, CheckCircle } from "lucide-react";
 import { AthleteResult } from "@/hooks/useBilly";
 
@@ -42,15 +43,6 @@ interface DossierPanelProps {
   openToIntro?: boolean;
 }
 
-// Mock recruiter profile — will come from auth context when backend is wired
-const MOCK_RECRUITER = {
-  name: "Mike Thompson",
-  title: "Head Coach",
-  school: "State University",
-  pitch:
-    "We've reviewed your film and metrics and believe you'd be a strong fit for our program. We run a spread RPO system built for athletes with your profile, and we'd love to connect to share what we can offer you — both on the field and academically.",
-};
-
 type IntroState = "idle" | "confirming" | "sent";
 
 export function DossierPanel({
@@ -61,6 +53,57 @@ export function DossierPanel({
   openToIntro = false,
 }: DossierPanelProps) {
   const [introState, setIntroState] = useState<IntroState>("idle");
+  const { data: session } = useSession();
+  const [recruiterProfile, setRecruiterProfile] = useState<{
+    university: string | null;
+    location: string | null;
+    scholarshipType: string | null;
+    sport: string | null;
+    division: string | null;
+    pitch: string | null;
+  } | null>(null);
+
+  useEffect(() => {
+    console.log("Fetching recruiter profile with token:", session?.user);
+    console.log(session?.accessToken)
+    const token = session?.accessToken as string | undefined;
+    if (!token) return;
+    fetch(`${process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3001"}/recruiter/profile`, {
+      headers: { Authorization: `Bearer ${token}` },
+    })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((data) => { 
+        console.log("Recruiter profile data:", data);
+        if (data) setRecruiterProfile(data); })
+      .catch(() => {});
+  }, [session]);
+
+  useEffect(() => {
+    console.log("session or openToIntro changed", { session, openToIntro });
+    if (openToIntro) {
+      setIntroState("confirming");
+    }
+  }, [openToIntro, session]);
+
+  const recruiterName = session?.user?.name ?? session?.user?.email ?? "Recruiter";
+  const recruiterInitials = recruiterName
+    .split(" ")
+    .map((w: string) => w[0])
+    .join("")
+    .slice(0, 2)
+    .toUpperCase();
+  const recruiterUniversity = recruiterProfile?.university ?? "";
+  const recruiterPitch = (() => {
+    if (recruiterProfile?.pitch) return recruiterProfile.pitch;
+    if (!recruiterProfile?.university) return "";
+    const parts = [
+      recruiterProfile.sport && `${recruiterProfile.sport} program`,
+      recruiterProfile.division && `competing at the ${recruiterProfile.division} level`,
+      recruiterProfile.location && `based in ${recruiterProfile.location}`,
+      recruiterProfile.scholarshipType && `offering ${recruiterProfile.scholarshipType.replace("_", " ")} scholarship opportunities`,
+    ].filter(Boolean);
+    return `${recruiterProfile.university}${parts.length ? " — " + parts.join(", ") + "." : "."}`;
+  })();
 
   useEffect(() => {
     setIntroState(openToIntro ? "confirming" : "idle");
@@ -129,16 +172,22 @@ export function DossierPanel({
             <div className="rounded-2xl border border-[#E8E3DD] bg-white p-5 shadow-sm">
               <div className="mb-4 flex items-center gap-3">
                 <div className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-full bg-[#3B6FE8] text-sm font-bold text-white">
-                  MT
+                  {recruiterInitials}
                 </div>
                 <div>
-                  <p className="font-semibold text-[#1A1A1A]">{MOCK_RECRUITER.name}</p>
-                  <p className="text-xs text-[#ADA8A5]">
-                    {MOCK_RECRUITER.title} · {MOCK_RECRUITER.school}
-                  </p>
+                  <p className="font-semibold text-[#1A1A1A]">{recruiterName}</p>
+                  {recruiterUniversity && (
+                    <p className="text-xs text-[#ADA8A5]">{recruiterUniversity}</p>
+                  )}
                 </div>
               </div>
-              <p className="text-sm leading-relaxed text-[#4B4745]">{MOCK_RECRUITER.pitch}</p>
+              {recruiterPitch ? (
+                <p className="text-sm leading-relaxed text-[#4B4745]">{recruiterPitch}</p>
+              ) : (
+                <p className="text-sm italic text-[#ADA8A5]">
+                  Complete your onboarding with Billy to generate your program pitch.
+                </p>
+              )}
             </div>
 
             <div className="mt-auto flex gap-3 pt-6">

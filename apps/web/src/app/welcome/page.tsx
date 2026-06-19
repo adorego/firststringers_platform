@@ -2,29 +2,17 @@
 
 import { useState } from "react";
 import { signIn } from "next-auth/react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { api } from "@/lib/api";
 
-type Role = "ATHLETE" | "RECRUITER";
-
-const COPY: Record<Role, { headline: string; subheadline: string }> = {
-  ATHLETE: {
-    headline: "Every athlete deserves representation",
-    subheadline:
-      "Create your account and start your journey with First Stringers.",
-  },
-  RECRUITER: {
-    headline: "Find the right athletes",
-    subheadline:
-      "Create your account and start recruiting with First Stringers.",
-  },
-};
-
 export default function WelcomePage() {
   const router = useRouter();
-  const [step, setStep] = useState<"role" | "form">("role");
-  const [role, setRole] = useState<Role>("ATHLETE");
+  const searchParams = useSearchParams();
+  const role = (searchParams.get("role") === "recruiter" ? "recruiter" : "athlete") as
+    | "athlete"
+    | "recruiter";
+
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -34,22 +22,14 @@ export default function WelcomePage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
-  const isAthleteValid =
+  const isValid =
     name.trim().length > 0 &&
     email.trim().length > 0 &&
     password.length >= 8 &&
     agreed &&
-    ageConfirmed;
+    (role === "recruiter" || ageConfirmed);
 
-  const isRecruiterValid =
-    name.trim().length > 0 &&
-    email.trim().length > 0 &&
-    password.length >= 8 &&
-    agreed;
-
-  const isValid = role === "ATHLETE" ? isAthleteValid : isRecruiterValid;
-
-  async function handleSubmit(e: React.FormEvent) {
+  async function handleContinue(e: React.FormEvent) {
     e.preventDefault();
     if (!isValid) return;
 
@@ -57,7 +37,12 @@ export default function WelcomePage() {
     setError("");
 
     try {
-      await api.register({ email, password, name, role });
+      await api.register({
+        email,
+        password,
+        name,
+        role: role.toUpperCase(),
+      });
 
       const res = await signIn("credentials", {
         email,
@@ -70,7 +55,8 @@ export default function WelcomePage() {
         return;
       }
 
-      router.push(role === "ATHLETE" ? "/chat" : "/billy");
+      // Full navigation so middleware can read the session and route by role
+      window.location.href = role === "recruiter" ? "/billy" : "/chat";
     } catch (err: unknown) {
       if (
         err &&
@@ -92,99 +78,51 @@ export default function WelcomePage() {
   const inputEmpty = "border-[#E0E0DC] bg-[#EDEDEA] text-[#2D2D2D]";
   const inputFilled = "border-[#C5C0D8] bg-[#E8E4F0] text-[#2D2D2D]";
 
-  const copy = COPY[role];
-
-  // ── Step 1: Role Selection ──
-  if (step === "role") {
-    return (
-      <div className="flex min-h-screen flex-col items-center bg-[#F5F5F0] px-6">
-        <div className="flex w-full max-w-md flex-1 flex-col items-center justify-center py-12">
-          {/* Logo */}
-          <div className="mb-8 flex h-14 w-14 items-center justify-center rounded-full bg-[#3D3D3D]">
-            <div className="h-3 w-3 rounded-full bg-[#F5F5F0]" />
-          </div>
-
-          <h1 className="text-center text-3xl font-bold tracking-tight text-[#2D2D2D]">
-            Welcome to First Stringers
-          </h1>
-          <p className="mt-3 text-center text-base text-[#6B6B6B]">
-            Choose how you&apos;d like to get started.
-          </p>
-
-          <div className="mt-10 w-full space-y-3">
-            <button
-              onClick={() => {
-                setRole("ATHLETE");
-                setStep("form");
-              }}
-              className="flex h-16 w-full items-center justify-center rounded-2xl bg-[#3D3D3D] text-lg font-semibold text-white transition-colors hover:bg-[#2D2D2D] active:scale-[0.98]"
-            >
-              Athlete
-            </button>
-            <button
-              onClick={() => {
-                setRole("RECRUITER");
-                setStep("form");
-              }}
-              className="flex h-16 w-full items-center justify-center rounded-2xl border-2 border-[#3D3D3D] bg-transparent text-lg font-semibold text-[#2D2D2D] transition-colors hover:bg-[#EDEDEA] active:scale-[0.98]"
-            >
-              Recruiter
-            </button>
-          </div>
-
-          <Link
-            href="/welcome/returning"
-            className="mt-8 text-sm text-[#6B6B6B] hover:text-[#2D2D2D]"
-          >
-            Already have an account? Sign in
-          </Link>
-        </div>
-
-        <p className="pb-8 text-xs text-[#C0C0BC]">First Stringers</p>
-      </div>
-    );
-  }
-
-  // ── Step 2: Registration Form (adapted by role) ──
   return (
     <div className="flex min-h-screen flex-col items-center bg-[#F5F5F0] px-6">
       <div className="flex w-full max-w-md flex-1 flex-col items-center justify-center py-12">
-        {/* Back to role selection */}
-        <div className="mb-6 w-full">
-          <button
-            onClick={() => {
-              setStep("role");
-              setError("");
-            }}
-            className="inline-flex items-center gap-2 text-sm font-medium text-[#2D2D2D] hover:opacity-70"
-          >
-            <svg
-              className="h-4 w-4"
-              viewBox="0 0 16 16"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            >
-              <path d="M10 12L6 8l4-4" />
-            </svg>
-            Back
-          </button>
-        </div>
-
         {/* Logo */}
         <div className="mb-8 flex h-14 w-14 items-center justify-center rounded-full bg-[#3D3D3D]">
           <div className="h-3 w-3 rounded-full bg-[#F5F5F0]" />
         </div>
 
-        {/* Heading — adapted per role */}
+        {/* Heading */}
         <h1 className="text-center text-3xl font-bold tracking-tight text-[#2D2D2D]">
-          {copy.headline}
+          {role === "recruiter"
+            ? "Find the right athletes"
+            : "Every athlete deserves representation"}
         </h1>
         <p className="mt-3 text-center text-base text-[#6B6B6B]">
-          {copy.subheadline}
+          {role === "recruiter"
+            ? "Create your account and start recruiting with First Stringers."
+            : "Create your account and start your journey with First Stringers."}
         </p>
+
+        {/* Role selector — updates URL */}
+        <div className="mt-8 w-full">
+          <div className="flex gap-2 rounded-2xl bg-[#EDEDEA] p-1">
+            <Link
+              href="/welcome?role=athlete"
+              className={`flex-1 rounded-xl py-2.5 text-center text-sm font-medium transition-colors ${
+                role === "athlete"
+                  ? "bg-[#3D3D3D] text-white shadow-sm"
+                  : "text-[#6B6B6B] hover:text-[#2D2D2D]"
+              }`}
+            >
+              Athlete
+            </Link>
+            <Link
+              href="/welcome?role=recruiter"
+              className={`flex-1 rounded-xl py-2.5 text-center text-sm font-medium transition-colors ${
+                role === "recruiter"
+                  ? "bg-[#3D3D3D] text-white shadow-sm"
+                  : "text-[#6B6B6B] hover:text-[#2D2D2D]"
+              }`}
+            >
+              Recruiter
+            </Link>
+          </div>
+        </div>
 
         {/* Error */}
         {error && (
@@ -194,7 +132,7 @@ export default function WelcomePage() {
         )}
 
         {/* Form */}
-        <form onSubmit={handleSubmit} className="mt-10 w-full space-y-4">
+        <form onSubmit={handleContinue} className="mt-6 w-full space-y-4">
           {/* Name */}
           <div>
             <label
@@ -258,6 +196,41 @@ export default function WelcomePage() {
             </div>
           </div>
 
+          {/* Age confirmation — athletes only */}
+          {role === "athlete" && (
+            <div className="flex items-start gap-3">
+              <button
+                type="button"
+                onClick={() => setAgeConfirmed(!ageConfirmed)}
+                className={`mt-0.5 flex h-5 w-5 flex-shrink-0 items-center justify-center rounded border transition-colors ${
+                  ageConfirmed
+                    ? "border-[#3D3D3D] bg-[#3D3D3D]"
+                    : "border-[#C0C0BC] bg-white"
+                }`}
+                aria-label="Confirm age"
+              >
+                {ageConfirmed && (
+                  <svg
+                    className="h-3 w-3 text-white"
+                    viewBox="0 0 12 12"
+                    fill="none"
+                  >
+                    <path
+                      d="M2 6l3 3 5-5"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    />
+                  </svg>
+                )}
+              </button>
+              <p className="text-sm leading-snug text-[#6B6B6B]">
+                I confirm that I am 13 years of age or older.
+              </p>
+            </div>
+          )}
+
           {/* T&C Checkbox */}
           <div className="flex items-start gap-3">
             <button
@@ -299,39 +272,11 @@ export default function WelcomePage() {
             </p>
           </div>
 
-          {/* Age confirmation — athletes only */}
-          {role === "ATHLETE" && (
-            <div className="flex items-start gap-3">
-              <button
-                type="button"
-                onClick={() => setAgeConfirmed(!ageConfirmed)}
-                className={`mt-0.5 flex h-5 w-5 flex-shrink-0 items-center justify-center rounded border transition-colors ${
-                  ageConfirmed
-                    ? "border-[#3D3D3D] bg-[#3D3D3D]"
-                    : "border-[#C0C0BC] bg-white"
-                }`}
-                aria-label="Confirm age"
-              >
-                {ageConfirmed && (
-                  <svg
-                    className="h-3 w-3 text-white"
-                    viewBox="0 0 12 12"
-                    fill="none"
-                  >
-                    <path
-                      d="M2 6l3 3 5-5"
-                      stroke="currentColor"
-                      strokeWidth="2"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                    />
-                  </svg>
-                )}
-              </button>
-              <p className="text-sm leading-snug text-[#6B6B6B]">
-                I confirm I am 13 years of age or older.
-              </p>
-            </div>
+          {/* Age notice — athletes only */}
+          {role === "athlete" && (
+            <p className="text-xs text-[#A0A0A0]">
+              First Stringers is available for athletes ages 13 and older.
+            </p>
           )}
 
           {/* Continue button */}
@@ -366,15 +311,16 @@ export default function WelcomePage() {
           </button>
         </form>
 
-        {/* Already have an account */}
+        {/* Already started */}
         <Link
           href="/welcome/returning"
           className="mt-6 text-sm text-[#6B6B6B] hover:text-[#2D2D2D]"
         >
-          Already have an account? Sign in
+          Already started your journey?
         </Link>
       </div>
 
+      {/* Footer */}
       <p className="pb-8 text-xs text-[#C0C0BC]">First Stringers</p>
     </div>
   );

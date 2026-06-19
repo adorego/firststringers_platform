@@ -25,6 +25,8 @@ const MOCK_CONVERSATIONS: DirectConversation[] = [
         createdAt: new Date(Date.now() - 2 * 60 * 1000).toISOString(),
       },
     ],
+    status: "accepted" as const,
+    createdAt: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString(),
     updatedAt: new Date(Date.now() - 2 * 60 * 1000).toISOString(),
   },
   {
@@ -43,6 +45,8 @@ const MOCK_CONVERSATIONS: DirectConversation[] = [
         createdAt: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString(),
       },
     ],
+    status: "accepted" as const,
+    createdAt: new Date(Date.now() - 4 * 24 * 60 * 60 * 1000).toISOString(),
     updatedAt: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString(),
   },
 ];

@@ -17,6 +17,7 @@ export interface DirectConversation {
   id: string;
   athleteId: string;
   recruiterId: string;
+  status: "pending" | "accepted" | "declined";
   athlete?: {
     id: string;
     name: string;
@@ -24,9 +25,15 @@ export interface DirectConversation {
     position: string | null;
     dossier?: { data: Record<string, unknown> } | null;
   };
-  recruiter?: { id: string; name: string; email: string };
+  recruiter?: {
+    id: string;
+    name: string;
+    email: string;
+    organization?: { name: string } | null;
+  };
   messages?: DirectMessage[];
   updatedAt: string;
+  createdAt: string;
 }
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001";
@@ -59,6 +66,51 @@ export async function createOrGetConversation(
     return await res.json();
   } catch {
     return null;
+  }
+}
+
+export async function fetchPendingRequests(
+  token: string,
+): Promise<DirectConversation[]> {
+  try {
+    const res = await fetch(`${API_URL}/conversations/me/requests`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    if (!res.ok) return [];
+    return await res.json();
+  } catch {
+    return [];
+  }
+}
+
+export async function acceptConnectionRequest(
+  conversationId: string,
+  token: string,
+): Promise<DirectConversation | null> {
+  try {
+    const res = await fetch(`${API_URL}/conversations/${conversationId}/accept`, {
+      method: "PATCH",
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    if (!res.ok) return null;
+    return await res.json();
+  } catch {
+    return null;
+  }
+}
+
+export async function declineConnectionRequest(
+  conversationId: string,
+  token: string,
+): Promise<boolean> {
+  try {
+    const res = await fetch(`${API_URL}/conversations/${conversationId}/decline`, {
+      method: "PATCH",
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    return res.ok;
+  } catch {
+    return false;
   }
 }
 

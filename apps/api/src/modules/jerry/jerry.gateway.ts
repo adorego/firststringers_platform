@@ -193,13 +193,14 @@ export class JerryGateway implements OnGatewayConnection, OnGatewayDisconnect {
     });
   }
 
-  // Billy initiated a recruiter→athlete contact: Jerry informs his athlete
+  // Billy sent a connection request: Jerry notifies the athlete with accept/decline options
   @OnEvent('contact.initiated')
   async handleContactInitiated(payload: {
     athleteId: string;
     recruiterName: string;
     organizationName?: string;
     conversationId: string;
+    pitch?: string;
   }) {
     try {
       const from = payload.organizationName
@@ -208,7 +209,7 @@ export class JerryGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
       const message: JerryMessage = {
         role: 'assistant',
-        content: `Good news — ${from} wants to connect with you. I've opened a direct conversation in your inbox so you two can talk. Take a look when you're ready, and remember: I'm in your corner if you want to talk it through first.`,
+        content: `Heads up — ${from} wants to connect with you directly. This is your call. Accept if you're interested, or decline and I'll handle it professionally. Either way, I'm in your corner.`,
         timestamp: new Date(),
       };
 
@@ -217,18 +218,19 @@ export class JerryGateway implements OnGatewayConnection, OnGatewayDisconnect {
       this.server.to(`athlete:${payload.athleteId}`).emit('message', message);
       this.server
         .to(`athlete:${payload.athleteId}`)
-        .emit('recruiter_contact', {
+        .emit('connection_request', {
           conversationId: payload.conversationId,
           recruiterName: payload.recruiterName,
           organizationName: payload.organizationName,
+          pitch: payload.pitch,
         });
 
       this.logger.log(
-        `Jerry notified athlete ${payload.athleteId} of contact from ${from}`,
+        `Jerry notified athlete ${payload.athleteId} of connection request from ${from}`,
       );
     } catch (err) {
       this.logger.error(
-        `Failed to notify athlete ${payload.athleteId} of recruiter contact`,
+        `Failed to notify athlete ${payload.athleteId} of connection request`,
         err,
       );
     }

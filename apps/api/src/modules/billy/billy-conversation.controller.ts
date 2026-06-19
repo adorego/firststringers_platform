@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, Query, HttpCode, HttpStatus } from '@nestjs/common';
+import { Controller, Get, Post, Patch, Delete, Body, Param, Query, HttpCode, HttpStatus } from '@nestjs/common';
 import { Public } from '../auth/public.decorator';
 import { BillyConversationService } from './billy-conversation.service';
 
@@ -16,5 +16,16 @@ export class BillyConversationController {
   @HttpCode(HttpStatus.CREATED)
   create(@Body() dto: { recruiterId: string }) {
     return this.service.create(dto.recruiterId);
+  }
+
+  @Patch(':id')
+  rename(@Param('id') id: string, @Body() dto: { title: string }) {
+    return this.service.updateTitle(id, dto.title);
+  }
+
+  @Delete(':id')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  delete(@Param('id') id: string) {
+    return this.service.delete(id);
   }
 }

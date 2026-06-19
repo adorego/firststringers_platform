@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
+import { signOut, useSession } from "next-auth/react";
 import { useEffect, useRef, useState } from "react";
 import {
   MessageSquare,
@@ -22,10 +23,14 @@ import {
   HelpCircle,
   LogOut,
   ClipboardList,
+  Pencil,
+  Trash2,
 } from "lucide-react";
 import {
   listBillyConversations,
   createBillyConversation,
+  renameBillyConversation,
+  deleteBillyConversation,
   BillyConversationSummary,
 } from "@/hooks/useBilly";
 import { LearnBillyPanel } from "@/components/recruiter/LearnBillyPanel";
@@ -49,11 +54,22 @@ export function RecruiterSidebar({
 }) {
   const pathname = usePathname();
   const router = useRouter();
+  const { data: session } = useSession();
+  const displayName = session?.user?.name ?? session?.user?.email ?? "Recruiter";
+  const initials = displayName
+    .split(" ")
+    .map((w) => w[0])
+    .join("")
+    .slice(0, 2)
+    .toUpperCase();
   const [conversations, setConversations] = useState<BillyConversationSummary[]>([]);
   const [creating, setCreating] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const [learnBillyOpen, setLearnBillyOpen] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editingTitle, setEditingTitle] = useState("");
   const menuRef = useRef<HTMLDivElement>(null);
+  const editInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     function handleClickOutside(e: MouseEvent) {
@@ -69,6 +85,34 @@ export function RecruiterSidebar({
     if (!recruiterId) return;
     listBillyConversations(recruiterId).then(setConversations);
   }, [recruiterId]);
+
+  const startEditing = (conv: BillyConversationSummary, e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setEditingId(conv.id);
+    setEditingTitle(conv.title);
+    setTimeout(() => editInputRef.current?.select(), 0);
+  };
+
+  const commitEdit = async (id: string) => {
+    const title = editingTitle.trim();
+    setEditingId(null);
+    if (!title) return;
+    setConversations((prev) =>
+      prev.map((c) => (c.id === id ? { ...c, title } : c)),
+    );
+    await renameBillyConversation(id, title);
+  };
+
+  const handleDelete = async (id: string, e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setConversations((prev) => prev.filter((c) => c.id !== id));
+    await deleteBillyConversation(id);
+    if (pathname === `/billy/${id}`) {
+      router.push("/billy");
+    }
+  };
 
   const handleNewSearch = async () => {
     if (creating) return;
@@ -197,20 +241,60 @@ export function RecruiterSidebar({
           )}
           {conversations.map((conv) => {
             const isActive = pathname === `/billy/${conv.id}`;
+            const isEditing = editingId === conv.id;
             return (
-              <Link
+              <div
                 key={conv.id}
-                href={`/billy/${conv.id}`}
-                onClick={closeOnMobile}
-                className={`flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-left text-sm transition-colors ${
+                className={`group flex items-center gap-2 rounded-lg px-3 py-2 text-sm transition-colors ${
                   isActive
                     ? "bg-white/80 text-[#1A1A1A]"
                     : "text-[#6B6561] hover:bg-white/50 hover:text-[#1A1A1A]"
                 }`}
               >
                 <Clock size={12} className="flex-shrink-0 text-[#C4BDBA]" />
-                <span className="truncate">{conv.title}</span>
-              </Link>
+
+                {isEditing ? (
+                  <input
+                    ref={editInputRef}
+                    value={editingTitle}
+                    onChange={(e) => setEditingTitle(e.target.value)}
+                    onBlur={() => commitEdit(conv.id)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") commitEdit(conv.id);
+                      if (e.key === "Escape") setEditingId(null);
+                    }}
+                    className="min-w-0 flex-1 bg-transparent text-sm text-[#1A1A1A] focus:outline-none"
+                    autoFocus
+                  />
+                ) : (
+                  <Link
+                    href={`/billy/${conv.id}`}
+                    onClick={closeOnMobile}
+                    className="min-w-0 flex-1 truncate"
+                  >
+                    {conv.title}
+                  </Link>
+                )}
+
+                {!isEditing && (
+                  <div className="flex flex-shrink-0 items-center gap-0.5 opacity-0 transition-opacity group-hover:opacity-100">
+                    <button
+                      onClick={(e) => startEditing(conv, e)}
+                      title="Rename"
+                      className="flex h-6 w-6 items-center justify-center rounded text-[#ADA8A5] hover:bg-black/5 hover:text-[#1A1A1A]"
+                    >
+                      <Pencil size={11} />
+                    </button>
+                    <button
+                      onClick={(e) => handleDelete(conv.id, e)}
+                      title="Delete"
+                      className="flex h-6 w-6 items-center justify-center rounded text-[#ADA8A5] hover:bg-black/5 hover:text-red-500"
+                    >
+                      <Trash2 size={11} />
+                    </button>
+                  </div>
+                )}
+              </div>
             );
           })}
         </div>
@@ -247,7 +331,7 @@ export function RecruiterSidebar({
 
             <div className="border-t border-[#E4DDD7] py-1">
               <button
-                onClick={() => setMenuOpen(false)}
+                onClick={() => signOut({ callbackUrl: "/welcome/returning" })}
                 className="flex w-full items-center gap-3 px-4 py-2.5 text-sm text-[#4B4745] transition-colors hover:bg-[#F5F0EB] hover:text-[#1A1A1A]"
               >
                 <span className="text-[#ADA8A5]"><LogOut size={15} /></span>
@@ -263,11 +347,11 @@ export function RecruiterSidebar({
           className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 transition-colors hover:bg-white/50"
         >
           <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-[#3B6FE8] text-xs font-bold text-white">
-            M
+            {initials}
           </div>
           <div className="flex-1 text-left">
-            <p className="text-sm font-medium text-[#1A1A1A]">Mike Thompson</p>
-            <p className="text-xs text-[#ADA8A5]">Head Coach</p>
+            <p className="text-sm font-medium text-[#1A1A1A]">{displayName}</p>
+            <p className="text-xs text-[#ADA8A5]">Recruiter</p>
           </div>
           {menuOpen
             ? <ChevronUp size={14} className="text-[#ADA8A5]" />
