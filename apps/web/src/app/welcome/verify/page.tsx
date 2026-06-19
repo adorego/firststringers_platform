@@ -2,30 +2,79 @@
 
 import { Suspense, useCallback, useEffect, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import { useSession } from "next-auth/react";
 import Link from "next/link";
+
+const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001";
 
 function VerifyForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const contact = searchParams.get("contact") ?? "";
-  const isReturning = searchParams.get("returning") === "true";
+  const { data: session } = useSession();
+  const contact = searchParams.get("contact") ?? session?.user?.email ?? "";
+  const role = searchParams.get("role") ?? "athlete";
 
   const [code, setCode] = useState<string[]>(Array(6).fill(""));
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+  const [resent, setResent] = useState(false);
   const inputRefs = useRef<(HTMLInputElement | null)[]>([]);
 
   const handleSubmit = useCallback(
     async (fullCode: string) => {
+      const token = session?.accessToken;
+      if (!token) return;
+
       setLoading(true);
-      // TODO: verify code with backend
-      if (isReturning) {
-        router.push("/chat");
-      } else {
-        router.push("/register");
+      setError("");
+
+      try {
+        const res = await fetch(`${API_URL}/auth/verify-email`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({ code: fullCode }),
+        });
+
+        if (!res.ok) {
+          const data = await res.json().catch(() => ({}));
+          setError(data.message ?? "Invalid code. Please try again.");
+          setCode(Array(6).fill(""));
+          inputRefs.current[0]?.focus();
+          setLoading(false);
+          return;
+        }
+
+        // Verified — redirect by role
+        window.location.href = role === "recruiter" ? "/billy" : "/chat";
+      } catch {
+        setError("Something went wrong. Please try again.");
+        setLoading(false);
       }
     },
-    [isReturning, router],
+    [session?.accessToken, role],
   );
+
+  async function handleResend() {
+    const token = session?.accessToken;
+    if (!token) return;
+
+    setResent(false);
+    setError("");
+
+    try {
+      await fetch(`${API_URL}/auth/send-otp`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      setResent(true);
+      setTimeout(() => setResent(false), 3000);
+    } catch {
+      setError("Could not resend code.");
+    }
+  }
 
   useEffect(() => {
     inputRefs.current[0]?.focus();
@@ -56,7 +105,10 @@ function VerifyForm() {
 
   function handlePaste(e: React.ClipboardEvent) {
     e.preventDefault();
-    const pasted = e.clipboardData.getData("text").replace(/\D/g, "").slice(0, 6);
+    const pasted = e.clipboardData
+      .getData("text")
+      .replace(/\D/g, "")
+      .slice(0, 6);
     if (!pasted) return;
 
     const next = [...code];
@@ -78,7 +130,7 @@ function VerifyForm() {
       {/* Back button */}
       <div className="pt-6">
         <Link
-          href={isReturning ? "/welcome/returning" : "/welcome"}
+          href="/welcome"
           className="inline-flex items-center gap-2 text-sm font-medium text-[#2D2D2D] hover:opacity-70"
         >
           <svg
@@ -108,14 +160,23 @@ function VerifyForm() {
 
           {/* Heading */}
           <h1 className="text-center text-3xl font-bold tracking-tight text-[#2D2D2D]">
-            Check your messages
+            Check your email
           </h1>
           <p className="mt-3 text-center text-base text-[#6B6B6B]">
             We sent a verification code to
           </p>
-          <p className="text-center text-base font-medium text-[#2D2D2D]">
-            {contact}
-          </p>
+          {contact && (
+            <p className="text-center text-base font-medium text-[#2D2D2D]">
+              {contact}
+            </p>
+          )}
+
+          {/* Error */}
+          {error && (
+            <div className="mt-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-center text-sm text-red-700">
+              {error}
+            </div>
+          )}
 
           {/* Code inputs */}
           <div className="mt-10 flex justify-center gap-3">
@@ -140,18 +201,25 @@ function VerifyForm() {
 
           {/* Resend */}
           <div className="mt-6 text-center">
-            <button
-              type="button"
-              className="text-sm font-medium text-[#6B6B6B] hover:text-[#2D2D2D]"
-            >
-              Resend code
-            </button>
+            {resent ? (
+              <p className="text-sm text-[#6B6B6B]">Code resent!</p>
+            ) : (
+              <button
+                type="button"
+                onClick={handleResend}
+                className="text-sm font-medium text-[#6B6B6B] hover:text-[#2D2D2D]"
+              >
+                Resend code
+              </button>
+            )}
           </div>
         </div>
       </div>
 
       {/* Footer */}
-      <p className="pb-8 text-center text-xs text-[#C0C0BC]">First Stringers</p>
+      <p className="pb-8 text-center text-xs text-[#C0C0BC]">
+        First Stringers
+      </p>
     </div>
   );
 }

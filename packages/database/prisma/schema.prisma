@@ -86,15 +86,29 @@ model Recruiter {
 }
 
 model User {
-  id          String     @id @default(uuid())
-  email       String     @unique
-  password    String
-  role        String     @default("ATHLETE")
-  athleteId   String?    @unique
-  athlete     Athlete?   @relation(fields: [athleteId], references: [id])
-  recruiterId String?    @unique
-  recruiter   Recruiter? @relation(fields: [recruiterId], references: [id])
-  createdAt   DateTime   @default(now())
+  id              String             @id @default(uuid())
+  email           String             @unique
+  password        String
+  role            String             @default("ATHLETE")
+  athleteId       String?            @unique
+  athlete         Athlete?           @relation(fields: [athleteId], references: [id])
+  recruiterId     String?            @unique
+  recruiter       Recruiter?         @relation(fields: [recruiterId], references: [id])
+  emailVerified   Boolean            @default(false)
+  emailVerifiedAt DateTime?
+  createdAt       DateTime           @default(now())
+  verificationCodes VerificationCode[]
+}
+
+model VerificationCode {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  code      String   // hashed
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  @@index([userId])
 }
 
 model DirectConversation {

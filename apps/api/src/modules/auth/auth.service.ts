@@ -2,17 +2,22 @@ import {
   Injectable,
   ConflictException,
   UnauthorizedException,
+  BadRequestException,
+  Logger,
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
 import * as bcrypt from 'bcrypt';
+import { randomInt } from 'crypto';
 import { PrismaService } from '../../shared/prisma/prisma.service';
 import { RegisterDto } from './dto/register.dto';
 import { LoginDto } from './dto/login.dto';
 
 @Injectable()
 export class AuthService {
+  private readonly logger = new Logger(AuthService.name);
   private readonly refreshSecret: string;
+  private readonly OTP_EXPIRY_MINUTES = 10;
 
   constructor(
     private prisma: PrismaService,
@@ -84,7 +89,12 @@ export class AuthService {
       });
     });
 
-    return this.generateTokens(user.id, user.email, user.role, dto.name, user.athleteId, user.recruiterId);
+    const tokens = this.generateTokens(user.id, user.email, user.role, dto.name, user.athleteId, user.recruiterId);
+
+    // Fire OTP asynchronously — don't block registration
+    void this.sendOtp(user.id).catch(() => {});
+
+    return tokens;
   }
 
   async login(dto: LoginDto) {
@@ -143,6 +153,88 @@ export class AuthService {
     } catch {
       throw new UnauthorizedException('Invalid refresh token');
     }
+  }
+
+  async sendOtp(userId: string): Promise<{ sent: true }> {
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+    });
+
+    if (!user) {
+      throw new UnauthorizedException('User not found');
+    }
+
+    if (user.emailVerified) {
+      return { sent: true }; // already verified, no-op
+    }
+
+    // Delete any existing codes for this user
+    await this.prisma.verificationCode.deleteMany({
+      where: { userId },
+    });
+
+    // Generate 6-digit code
+    const plainCode = String(randomInt(100000, 999999));
+    const hashedCode = await bcrypt.hash(plainCode, 10);
+
+    await this.prisma.verificationCode.create({
+      data: {
+        userId,
+        code: hashedCode,
+        expiresAt: new Date(
+          Date.now() + this.OTP_EXPIRY_MINUTES * 60 * 1000,
+        ),
+      },
+    });
+
+    // TODO: Replace with real email provider (Resend, SendGrid, etc.)
+    this.logger.log(
+      `[EMAIL VERIFICATION] Code for ${user.email}: ${plainCode}`,
+    );
+
+    return { sent: true };
+  }
+
+  async verifyEmail(
+    userId: string,
+    code: string,
+  ): Promise<{ verified: true }> {
+    const records = await this.prisma.verificationCode.findMany({
+      where: { userId },
+      orderBy: { createdAt: 'desc' },
+      take: 1,
+    });
+
+    if (records.length === 0) {
+      throw new BadRequestException('No verification code found. Request a new one.');
+    }
+
+    const record = records[0];
+
+    if (record.expiresAt < new Date()) {
+      await this.prisma.verificationCode.delete({
+        where: { id: record.id },
+      });
+      throw new BadRequestException('Code expired. Request a new one.');
+    }
+
+    const valid = await bcrypt.compare(code, record.code);
+    if (!valid) {
+      throw new BadRequestException('Invalid code.');
+    }
+
+    // Mark verified + cleanup
+    await this.prisma.$transaction([
+      this.prisma.user.update({
+        where: { id: userId },
+        data: { emailVerified: true, emailVerifiedAt: new Date() },
+      }),
+      this.prisma.verificationCode.deleteMany({
+        where: { userId },
+      }),
+    ]);
+
+    return { verified: true };
   }
 
   private generateTokens(
