@@ -73,6 +73,12 @@ model Recruiter {
   openings            Int?
   onboardingCompleted Boolean              @default(false)
   pitch               String?
+  // Verification: pending → under_review → verified | rejected
+  verificationStatus  String               @default("pending") // "pending" | "under_review" | "verified" | "rejected"
+  verificationTitle   String?              // role/title at the organization
+  verificationWebsite String?              // organization website
+  verificationLinkedIn String?             // recruiter's LinkedIn URL
+  verifiedAt          DateTime?
   createdAt           DateTime             @default(now())
   user                User?
   billyMessages       BillyMessage[]

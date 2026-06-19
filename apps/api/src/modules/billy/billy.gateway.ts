@@ -223,6 +223,22 @@ export class BillyGateway implements OnGatewayConnection, OnGatewayDisconnect {
     client.emit('status', { status: 'typing' });
 
     try {
+      // Gate: recruiter must be verified to contact athletes
+      try {
+        await this.conversations.assertRecruiterCanContact(ctx.recruiterId);
+      } catch (err) {
+        const message =
+          err instanceof Error && 'message' in err
+            ? err.message
+            : 'You need to complete verification before contacting athletes.';
+        client.emit('message', {
+          role: 'assistant',
+          content: `I can't send that request yet — ${message.toLowerCase()} Once verified, I'll be able to connect you with athletes right away.`,
+          timestamp: new Date(),
+        });
+        return;
+      }
+
       // Create a pending connection request
       const conversation = await this.conversations.createRequest(
         ctx.recruiterId,
