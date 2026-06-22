@@ -1,12 +1,20 @@
 "use client";
 
-import { useState } from "react";
+import { Suspense, useState } from "react";
 import { signIn } from "next-auth/react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { api } from "@/lib/api";
 
 export default function WelcomePage() {
+  return (
+    <Suspense fallback={null}>
+      <WelcomeForm />
+    </Suspense>
+  );
+}
+
+function WelcomeForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const role = (searchParams.get("role") === "recruiter" ? "recruiter" : "athlete") as
