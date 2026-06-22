@@ -33,33 +33,41 @@ Rules:
   [PROFILE_UPDATE]{"sport": "basketball"}[/PROFILE_UPDATE]
 - Keep a friendly, professional tone`;
 
-const ONBOARDING_SYSTEM_PROMPT = `You are Billy, a recruiting intelligence assistant for First Stringers. A recruiter just created their account and you need to learn about their program to help them find the right athletes and introduce those athletes properly.
+const ONBOARDING_SYSTEM_PROMPT = `You are Billy, a recruiting intelligence assistant for First Stringers. A recruiter just created their account. Your goal is to learn about their recruiting responsibilities through exactly 8 conversational questions — one at a time, in order.
 
-Collect the following information through natural, friendly conversation — one question at a time:
-1. University or institution they represent (MOST IMPORTANT)
-2. Location / city and state (MOST IMPORTANT)
-3. Scholarship available: full scholarship, partial scholarship, or financial aid only (MOST IMPORTANT)
-4. Primary sport they recruit for (optional — they can skip)
-5. Gender of athletes they recruit: male, female, or both (optional)
-6. Division level: D1, D2, D3, NAIA, JUCO (optional — they can skip)
-7. Number of open spots/vacancies they have (optional)
+After the recruiter answers a question, briefly acknowledge their answer and immediately ask the next one. Do not summarize all answers until the very end.
+
+Ask these 8 questions in this exact order:
+
+Q1 — Sport: "What sport are you recruiting for?" (Options: Football, Baseball, Basketball, Soccer, Volleyball, Other)
+
+Q2 — Organization type: "What type of organization do you work with?" (Options: High School, College / University, Club, Academy, Professional Organization, Other)
+
+Q3 — Role: "What is your role within the program?" (Options: Head Coach, Assistant Coach, Recruiting Coordinator, Scout, Position Coach, Other)
+
+Q4 — Region: "What region or area do you primarily recruit from?" (Options: Florida, Southeast, Texas, Midwest, Nationwide, International)
+
+Q5 — Positions: "What types of athletes are you typically responsible for evaluating?" (Options: Quarterbacks, Wide Receivers, Offensive Line, Defensive Backs, All Positions, Other)
+
+Q6 — Graduating classes: "Which graduating classes are you actively recruiting?" (Options: 2027, 2028, 2029, 2030)
+
+Q7 — Evaluation priority: "When evaluating an athlete for the first time, what usually matters most to you?" (Options: Athleticism, Academics, Character, Coachability, Physical Traits, Development Potential, Film, Other)
+
+Q8 — Filter criteria: "Are there any specific criteria or limitations you typically use to filter athletes?" (Options: Minimum GPA, Location, Position, Height / Weight, Academic Standards, Program Fit, Other)
 
 Rules:
-- Ask ONE question at a time, conversationally
-- Max 2 sentences per message
-- Be warm and encouraging — this is their first experience with the platform
-- If they say they don't know or want to skip any optional question, gracefully move on
-- Never be pushy about the optional ones (sport, gender, division, openings)
-- After collecting at least university, location, and scholarship type, wrap up
-- When you have enough to proceed, your ENTIRE response must look EXACTLY like this example (replace with real values):
+- Ask ONE question at a time
+- After each question, list its options on a new line like: "You can choose from: X, Y, Z, or Other."
+- Be warm and conversational — this is their first experience
+- Accept any answer even if it doesn't exactly match the options
+- After all 8 answers are collected, close with EXACTLY this text (replace nothing, just copy it verbatim):
+  "Perfect. I have enough context to start helping you identify athletes that fit your program. As we work together, I'll continue learning more about your recruiting needs and preferences. Let's get started."
+  Then on a new line, immediately append the PROFILE_READY tag with all collected answers:
+  [PROFILE_READY]{"sport": "...", "organizationType": "...", "recruiterRole": "...", "location": "...", "positions": "...", "graduatingClasses": "...", "evaluationPriority": "...", "filterCriteria": "..."}[/PROFILE_READY]
 
-  You're all set! Welcome to First Stringers — let's find you some great athletes.
-  [PROFILE_READY]{"university": "State University", "location": "Austin, TX", "scholarshipType": "full"}[/PROFILE_READY]
-
-- The visible part (before [PROFILE_READY]) must be 1-2 warm sentences of PLAIN TEXT only — no JSON, no code fences, no backticks, no "profile summary", no data recap of any kind.
-- The [PROFILE_READY] tag contains ONLY the JSON object and nothing else. It is invisible to the recruiter.
-- Only include fields the recruiter actually provided — omit nulls
-- Keep a warm, professional tone`;
+- The [PROFILE_READY] tag is INVISIBLE to the recruiter — never mention it
+- Include only fields the recruiter actually answered; omit unanswered ones
+- The visible closing text must be PLAIN TEXT only — no JSON, no bullet points, no recap`;
 
 @Processor('billy')
 export class BillyWorker {
@@ -113,11 +121,16 @@ export class BillyWorker {
 
     const profileLines = [
       recruiter?.university && `- University: ${recruiter.university}`,
-      recruiter?.location && `- Location: ${recruiter.location}`,
-      recruiter?.scholarshipType && `- Scholarship: ${recruiter.scholarshipType}`,
+      recruiter?.organizationType && `- Organization type: ${recruiter.organizationType}`,
+      recruiter?.recruiterRole && `- Role: ${recruiter.recruiterRole}`,
       recruiter?.sport && `- Sport: ${recruiter.sport}`,
+      recruiter?.location && `- Recruiting region: ${recruiter.location}`,
+      recruiter?.positions && `- Positions evaluated: ${recruiter.positions}`,
+      recruiter?.graduatingClasses && `- Target classes: ${recruiter.graduatingClasses}`,
+      recruiter?.evaluationPriority && `- Evaluation priority: ${recruiter.evaluationPriority}`,
+      recruiter?.filterCriteria && `- Filters: ${recruiter.filterCriteria}`,
+      recruiter?.scholarshipType && `- Scholarship: ${recruiter.scholarshipType}`,
       recruiter?.division && `- Division: ${recruiter.division}`,
-      recruiter?.gender && `- Athletes: ${recruiter.gender}`,
       recruiter?.openings && `- Open spots: ${recruiter.openings}`,
     ].filter(Boolean).join('\n');
 
@@ -240,34 +253,35 @@ export class BillyWorker {
     if (profileMatch) {
       try {
         const profileData = JSON.parse(profileMatch[1]) as Record<string, unknown>;
-        const summaryLines: string[] = [];
-        if (profileData['university']) summaryLines.push(`🏫 University: ${profileData['university']}`);
-        if (profileData['location']) summaryLines.push(`📍 Location: ${profileData['location']}`);
-        if (profileData['scholarshipType']) summaryLines.push(`🎓 Scholarship: ${profileData['scholarshipType']}`);
-        if (profileData['sport']) summaryLines.push(`🏆 Sport: ${profileData['sport']}`);
-        if (profileData['division']) summaryLines.push(`📊 Division: ${profileData['division']}`);
-        if (profileData['gender']) summaryLines.push(`👥 Athletes: ${profileData['gender']}`);
-        if (profileData['openings']) summaryLines.push(`🔢 Open spots: ${profileData['openings']}`);
-        visibleContent = `You're all set! Here's your program profile:\n\n${summaryLines.join('\n')}\n\nWelcome to First Stringers — let's find your next great athlete.`;
 
-        const pitch = await this.generateRecruiterPitch(profileData);
+        // Strip the tag — closing text is already what we want to show
+        visibleContent = visibleContent.replace(/\[PROFILE_READY\].*?\[\/PROFILE_READY\]/s, '').trim();
+
+        const [pitch, suggestedSearches] = await Promise.all([
+          this.generateRecruiterPitch(profileData),
+          this.generateSuggestedSearches(profileData),
+        ]);
 
         await this.recruiterService.updateProfile(recruiterId, {
-          university: profileData.university as string | undefined,
-          location: profileData.location as string | undefined,
-          scholarshipType: profileData.scholarshipType as string | undefined,
           sport: profileData.sport as string | undefined,
-          gender: profileData.gender as string | undefined,
-          division: profileData.division as string | undefined,
-          openings: profileData.openings as number | undefined,
+          organizationType: profileData.organizationType as string | undefined,
+          recruiterRole: profileData.recruiterRole as string | undefined,
+          location: profileData.location as string | undefined,
+          positions: profileData.positions as string | undefined,
+          graduatingClasses: profileData.graduatingClasses as string | undefined,
+          evaluationPriority: profileData.evaluationPriority as string | undefined,
+          filterCriteria: profileData.filterCriteria as string | undefined,
           onboardingCompleted: true,
           pitch,
         });
 
-        // Flip the session out of onboarding mode
         await this.session.setOnboardingComplete(conversationId, recruiterId);
 
-        this.eventEmitter.emit('billy.onboarding_complete', { recruiterId, conversationId });
+        this.eventEmitter.emit('billy.onboarding_complete', {
+          recruiterId,
+          conversationId,
+          suggestedSearches,
+        });
       } catch (err) {
         this.logger.warn(`Could not parse or save onboarding profile for recruiter ${recruiterId}`, err);
       }
@@ -294,14 +308,51 @@ export class BillyWorker {
     });
   }
 
+  private async generateSuggestedSearches(profile: Record<string, unknown>): Promise<string[]> {
+    const context = [
+      profile['sport'] && `Sport: ${profile['sport']}`,
+      profile['organizationType'] && `Organization: ${profile['organizationType']}`,
+      profile['recruiterRole'] && `Role: ${profile['recruiterRole']}`,
+      profile['location'] && `Region: ${profile['location']}`,
+      profile['positions'] && `Positions: ${profile['positions']}`,
+      profile['graduatingClasses'] && `Classes: ${profile['graduatingClasses']}`,
+      profile['evaluationPriority'] && `Priority: ${profile['evaluationPriority']}`,
+      profile['filterCriteria'] && `Filters: ${profile['filterCriteria']}`,
+    ]
+      .filter(Boolean)
+      .join('\n');
+
+    try {
+      const response = await this.openai.chat.completions.create({
+        model: 'gpt-4o-mini',
+        messages: [
+          {
+            role: 'system',
+            content:
+              'Generate exactly 4 short, specific athlete search queries for a recruiter based on their profile. Each query should be a natural language search a recruiter would type to find athletes. Return ONLY a JSON array of 4 strings, no explanation, no markdown.',
+          },
+          { role: 'user', content: `Recruiter profile:\n${context}` },
+        ],
+        temperature: 0.7,
+        max_tokens: 200,
+      });
+      const raw = response.choices[0].message.content?.trim() ?? '[]';
+      const parsed = JSON.parse(raw) as string[];
+      return Array.isArray(parsed) ? parsed.slice(0, 4) : [];
+    } catch (err) {
+      this.logger.warn('Could not generate suggested searches', err);
+      return [];
+    }
+  }
+
   private async generateRecruiterPitch(profile: Record<string, unknown>): Promise<string> {
     const lines = [
       profile['university'] && `University: ${profile['university']}`,
-      profile['location'] && `Location: ${profile['location']}`,
+      profile['location'] && `Region: ${profile['location']}`,
       profile['scholarshipType'] && `Scholarship: ${profile['scholarshipType']}`,
       profile['sport'] && `Sport: ${profile['sport']}`,
+      profile['organizationType'] && `Organization: ${profile['organizationType']}`,
       profile['division'] && `Division: ${profile['division']}`,
-      profile['openings'] && `Open spots: ${profile['openings']}`,
     ]
       .filter(Boolean)
       .join('\n');

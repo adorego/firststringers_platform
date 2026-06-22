@@ -171,7 +171,7 @@ export default function BillyChatPage() {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const autoSentRef = useRef(false);
 
-  const { messages, status, isTyping, sendMessage, handleOption } = useBilly(
+  const { messages, status, isTyping, suggestedSearches, sendMessage, handleOption } = useBilly(
     recruiterId,
     conversationId,
   );
@@ -284,6 +284,26 @@ export default function BillyChatPage() {
             <div ref={messagesEndRef} />
           </div>
         </div>
+
+        {/* Suggested searches — appear once after onboarding completes */}
+        {suggestedSearches.length > 0 && (
+          <div className="px-6 pb-2">
+            <div className="mx-auto max-w-2xl">
+              <p className="mb-2 text-xs text-[#ADA8A5]">Suggested searches</p>
+              <div className="flex flex-wrap gap-2">
+                {suggestedSearches.map((s, i) => (
+                  <button
+                    key={i}
+                    onClick={() => sendMessage(s)}
+                    className="rounded-full border border-[#E4DDD7] bg-white px-4 py-1.5 text-xs text-[#4B4745] transition-colors hover:border-[#1A1A1A] hover:text-[#1A1A1A]"
+                  >
+                    {s}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Input */}
         <div className="px-6 pb-6">

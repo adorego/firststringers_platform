@@ -13,6 +13,12 @@ export interface RecruiterProfile {
   gender: string | null;
   division: string | null;
   openings: number | null;
+  organizationType: string | null;
+  recruiterRole: string | null;
+  positions: string | null;
+  graduatingClasses: string | null;
+  evaluationPriority: string | null;
+  filterCriteria: string | null;
   onboardingCompleted: boolean;
   pitch: string | null;
   verificationStatus: string;
@@ -30,6 +36,12 @@ export interface UpdateRecruiterProfileDto {
   gender?: string;
   division?: string;
   openings?: number;
+  organizationType?: string;
+  recruiterRole?: string;
+  positions?: string;
+  graduatingClasses?: string;
+  evaluationPriority?: string;
+  filterCriteria?: string;
   onboardingCompleted?: boolean;
   pitch?: string;
 }

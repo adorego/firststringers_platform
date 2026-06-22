@@ -65,12 +65,18 @@ model Recruiter {
   name                String
   // Program info collected during Billy onboarding
   university          String?
-  location            String?
-  scholarshipType     String?              // "full" | "partial" | "financial_aid"
+  location            String?              // recruiting region (e.g. "Florida", "Nationwide")
+  scholarshipType     String?
   sport               String?
-  gender              String?              // "male" | "female" | "both"
-  division            String?              // "D1" | "D2" | "D3" | "NAIA" | "JUCO"
+  gender              String?
+  division            String?
   openings            Int?
+  organizationType    String?              // High School | College/University | Club | Academy | Professional Organization | Other
+  recruiterRole       String?              // Head Coach | Assistant Coach | Recruiting Coordinator | Scout | Position Coach | Other
+  positions           String?              // positions they evaluate (e.g. "Quarterbacks, Wide Receivers")
+  graduatingClasses   String?              // classes actively recruiting (e.g. "2027, 2028")
+  evaluationPriority  String?              // what matters most when evaluating (recruiting philosophy)
+  filterCriteria      String?              // filters/limitations used (e.g. "Minimum GPA, Location")
   onboardingCompleted Boolean              @default(false)
   pitch               String?
   // Verification: pending → under_review → verified | rejected

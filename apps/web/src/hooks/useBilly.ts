@@ -124,6 +124,8 @@ export function useBilly(recruiterId: string, conversationId: string) {
   const [status, setStatus] = useState<ConnectionStatus>("connecting");
   const [isTyping, setIsTyping] = useState(false);
   const [searchCriteria, setSearchCriteria] = useState<SearchCriteria>({});
+  const [isOnboarding, setIsOnboarding] = useState<boolean | null>(null);
+  const [suggestedSearches, setSuggestedSearches] = useState<string[]>([]);
   const socketRef = useRef<Socket | null>(null);
 
   useEffect(() => {
@@ -151,7 +153,7 @@ export function useBilly(recruiterId: string, conversationId: string) {
 
     socket.on(
       "session_resumed",
-      (data: { messages: BillyMessage[]; searchCriteria: SearchCriteria }) => {
+      (data: { messages: BillyMessage[]; searchCriteria: SearchCriteria; isOnboarding: boolean }) => {
         setMessages(
           data.messages.map((m) => ({
             ...m,
@@ -160,8 +162,16 @@ export function useBilly(recruiterId: string, conversationId: string) {
           })),
         );
         setSearchCriteria(data.searchCriteria || {});
+        setIsOnboarding(data.isOnboarding ?? false);
       },
     );
+
+    socket.on("onboarding_started", () => setIsOnboarding(true));
+
+    socket.on("onboarding_complete", (data: { suggestedSearches: string[] }) => {
+      setIsOnboarding(false);
+      setSuggestedSearches(data.suggestedSearches ?? []);
+    });
 
     socket.on("status", (data: { status: string }) => {
       if (data.status === "typing") setIsTyping(true);
@@ -184,19 +194,23 @@ export function useBilly(recruiterId: string, conversationId: string) {
     };
   }, [recruiterId, conversationId]);
 
-  const sendMessage = useCallback((content: string) => {
-    if (!socketRef.current || !content.trim()) return;
+  const sendMessage = useCallback(
+    (content: string) => {
+      if (!socketRef.current || !content.trim()) return;
 
-    const optimisticMsg: BillyMessage = {
-      id: crypto.randomUUID(),
-      role: "user",
-      content,
-      timestamp: new Date(),
-    };
+      const optimisticMsg: BillyMessage = {
+        id: crypto.randomUUID(),
+        role: "user",
+        content,
+        timestamp: new Date(),
+      };
 
-    setMessages((prev) => [...prev, optimisticMsg]);
-    socketRef.current.emit("message", { content });
-  }, []);
+      setMessages((prev) => [...prev, optimisticMsg]);
+      setSuggestedSearches([]);
+      socketRef.current.emit("message", { content });
+    },
+    [],
+  );
 
   const handleOption = useCallback((option: MessageOption) => {
     if (!socketRef.current) return;
@@ -229,5 +243,14 @@ export function useBilly(recruiterId: string, conversationId: string) {
     }
   }, []);
 
-  return { messages, status, isTyping, searchCriteria, sendMessage, handleOption };
+  return {
+    messages,
+    status,
+    isTyping,
+    searchCriteria,
+    isOnboarding,
+    suggestedSearches,
+    sendMessage,
+    handleOption,
+  };
 }

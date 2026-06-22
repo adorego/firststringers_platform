@@ -109,9 +109,33 @@ export const api = {
     division: string | null;
     gender: string | null;
     openings: number | null;
+    organizationType: string | null;
+    recruiterRole: string | null;
+    positions: string | null;
+    graduatingClasses: string | null;
+    evaluationPriority: string | null;
+    filterCriteria: string | null;
+    onboardingCompleted: boolean;
     pitch: string | null;
   }> {
     const { data } = await http.get("/recruiter/profile");
+    return data;
+  },
+
+  async completeOnboarding(answers: {
+    sport?: string;
+    organizationType?: string;
+    recruiterRole?: string;
+    location?: string;
+    positions?: string;
+    graduatingClasses?: string;
+    evaluationPriority?: string;
+    filterCriteria?: string;
+  }): Promise<{ suggestedSearches: string[] }> {
+    const { data } = await http.post<{ suggestedSearches: string[] }>(
+      "/recruiter/onboarding/complete",
+      answers,
+    );
     return data;
   },
 

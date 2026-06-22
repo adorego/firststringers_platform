@@ -90,8 +90,8 @@ export class BillyGateway implements OnGatewayConnection, OnGatewayDisconnect {
         const welcomeMessage: BillyMessage = {
           role: 'assistant',
           content: isOnboarding
-            ? `Hi${recruiter?.name ? ` ${recruiter.name}` : ''}! I'm Billy. Before we start finding athletes, I'd love to learn a bit about your program so I can make the best recommendations — and introduce athletes to you properly.\n\nFirst up: what university or institution do you represent?`
-            : "Hi! I'm Billy, your recruiting intelligence agent. Tell me what kind of athlete you're looking for and I'll help you find the best matches. What sport and position are you recruiting for?",
+            ? `Hi${recruiter?.name ? ` ${recruiter.name}` : ''}.\n\nBefore we get started, I'd like to learn a little about your recruiting responsibilities so I can better assist you.\n\nWhat sport are you recruiting for?\nYou can choose from: Football, Baseball, Basketball, Soccer, Volleyball, or Other.`
+            : `Hi${recruiter?.name ? ` ${recruiter.name}` : ''}! I'm Billy. Tell me what kind of athlete fits your program and I'll help you find the best matches.`,
           timestamp: new Date(),
         };
         await this.session.appendMessage(conversationId, recruiterId, welcomeMessage);
@@ -178,6 +178,17 @@ export class BillyGateway implements OnGatewayConnection, OnGatewayDisconnect {
         .to(`conversation:${payload.conversationId}`)
         .emit('search_results', { results: payload.searchResults });
     }
+  }
+
+  @OnEvent('billy.onboarding_complete')
+  handleOnboardingComplete(payload: {
+    recruiterId: string;
+    conversationId: string;
+    suggestedSearches: string[];
+  }) {
+    this.server
+      .to(`conversation:${payload.conversationId}`)
+      .emit('onboarding_complete', { suggestedSearches: payload.suggestedSearches ?? [] });
   }
 
   @OnEvent('billy.error')
