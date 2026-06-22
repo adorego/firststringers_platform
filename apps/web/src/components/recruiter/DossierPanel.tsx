@@ -41,6 +41,7 @@ interface DossierPanelProps {
   onAddToPipeline?: (athlete: AthleteResult) => void;
   onRequestIntro?: (athlete: AthleteResult) => void;
   openToIntro?: boolean;
+  isInPipeline?: boolean;
 }
 
 type IntroState = "idle" | "confirming" | "sent";
@@ -51,6 +52,7 @@ export function DossierPanel({
   onAddToPipeline,
   onRequestIntro,
   openToIntro = false,
+  isInPipeline = false,
 }: DossierPanelProps) {
   const [introState, setIntroState] = useState<IntroState>("idle");
   const { data: session } = useSession();
@@ -287,9 +289,10 @@ export function DossierPanel({
           <div className="flex items-center gap-4 border-y border-[#E8E3DD] py-4">
             <button
               onClick={() => onAddToPipeline?.(athlete)}
-              className="flex-1 rounded-xl border border-[#E8E3DD] py-2.5 text-sm font-medium text-[#6B6561] transition-colors hover:bg-[#EDEAE5] hover:text-[#1A1A1A]"
+              disabled={isInPipeline}
+              className="flex-1 rounded-xl border border-[#E8E3DD] py-2.5 text-sm font-medium text-[#6B6561] transition-colors hover:bg-[#EDEAE5] hover:text-[#1A1A1A] disabled:border-[#C8E6C9] disabled:text-[#2E7D32] disabled:hover:bg-transparent"
             >
-              Add to Pipeline
+              {isInPipeline ? "Added to Pipeline ✓" : "Add to Pipeline"}
             </button>
             <button
               onClick={() => setIntroState("confirming")}

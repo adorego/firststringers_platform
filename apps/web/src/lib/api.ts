@@ -153,6 +153,37 @@ export const api = {
     const { data } = await http.get<MatchResult[]>("/search", { params: { q: query } });
     return data;
   },
+
+  // Pipeline
+  async getPipeline(): Promise<PipelineEntry[]> {
+    const { data } = await http.get<PipelineEntry[]>("/pipeline");
+    return data;
+  },
+
+  async addToPipeline(athleteId: string): Promise<void> {
+    await http.post("/pipeline", { athleteId });
+  },
+
+  async removeFromPipeline(athleteId: string): Promise<void> {
+    await http.delete(`/pipeline/${athleteId}`);
+  },
+
+  async requestIntroduction(athleteId: string): Promise<void> {
+    await http.post("/conversations/request-intro", { athleteId });
+  },
 };
+
+export interface PipelineEntry {
+  pipelineId: string;
+  athleteId: string;
+  fullName: string;
+  sport: string | null;
+  position: string | null;
+  school: string | null;
+  graduationYear: number | null;
+  completenessScore: number;
+  addedAt: string;
+  latestUpdate: { content: string; publishedAt: string } | null;
+}
 
 export default api;

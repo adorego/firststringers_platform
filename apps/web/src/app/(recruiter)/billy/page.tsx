@@ -1,12 +1,27 @@
 "use client";
 
+<<<<<<< Updated upstream
 import { useState, useEffect } from "react";
+=======
+import { useState, useEffect, useRef } from "react";
+>>>>>>> Stashed changes
 import { ChevronRight, ArrowUp } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { createBillyConversation } from "@/hooks/useBilly";
+<<<<<<< Updated upstream
 import { OnboardingWizard } from "@/components/recruiter/OnboardingWizard";
 import { api } from "@/lib/api";
+=======
+import { api } from "@/lib/api";
+
+const SUGGESTIONS = [
+  "Find developmental OL prospects in Florida",
+  "Show me dual-threat QBs with strong academics",
+  "Transfer portal WRs with 4.4 speed or faster",
+  "D1 safeties from the Southeast, class of 2026",
+];
+>>>>>>> Stashed changes
 
 export default function BillyLandingPage() {
   const router = useRouter();
@@ -16,6 +31,7 @@ export default function BillyLandingPage() {
 
   const [input, setInput] = useState("");
   const [isCreating, setIsCreating] = useState(false);
+<<<<<<< Updated upstream
   const [onboardingStatus, setOnboardingStatus] = useState<"loading" | "needed" | "done">(
     "loading",
   );
@@ -43,9 +59,13 @@ export default function BillyLandingPage() {
     if (suggestedSearches.length > 0) setSuggestions(suggestedSearches);
     setOnboardingStatus("done");
   };
+=======
+  const [ready, setReady] = useState(false);
+  const redirectedRef = useRef(false);
+>>>>>>> Stashed changes
 
   const startConversation = async (initialMessage?: string) => {
-    if (isCreating) return;
+    if (isCreating || redirectedRef.current) return;
     setIsCreating(true);
     try {
       const conv = await createBillyConversation(recruiterId);
@@ -57,6 +77,27 @@ export default function BillyLandingPage() {
       setIsCreating(false);
     }
   };
+
+  // Onboarding starts automatically as soon as the recruiter account is created —
+  // jump straight into a Billy conversation so the chat-based onboarding kicks in.
+  useEffect(() => {
+    if (!session) return;
+    api
+      .getRecruiterProfile()
+      .then(async (profile) => {
+        if (!profile.onboardingCompleted && !redirectedRef.current) {
+          redirectedRef.current = true;
+          const conv = await createBillyConversation(recruiterId);
+          if (conv) {
+            router.replace(`/billy/${conv.id}`);
+            return;
+          }
+        }
+        setReady(true);
+      })
+      .catch(() => setReady(true));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [session]);
 
   const handleSend = () => {
     const msg = input.trim();
@@ -70,6 +111,17 @@ export default function BillyLandingPage() {
       handleSend();
     }
   };
+
+  if (!ready) {
+    return (
+      <div className="flex h-full items-center justify-center bg-[#F5F0EB]">
+        <svg className="h-5 w-5 animate-spin text-[#ADA8A5]" viewBox="0 0 24 24" fill="none">
+          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+        </svg>
+      </div>
+    );
+  }
 
   return (
     <>

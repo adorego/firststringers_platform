@@ -12,6 +12,7 @@ export class BillySessionService {
   private readonly logger = new Logger(BillySessionService.name);
   private readonly SESSION_TTL = 60 * 60 * 24; // 24h
   private readonly MAX_MESSAGES = 30;
+  private readonly PENDING_SUGGESTIONS_TTL = 60 * 10; // 10min
 
   constructor(
     private readonly redis: RedisService,
@@ -82,11 +83,37 @@ export class BillySessionService {
     await this.redis.del(this.buildKey(conversationId));
   }
 
+  // Bridges onboarding completion (old conversation) to the first message of the
+  // fresh conversation Billy opens right after — short-lived, consumed on next connect.
+  async setPendingSuggestions(recruiterId: string, suggestions: string[]): Promise<void> {
+    await this.redis.setex(
+      this.buildPendingKey(recruiterId),
+      this.PENDING_SUGGESTIONS_TTL,
+      JSON.stringify(suggestions),
+    );
+  }
+
+  async getAndClearPendingSuggestions(recruiterId: string): Promise<string[] | null> {
+    const key = this.buildPendingKey(recruiterId);
+    const data = await this.redis.get(key);
+    if (!data) return null;
+    await this.redis.del(key);
+    try {
+      return JSON.parse(data) as string[];
+    } catch {
+      return null;
+    }
+  }
+
   private async saveSession(conversationId: string, session: BillySessionState): Promise<void> {
     await this.redis.setex(this.buildKey(conversationId), this.SESSION_TTL, JSON.stringify(session));
   }
 
   private buildKey(conversationId: string): string {
     return `billy:session:${conversationId}`;
+  }
+
+  private buildPendingKey(recruiterId: string): string {
+    return `billy:pending-suggestions:${recruiterId}`;
   }
 }

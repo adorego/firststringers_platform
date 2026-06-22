@@ -82,6 +82,16 @@ export class ConversationsController {
     );
   }
 
+  // Recruiter: request an introduction from outside an active Billy conversation
+  // (e.g. Pipeline, Dossier panel) — notifies the athlete via Jerry.
+  @Post('request-intro')
+  requestIntro(
+    @CurrentUser() user: { recruiterId: string },
+    @Body() dto: { athleteId: string },
+  ) {
+    return this.conversationsService.requestIntroduction(user.recruiterId, dto.athleteId);
+  }
+
   @Public()
   @Get(':id/messages')
   getMessages(@Param('id') id: string) {

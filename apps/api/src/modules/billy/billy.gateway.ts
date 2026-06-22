@@ -87,17 +87,32 @@ export class BillyGateway implements OnGatewayConnection, OnGatewayDisconnect {
           isOnboarding: sessionState.isOnboarding,
         });
       } else {
+        // A fresh conversation right after onboarding gets seeded with the
+        // suggestions Billy generated from the recruiter's answers.
+        const pendingSuggestions = !isOnboarding
+          ? await this.session.getAndClearPendingSuggestions(recruiterId)
+          : null;
+
         const welcomeMessage: BillyMessage = {
           role: 'assistant',
           content: isOnboarding
             ? `Hi${recruiter?.name ? ` ${recruiter.name}` : ''}.\n\nBefore we get started, I'd like to learn a little about your recruiting responsibilities so I can better assist you.\n\nWhat sport are you recruiting for?\nYou can choose from: Football, Baseball, Basketball, Soccer, Volleyball, or Other.`
+<<<<<<< Updated upstream
             : `Hi${recruiter?.name ? ` ${recruiter.name}` : ''}! I'm Billy. Tell me what kind of athlete fits your program and I'll help you find the best matches.`,
+=======
+            : pendingSuggestions && pendingSuggestions.length > 0
+              ? `Now that I know more about your program, here are a few searches to get you started.`
+              : `Hi${recruiter?.name ? ` ${recruiter.name}` : ''}! I'm Billy. Tell me what kind of athlete fits your program and I'll help you find the best matches.`,
+>>>>>>> Stashed changes
           timestamp: new Date(),
         };
         await this.session.appendMessage(conversationId, recruiterId, welcomeMessage);
         client.emit('message', welcomeMessage);
         if (isOnboarding) {
           client.emit('onboarding_started', {});
+        }
+        if (pendingSuggestions && pendingSuggestions.length > 0) {
+          client.emit('onboarding_complete', { suggestedSearches: pendingSuggestions });
         }
       }
     } catch (err) {
@@ -184,11 +199,19 @@ export class BillyGateway implements OnGatewayConnection, OnGatewayDisconnect {
   handleOnboardingComplete(payload: {
     recruiterId: string;
     conversationId: string;
+<<<<<<< Updated upstream
     suggestedSearches: string[];
   }) {
     this.server
       .to(`conversation:${payload.conversationId}`)
       .emit('onboarding_complete', { suggestedSearches: payload.suggestedSearches ?? [] });
+=======
+    newConversationId: string;
+  }) {
+    this.server
+      .to(`conversation:${payload.conversationId}`)
+      .emit('onboarding_complete', { newConversationId: payload.newConversationId });
+>>>>>>> Stashed changes
   }
 
   @OnEvent('billy.error')

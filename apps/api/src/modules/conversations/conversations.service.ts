@@ -1,13 +1,23 @@
+<<<<<<< Updated upstream
 import {
   Injectable,
   ForbiddenException,
   NotFoundException,
 } from '@nestjs/common';
+=======
+import { Injectable, ForbiddenException, NotFoundException } from '@nestjs/common';
+import { EventEmitter2 } from '@nestjs/event-emitter';
+>>>>>>> Stashed changes
 import { PrismaService } from '../../shared/prisma/prisma.service';
+import { RecruiterService } from '../recruiter/recruiter.service';
 
 @Injectable()
 export class ConversationsService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly recruiterService: RecruiterService,
+    private readonly eventEmitter: EventEmitter2,
+  ) {}
 
   async getConversationsForRecruiter(recruiterId: string) {
     return this.prisma.directConversation.findMany({
@@ -107,6 +117,25 @@ export class ConversationsService {
   // Keep for internal use (e.g. existing conversations REST endpoint)
   async getOrCreateConversation(recruiterId: string, athleteId: string) {
     return this.createRequest(recruiterId, athleteId);
+  }
+
+  // REST counterpart of BillyGateway.handleInitiateContact — used when a recruiter
+  // requests an introduction from outside an active Billy conversation (Pipeline, Dossier).
+  async requestIntroduction(recruiterId: string, athleteId: string) {
+    const conversation = await this.createRequest(recruiterId, athleteId);
+    const recruiterProfile = await this.recruiterService.findById(recruiterId);
+
+    this.eventEmitter.emit('contact.initiated', {
+      athleteId,
+      athleteName: conversation.athlete?.name,
+      recruiterId,
+      recruiterName: conversation.recruiter?.name ?? 'A recruiter',
+      organizationName: conversation.recruiter?.organization?.name,
+      conversationId: conversation.id,
+      pitch: recruiterProfile?.pitch ?? undefined,
+    });
+
+    return conversation;
   }
 
   async acceptRequest(conversationId: string, athleteId: string) {

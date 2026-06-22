@@ -28,6 +28,7 @@ model Athlete {
   sessions       JerrySession[]
   user           User?
   conversations  DirectConversation[]
+  pipelineEntries PipelineEntry[]
   createdAt      DateTime             @default(now())
   updatedAt      DateTime             @updatedAt
 }
@@ -89,6 +90,7 @@ model Recruiter {
   user                User?
   billyMessages       BillyMessage[]
   conversations       DirectConversation[]
+  pipelineEntries     PipelineEntry[]
 }
 
 model User {
@@ -168,4 +170,16 @@ model BillyConversation {
 
   @@index([recruiterId])
   @@map("billy_conversations")
+}
+
+model PipelineEntry {
+  id          String    @id @default(uuid())
+  recruiterId String
+  recruiter   Recruiter @relation(fields: [recruiterId], references: [id], onDelete: Cascade)
+  athleteId   String
+  athlete     Athlete   @relation(fields: [athleteId], references: [id], onDelete: Cascade)
+  createdAt   DateTime  @default(now())
+
+  @@unique([recruiterId, athleteId])
+  @@map("pipeline_entries")
 }

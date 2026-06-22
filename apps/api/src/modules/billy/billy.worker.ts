@@ -277,10 +277,23 @@ export class BillyWorker {
 
         await this.session.setOnboardingComplete(conversationId, recruiterId);
 
+<<<<<<< Updated upstream
         this.eventEmitter.emit('billy.onboarding_complete', {
           recruiterId,
           conversationId,
           suggestedSearches,
+=======
+        // Onboarding lives in its own conversation — start a fresh one for the
+        // post-onboarding search experience, seeded with the suggestions Billy just learned.
+        const newConversation = await this.conversations.create(recruiterId);
+        await this.conversations.updateTitle(newConversation.id, 'Suggested searches');
+        await this.session.setPendingSuggestions(recruiterId, suggestedSearches);
+
+        this.eventEmitter.emit('billy.onboarding_complete', {
+          recruiterId,
+          conversationId,
+          newConversationId: newConversation.id,
+>>>>>>> Stashed changes
         });
       } catch (err) {
         this.logger.warn(`Could not parse or save onboarding profile for recruiter ${recruiterId}`, err);

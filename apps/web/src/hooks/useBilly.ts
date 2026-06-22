@@ -126,6 +126,10 @@ export function useBilly(recruiterId: string, conversationId: string) {
   const [searchCriteria, setSearchCriteria] = useState<SearchCriteria>({});
   const [isOnboarding, setIsOnboarding] = useState<boolean | null>(null);
   const [suggestedSearches, setSuggestedSearches] = useState<string[]>([]);
+<<<<<<< Updated upstream
+=======
+  const [redirectTo, setRedirectTo] = useState<string | null>(null);
+>>>>>>> Stashed changes
   const socketRef = useRef<Socket | null>(null);
 
   useEffect(() => {
@@ -163,6 +167,20 @@ export function useBilly(recruiterId: string, conversationId: string) {
         );
         setSearchCriteria(data.searchCriteria || {});
         setIsOnboarding(data.isOnboarding ?? false);
+<<<<<<< Updated upstream
+=======
+      },
+    );
+
+    socket.on("onboarding_started", () => setIsOnboarding(true));
+
+    socket.on(
+      "onboarding_complete",
+      (data: { suggestedSearches?: string[]; newConversationId?: string }) => {
+        setIsOnboarding(false);
+        if (data.suggestedSearches) setSuggestedSearches(data.suggestedSearches);
+        if (data.newConversationId) setRedirectTo(data.newConversationId);
+>>>>>>> Stashed changes
       },
     );
 
@@ -250,6 +268,10 @@ export function useBilly(recruiterId: string, conversationId: string) {
     searchCriteria,
     isOnboarding,
     suggestedSearches,
+<<<<<<< Updated upstream
+=======
+    redirectTo,
+>>>>>>> Stashed changes
     sendMessage,
     handleOption,
   };

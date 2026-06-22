@@ -2,10 +2,11 @@
 
 import { useState, useRef, useEffect } from "react";
 import { ArrowUp } from "lucide-react";
-import { useParams, useSearchParams } from "next/navigation";
+import { useParams, useSearchParams, useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { useBilly, AthleteResult } from "@/hooks/useBilly";
 import { DossierPanel } from "@/components/recruiter/DossierPanel";
+import { api } from "@/lib/api";
 
 // ─── Sub-components ──────────────────────────────────────────────────────────
 
@@ -46,10 +47,14 @@ function AthleteCard({
   athlete,
   onViewDossier,
   onRequestIntro,
+  onAddToPipeline,
+  isInPipeline,
 }: {
   athlete: AthleteResult;
   onViewDossier: (athlete: AthleteResult) => void;
   onRequestIntro: (athlete: AthleteResult) => void;
+  onAddToPipeline: (athlete: AthleteResult) => void;
+  isInPipeline: boolean;
 }) {
   const initials = athlete.fullName
     .split(" ")
@@ -99,8 +104,12 @@ function AthleteCard({
               View Dossier ›
             </button>
             <span className="text-[#C4BDBA]">·</span>
-            <button className="text-[#6B6561] transition-colors hover:text-[#1A1A1A]">
-              Add to Pipeline
+            <button
+              onClick={() => onAddToPipeline(athlete)}
+              disabled={isInPipeline}
+              className="text-[#6B6561] transition-colors hover:text-[#1A1A1A] disabled:text-[#2E7D32]"
+            >
+              {isInPipeline ? "Added ✓" : "Add to Pipeline"}
             </button>
             <span className="text-[#C4BDBA]">·</span>
             <button
@@ -160,6 +169,7 @@ function InputBar({
 export default function BillyChatPage() {
   const { id: conversationId } = useParams<{ id: string }>();
   const searchParams = useSearchParams();
+  const router = useRouter();
   const initialQuery = searchParams.get("q");
   const { data: session } = useSession();
   const recruiterId = session?.user?.recruiterId ?? "e0b6c0c8-2b27-4521-9b26-46ace16b4983";
@@ -167,14 +177,34 @@ export default function BillyChatPage() {
   const [input, setInput] = useState("");
   const [selectedAthlete, setSelectedAthlete] = useState<AthleteResult | null>(null);
   const [openToIntro, setOpenToIntro] = useState(false);
+  const [pipelineIds, setPipelineIds] = useState<Set<string>>(new Set());
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const autoSentRef = useRef(false);
 
+<<<<<<< Updated upstream
   const { messages, status, isTyping, suggestedSearches, sendMessage, handleOption } = useBilly(
     recruiterId,
     conversationId,
   );
+=======
+  const handleAddToPipeline = async (athlete: AthleteResult) => {
+    if (pipelineIds.has(athlete.id)) return;
+    setPipelineIds((prev) => new Set(prev).add(athlete.id));
+    try {
+      await api.addToPipeline(athlete.id);
+    } catch {
+      setPipelineIds((prev) => {
+        const next = new Set(prev);
+        next.delete(athlete.id);
+        return next;
+      });
+    }
+  };
+
+  const { messages, status, isTyping, suggestedSearches, redirectTo, sendMessage, handleOption } =
+    useBilly(recruiterId, conversationId);
+>>>>>>> Stashed changes
 
   // Auto-send the suggestion from the landing page once connected
   useEffect(() => {
@@ -183,6 +213,14 @@ export default function BillyChatPage() {
       sendMessage(initialQuery);
     }
   }, [initialQuery, status, sendMessage]);
+
+  // Onboarding just wrapped up in this conversation — hand off to the fresh
+  // chat Billy opened with suggestions, after giving time to read the closing message.
+  useEffect(() => {
+    if (!redirectTo) return;
+    const timer = setTimeout(() => router.push(`/billy/${redirectTo}`), 2500);
+    return () => clearTimeout(timer);
+  }, [redirectTo, router]);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -273,6 +311,8 @@ export default function BillyChatPage() {
                           setOpenToIntro(true);
                           setSelectedAthlete(a);
                         }}
+                        onAddToPipeline={handleAddToPipeline}
+                        isInPipeline={pipelineIds.has(athlete.id)}
                       />
                     ))}
                   </div>
@@ -327,6 +367,8 @@ export default function BillyChatPage() {
           setSelectedAthlete(null);
           setOpenToIntro(false);
         }}
+        onAddToPipeline={handleAddToPipeline}
+        isInPipeline={selectedAthlete ? pipelineIds.has(selectedAthlete.id) : false}
       />
     </>
   );
