@@ -36,7 +36,8 @@ services:
       - REDIS_URL=redis://redis:6379
       - OPENAI_API_KEY=${OPENAI_API_KEY}
       - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
-      - AUTH_SECRET=${AUTH_SECRET}
+      - JWT_SECRET=${JWT_SECRET}
+      - JWT_REFRESH_SECRET=${JWT_REFRESH_SECRET} 
       - FRONTEND_URL=http://localhost:3000
       - PORT=3001
     depends_on:
