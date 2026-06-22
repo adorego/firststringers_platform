@@ -94,9 +94,7 @@ export class RecruiterService {
     if (!exists) throw new NotFoundException('Recruiter not found');
     await this.prisma.recruiter.update({ where: { id }, data });
   }
-<<<<<<< Updated upstream
 
-<<<<<<< HEAD
   async submitVerification(
     recruiterId: string,
     data: { title?: string; website?: string; linkedIn?: string },
@@ -153,48 +151,5 @@ export class RecruiterService {
       },
       orderBy: { createdAt: 'asc' },
     });
-=======
-  async completeOnboarding(id: string, data: Omit<UpdateRecruiterProfileDto, 'onboardingCompleted' | 'pitch'>): Promise<string[]> {
-    await this.updateProfile(id, { ...data, onboardingCompleted: true });
-    const recruiter = await this.findById(id);
-    if (!recruiter) return [];
-
-    const [pitch, suggestedSearches] = await Promise.all([
-      this.generatePitch(recruiter),
-      this.generateSuggestedSearches(recruiter),
-    ]);
-    await this.prisma.recruiter.update({ where: { id }, data: { pitch } });
-
-    return suggestedSearches;
   }
-
-  private async generateSuggestedSearches(profile: RecruiterProfile): Promise<string[]> {
-    const context = [
-      profile.sport && `Sport: ${profile.sport}`,
-      profile.organizationType && `Organization: ${profile.organizationType}`,
-      profile.recruiterRole && `Role: ${profile.recruiterRole}`,
-      profile.location && `Region: ${profile.location}`,
-      profile.positions && `Positions: ${profile.positions}`,
-      profile.graduatingClasses && `Classes: ${profile.graduatingClasses}`,
-      profile.evaluationPriority && `Priority: ${profile.evaluationPriority}`,
-      profile.filterCriteria && `Filters: ${profile.filterCriteria}`,
-    ]
-      .filter(Boolean)
-      .join('\n');
-
-    try {
-      const raw = await this.llm.chat({
-        systemPrompt:
-          'Generate exactly 4 short, specific athlete search queries for a recruiter based on their profile. Each query should be a natural language search a recruiter would type. Return ONLY a JSON array of 4 strings, no explanation, no markdown.',
-        messages: [{ role: 'user', content: `Recruiter profile:\n${context}`, timestamp: new Date() }],
-      });
-      const parsed = JSON.parse(raw) as string[];
-      return Array.isArray(parsed) ? parsed.slice(0, 4) : [];
-    } catch {
-      return [];
-    }
->>>>>>> 905f8b0 (modifica el onboarding del reclutador)
-  }
-=======
->>>>>>> Stashed changes
 }

@@ -1,13 +1,5 @@
-<<<<<<< Updated upstream
-import {
-  Injectable,
-  ForbiddenException,
-  NotFoundException,
-} from '@nestjs/common';
-=======
 import { Injectable, ForbiddenException, NotFoundException } from '@nestjs/common';
 import { EventEmitter2 } from '@nestjs/event-emitter';
->>>>>>> Stashed changes
 import { PrismaService } from '../../shared/prisma/prisma.service';
 import { RecruiterService } from '../recruiter/recruiter.service';
 

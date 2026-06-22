@@ -182,12 +182,6 @@ export default function BillyChatPage() {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const autoSentRef = useRef(false);
 
-<<<<<<< Updated upstream
-  const { messages, status, isTyping, suggestedSearches, sendMessage, handleOption } = useBilly(
-    recruiterId,
-    conversationId,
-  );
-=======
   const handleAddToPipeline = async (athlete: AthleteResult) => {
     if (pipelineIds.has(athlete.id)) return;
     setPipelineIds((prev) => new Set(prev).add(athlete.id));
@@ -204,7 +198,6 @@ export default function BillyChatPage() {
 
   const { messages, status, isTyping, suggestedSearches, redirectTo, sendMessage, handleOption } =
     useBilly(recruiterId, conversationId);
->>>>>>> Stashed changes
 
   // Auto-send the suggestion from the landing page once connected
   useEffect(() => {

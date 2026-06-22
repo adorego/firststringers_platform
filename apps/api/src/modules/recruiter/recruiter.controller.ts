@@ -1,5 +1,3 @@
-<<<<<<< Updated upstream
-<<<<<<< HEAD
 import {
   Controller,
   Get,
@@ -12,15 +10,6 @@ import {
 import { RecruiterService } from './recruiter.service';
 import { CurrentUser } from '../auth/current-user.decorator';
 import { Roles } from '../auth/roles.decorator';
-=======
-import { Controller, Get, Post, Body } from '@nestjs/common';
-import { RecruiterService, UpdateRecruiterProfileDto } from './recruiter.service';
-=======
-import { Controller, Get } from '@nestjs/common';
-import { RecruiterService } from './recruiter.service';
->>>>>>> Stashed changes
-import { CurrentUser } from '../auth/current-user.decorator';
->>>>>>> 905f8b0 (modifica el onboarding del reclutador)
 
 @Controller('recruiter')
 export class RecruiterController {
@@ -30,9 +19,7 @@ export class RecruiterController {
   async getProfile(@CurrentUser() user: { recruiterId: string }) {
     return this.recruiterService.findById(user.recruiterId);
   }
-<<<<<<< Updated upstream
 
-<<<<<<< HEAD
   // Recruiter submits their verification info
   @Post('verify')
   async submitVerification(
@@ -64,19 +51,5 @@ export class RecruiterController {
     }
     await this.recruiterService.setVerificationStatus(recruiterId, dto.status);
     return { ok: true };
-=======
-  @Post('onboarding/complete')
-  async completeOnboarding(
-    @CurrentUser() user: { recruiterId: string },
-    @Body() body: Omit<UpdateRecruiterProfileDto, 'onboardingCompleted' | 'pitch'>,
-  ) {
-    const suggestedSearches = await this.recruiterService.completeOnboarding(
-      user.recruiterId,
-      body,
-    );
-    return { suggestedSearches };
->>>>>>> 905f8b0 (modifica el onboarding del reclutador)
   }
-=======
->>>>>>> Stashed changes
 }
