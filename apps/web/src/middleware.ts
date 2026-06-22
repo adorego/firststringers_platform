@@ -3,7 +3,7 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
 // Always public — no auth needed
-const PUBLIC_PATHS = ["/", "/welcome", "/login", "/register", "/api/auth"];
+const PUBLIC_PATHS = ["/", "/welcome", "/login", "/register", "/api/auth", "/api/health"];
 
 // Routes only athletes should access
 const ATHLETE_PATHS = ["/chat", "/dossier", "/profile", "/conversations", "/pipeline", "/updates"];
