@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { Suspense, useState, useRef, useEffect } from "react";
 import { ArrowUp } from "lucide-react";
 import { useParams, useSearchParams } from "next/navigation";
 import { useSession } from "next-auth/react";
@@ -158,6 +158,14 @@ function InputBar({
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
 export default function BillyChatPage() {
+  return (
+    <Suspense fallback={null}>
+      <BillyChatPageContent />
+    </Suspense>
+  );
+}
+
+function BillyChatPageContent() {
   const { id: conversationId } = useParams<{ id: string }>();
   const searchParams = useSearchParams();
   const initialQuery = searchParams.get("q");
