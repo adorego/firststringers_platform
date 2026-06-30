@@ -14,7 +14,13 @@ export class ConversationsService {
       where: { recruiterId },
       include: {
         athlete: {
-          select: { id: true, name: true, sport: true, position: true, dossier: { select: { data: true } } },
+          select: {
+            id: true,
+            name: true,
+            sport: true,
+            position: true,
+            dossier: { select: { data: true } },
+          },
         },
         messages: {
           orderBy: { createdAt: 'desc' },
@@ -91,7 +97,9 @@ export class ConversationsService {
       create: { recruiterId, athleteId, status: 'pending' },
       update: {},
       include: {
-        athlete: { select: { id: true, name: true, sport: true, position: true } },
+        athlete: {
+          select: { id: true, name: true, sport: true, position: true },
+        },
         recruiter: {
           select: {
             id: true,
@@ -114,7 +122,8 @@ export class ConversationsService {
       where: { id: conversationId },
     });
     if (!conv) throw new NotFoundException('Conversation not found');
-    if (conv.athleteId !== athleteId) throw new ForbiddenException('Not your conversation');
+    if (conv.athleteId !== athleteId)
+      throw new ForbiddenException('Not your conversation');
     if (conv.status === 'accepted') return conv;
 
     return this.prisma.directConversation.update({
@@ -131,7 +140,8 @@ export class ConversationsService {
       where: { id: conversationId },
     });
     if (!conv) throw new NotFoundException('Conversation not found');
-    if (conv.athleteId !== athleteId) throw new ForbiddenException('Not your conversation');
+    if (conv.athleteId !== athleteId)
+      throw new ForbiddenException('Not your conversation');
 
     return this.prisma.directConversation.update({
       where: { id: conversationId },

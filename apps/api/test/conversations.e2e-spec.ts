@@ -3,7 +3,7 @@ import {
   createTestApp,
   closeTestApp,
   truncateAll,
-  getApp,
+  getHttpServer,
   getPrisma,
 } from './helpers/test-app';
 import {
@@ -11,6 +11,7 @@ import {
   registerRecruiter,
   decodeJwt,
 } from './helpers/auth.helper';
+import { ConversationResponse } from './helpers/response-types';
 
 beforeAll(async () => {
   await createTestApp();
@@ -51,7 +52,7 @@ describe('Conversations (e2e)', () => {
         data: { onboardingCompleted: true },
       });
 
-      await request(getApp().getHttpServer())
+      await request(getHttpServer())
         .post('/conversations')
         .set('Authorization', `Bearer ${recruiter.access_token}`)
         .send({ recruiterId, athleteId })
@@ -67,14 +68,15 @@ describe('Conversations (e2e)', () => {
 
       await verifyRecruiter(recruiterId);
 
-      const res = await request(getApp().getHttpServer())
+      const res = await request(getHttpServer())
         .post('/conversations')
         .set('Authorization', `Bearer ${recruiter.access_token}`)
         .send({ recruiterId, athleteId })
         .expect(201);
+      const body = res.body as ConversationResponse;
 
-      expect(res.body.status).toBe('pending');
-      expect(res.body.athleteId).toBe(athleteId);
+      expect(body.status).toBe('pending');
+      expect(body.athleteId).toBe(athleteId);
     });
   });
 
@@ -89,21 +91,22 @@ describe('Conversations (e2e)', () => {
       await verifyRecruiter(recruiterId);
 
       // Create request
-      const conv = await request(getApp().getHttpServer())
+      const conv = await request(getHttpServer())
         .post('/conversations')
         .set('Authorization', `Bearer ${recruiter.access_token}`)
         .send({ recruiterId, athleteId })
         .expect(201);
+      const convBody = conv.body as ConversationResponse;
 
       // Accept
-      await request(getApp().getHttpServer())
-        .patch(`/conversations/${conv.body.id}/accept`)
+      await request(getHttpServer())
+        .patch(`/conversations/${convBody.id}/accept`)
         .set('Authorization', `Bearer ${athlete.access_token}`)
         .expect(200);
 
       // Verify it's accepted
       const updated = await getPrisma().directConversation.findUnique({
-        where: { id: conv.body.id },
+        where: { id: convBody.id },
       });
       expect(updated?.status).toBe('accepted');
     });
@@ -117,19 +120,20 @@ describe('Conversations (e2e)', () => {
 
       await verifyRecruiter(recruiterId);
 
-      const conv = await request(getApp().getHttpServer())
+      const conv = await request(getHttpServer())
         .post('/conversations')
         .set('Authorization', `Bearer ${recruiter.access_token}`)
         .send({ recruiterId, athleteId })
         .expect(201);
+      const convBody = conv.body as ConversationResponse;
 
-      await request(getApp().getHttpServer())
-        .patch(`/conversations/${conv.body.id}/decline`)
+      await request(getHttpServer())
+        .patch(`/conversations/${convBody.id}/decline`)
         .set('Authorization', `Bearer ${athlete.access_token}`)
         .expect(200);
 
       const updated = await getPrisma().directConversation.findUnique({
-        where: { id: conv.body.id },
+        where: { id: convBody.id },
       });
       expect(updated?.status).toBe('declined');
     });

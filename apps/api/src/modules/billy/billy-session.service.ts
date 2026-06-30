@@ -18,7 +18,11 @@ export class BillySessionService {
     private readonly conversations: BillyConversationService,
   ) {}
 
-  async getSession(conversationId: string, recruiterId: string, isOnboarding = false): Promise<BillySessionState> {
+  async getSession(
+    conversationId: string,
+    recruiterId: string,
+    isOnboarding = false,
+  ): Promise<BillySessionState> {
     const key = this.buildKey(conversationId);
     const data = await this.redis.get(key);
 
@@ -26,13 +30,17 @@ export class BillySessionService {
       try {
         return JSON.parse(data) as BillySessionState;
       } catch (err) {
-        this.logger.warn(`Corrupted session for conversation ${conversationId}, loading from DB`, err);
+        this.logger.warn(
+          `Corrupted session for conversation ${conversationId}, loading from DB`,
+          err,
+        );
       }
     }
 
     // Redis miss — warm from DB
     const messages = await this.conversations.getMessages(conversationId);
-    const searchCriteria = await this.conversations.getSearchCriteria(conversationId);
+    const searchCriteria =
+      await this.conversations.getSearchCriteria(conversationId);
 
     const session: BillySessionState = {
       conversationId,
@@ -49,13 +57,20 @@ export class BillySessionService {
     return session;
   }
 
-  async appendMessage(conversationId: string, recruiterId: string, message: BillyMessage): Promise<void> {
+  async appendMessage(
+    conversationId: string,
+    recruiterId: string,
+    message: BillyMessage,
+  ): Promise<void> {
     const session = await this.getSession(conversationId, recruiterId);
     session.messages.push(message);
     session.updatedAt = new Date();
 
     if (session.messages.length > this.MAX_MESSAGES) {
-      session.messages = [session.messages[0], ...session.messages.slice(-this.MAX_MESSAGES + 1)];
+      session.messages = [
+        session.messages[0],
+        ...session.messages.slice(-this.MAX_MESSAGES + 1),
+      ];
     }
 
     await this.saveSession(conversationId, session);
@@ -72,7 +87,10 @@ export class BillySessionService {
     await this.saveSession(conversationId, session);
   }
 
-  async setOnboardingComplete(conversationId: string, recruiterId: string): Promise<void> {
+  async setOnboardingComplete(
+    conversationId: string,
+    recruiterId: string,
+  ): Promise<void> {
     const session = await this.getSession(conversationId, recruiterId);
     session.isOnboarding = false;
     await this.saveSession(conversationId, session);
@@ -82,8 +100,15 @@ export class BillySessionService {
     await this.redis.del(this.buildKey(conversationId));
   }
 
-  private async saveSession(conversationId: string, session: BillySessionState): Promise<void> {
-    await this.redis.setex(this.buildKey(conversationId), this.SESSION_TTL, JSON.stringify(session));
+  private async saveSession(
+    conversationId: string,
+    session: BillySessionState,
+  ): Promise<void> {
+    await this.redis.setex(
+      this.buildKey(conversationId),
+      this.SESSION_TTL,
+      JSON.stringify(session),
+    );
   }
 
   private buildKey(conversationId: string): string {

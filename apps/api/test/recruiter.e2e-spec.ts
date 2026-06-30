@@ -3,10 +3,14 @@ import {
   createTestApp,
   closeTestApp,
   truncateAll,
-  getApp,
+  getHttpServer,
   getPrisma,
 } from './helpers/test-app';
 import { registerRecruiter, decodeJwt } from './helpers/auth.helper';
+import {
+  RecruiterVerifyResponse,
+  RecruiterProfileResponse,
+} from './helpers/response-types';
 
 beforeAll(async () => {
   await createTestApp();
@@ -24,10 +28,9 @@ describe('Recruiter Verification (e2e)', () => {
   describe('POST /recruiter/verify', () => {
     it('moves verification to under_review with submitted info', async () => {
       const auth = await registerRecruiter();
-      const recruiterId = decodeJwt(auth.access_token)
-        .recruiterId as string;
+      const recruiterId = decodeJwt(auth.access_token).recruiterId as string;
 
-      const res = await request(getApp().getHttpServer())
+      const res = await request(getHttpServer())
         .post('/recruiter/verify')
         .set('Authorization', `Bearer ${auth.access_token}`)
         .send({
@@ -36,8 +39,9 @@ describe('Recruiter Verification (e2e)', () => {
           linkedIn: 'https://linkedin.com/in/coach',
         })
         .expect(201);
+      const body = res.body as RecruiterVerifyResponse;
 
-      expect(res.body.verificationStatus).toBe('under_review');
+      expect(body.verificationStatus).toBe('under_review');
 
       // Verify in DB
       const recruiter = await getPrisma().recruiter.findUnique({
@@ -45,9 +49,7 @@ describe('Recruiter Verification (e2e)', () => {
       });
       expect(recruiter?.verificationStatus).toBe('under_review');
       expect(recruiter?.verificationTitle).toBe('Head Coach');
-      expect(recruiter?.verificationWebsite).toBe(
-        'https://athletics.test.edu',
-      );
+      expect(recruiter?.verificationWebsite).toBe('https://athletics.test.edu');
     });
   });
 
@@ -55,24 +57,24 @@ describe('Recruiter Verification (e2e)', () => {
     it('returns the recruiter profile with verification fields', async () => {
       const auth = await registerRecruiter('Coach Test');
 
-      const res = await request(getApp().getHttpServer())
+      const res = await request(getHttpServer())
         .get('/recruiter/profile')
         .set('Authorization', `Bearer ${auth.access_token}`)
         .expect(200);
+      const body = res.body as RecruiterProfileResponse;
 
-      expect(res.body.name).toBe('Coach Test');
-      expect(res.body.verificationStatus).toBe('pending');
+      expect(body.name).toBe('Coach Test');
+      expect(body.verificationStatus).toBe('pending');
     });
   });
 
   describe('Full verification flow', () => {
     it('pending → under_review → verified', async () => {
       const auth = await registerRecruiter();
-      const recruiterId = decodeJwt(auth.access_token)
-        .recruiterId as string;
+      const recruiterId = decodeJwt(auth.access_token).recruiterId as string;
 
       // Step 1: submit
-      await request(getApp().getHttpServer())
+      await request(getHttpServer())
         .post('/recruiter/verify')
         .set('Authorization', `Bearer ${auth.access_token}`)
         .send({ title: 'Assistant Coach', website: 'https://test.edu' })
@@ -85,13 +87,14 @@ describe('Recruiter Verification (e2e)', () => {
       });
 
       // Step 3: profile reflects verified status
-      const res = await request(getApp().getHttpServer())
+      const res = await request(getHttpServer())
         .get('/recruiter/profile')
         .set('Authorization', `Bearer ${auth.access_token}`)
         .expect(200);
+      const body = res.body as RecruiterProfileResponse;
 
-      expect(res.body.verificationStatus).toBe('verified');
-      expect(res.body.verifiedAt).toBeDefined();
+      expect(body.verificationStatus).toBe('verified');
+      expect(body.verifiedAt).toBeDefined();
     });
   });
 });

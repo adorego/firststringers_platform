@@ -34,7 +34,9 @@ export class ConversationsController {
     if (!user.athleteId) {
       throw new NotFoundException('No athlete profile linked to this user');
     }
-    return this.conversationsService.getPendingRequestsForAthlete(user.athleteId);
+    return this.conversationsService.getPendingRequestsForAthlete(
+      user.athleteId,
+    );
   }
 
   // Athlete: accept a connection request

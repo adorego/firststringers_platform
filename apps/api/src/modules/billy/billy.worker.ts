@@ -7,7 +7,11 @@ import { BillySessionService } from './billy-session.service';
 import { BillyConversationService } from './billy-conversation.service';
 import { BillyMessage, BillyMessageJob } from '../../shared/types/billy.types';
 import { ScoutService } from '../scout/scout.service';
-import { RecruiterService } from '../recruiter/recruiter.service';
+import {
+  RecruiterService,
+  UpdateRecruiterProfileDto,
+} from '../recruiter/recruiter.service';
+import { SearchFilters } from '../../shared/types/scout.types';
 
 const SEARCH_SYSTEM_PROMPT = `You are Billy, an intelligent sports recruitment assistant helping a coach or recruiter find the right athlete.
 
@@ -81,15 +85,31 @@ export class BillyWorker {
     const { conversationId, recruiterId, message } = job.data;
 
     try {
-      const sessionState = await this.session.getSession(conversationId, recruiterId);
+      const sessionState = await this.session.getSession(
+        conversationId,
+        recruiterId,
+      );
 
       if (sessionState.isOnboarding) {
-        return this.handleOnboarding(conversationId, recruiterId, message, sessionState.messages);
+        return this.handleOnboarding(
+          conversationId,
+          recruiterId,
+          message,
+          sessionState.messages,
+        );
       }
 
-      return this.handleSearch(conversationId, recruiterId, message, sessionState);
+      return this.handleSearch(
+        conversationId,
+        recruiterId,
+        message,
+        sessionState,
+      );
     } catch (error) {
-      this.logger.error(`Error processing Billy message for conversation ${conversationId}`, error);
+      this.logger.error(
+        `Error processing Billy message for conversation ${conversationId}`,
+        error,
+      );
       this.eventEmitter.emit('billy.error', {
         conversationId,
         error: 'Error processing your message. Please try again.',
@@ -114,12 +134,15 @@ export class BillyWorker {
     const profileLines = [
       recruiter?.university && `- University: ${recruiter.university}`,
       recruiter?.location && `- Location: ${recruiter.location}`,
-      recruiter?.scholarshipType && `- Scholarship: ${recruiter.scholarshipType}`,
+      recruiter?.scholarshipType &&
+        `- Scholarship: ${recruiter.scholarshipType}`,
       recruiter?.sport && `- Sport: ${recruiter.sport}`,
       recruiter?.division && `- Division: ${recruiter.division}`,
       recruiter?.gender && `- Athletes: ${recruiter.gender}`,
       recruiter?.openings && `- Open spots: ${recruiter.openings}`,
-    ].filter(Boolean).join('\n');
+    ]
+      .filter(Boolean)
+      .join('\n');
 
     const profileContext = profileLines
       ? `\n\nThis recruiter's program profile (use this when they ask about their profile, program, or saved info):\n${profileLines}`
@@ -137,27 +160,39 @@ export class BillyWorker {
 
     const rawContent = response.choices[0].message.content ?? '';
 
-    const searchMatch = rawContent.match(/\[SEARCH_READY\](.*?)\[\/SEARCH_READY\]/s);
-    const updateMatch = rawContent.match(/\[PROFILE_UPDATE\](.*?)\[\/PROFILE_UPDATE\]/s);
+    const searchMatch = rawContent.match(
+      /\[SEARCH_READY\](.*?)\[\/SEARCH_READY\]/s,
+    );
+    const updateMatch = rawContent.match(
+      /\[PROFILE_UPDATE\](.*?)\[\/PROFILE_UPDATE\]/s,
+    );
     let visibleContent = rawContent;
     let searchResults: unknown[] | undefined;
-    let extractedFilters: Record<string, unknown> | undefined;
+    let extractedFilters: SearchFilters | undefined;
 
     if (updateMatch) {
       try {
-        const updatedFields = JSON.parse(updateMatch[1]) as Record<string, unknown>;
-        visibleContent = rawContent.replace(/\[PROFILE_UPDATE\].*?\[\/PROFILE_UPDATE\]/s, '').trim();
+        const updatedFields = JSON.parse(
+          updateMatch[1],
+        ) as UpdateRecruiterProfileDto;
+        visibleContent = rawContent
+          .replace(/\[PROFILE_UPDATE\].*?\[\/PROFILE_UPDATE\]/s, '')
+          .trim();
+        // Cherry-pick known fields only — never forward arbitrary LLM JSON keys to Prisma.
         await this.recruiterService.updateProfile(recruiterId, {
-          university: updatedFields['university'] as string | undefined,
-          location: updatedFields['location'] as string | undefined,
-          scholarshipType: updatedFields['scholarshipType'] as string | undefined,
-          sport: updatedFields['sport'] as string | undefined,
-          gender: updatedFields['gender'] as string | undefined,
-          division: updatedFields['division'] as string | undefined,
-          openings: updatedFields['openings'] as number | undefined,
+          university: updatedFields.university,
+          location: updatedFields.location,
+          scholarshipType: updatedFields.scholarshipType,
+          sport: updatedFields.sport,
+          gender: updatedFields.gender,
+          division: updatedFields.division,
+          openings: updatedFields.openings,
         });
       } catch (err) {
-        this.logger.warn(`Could not apply profile update for recruiter ${recruiterId}`, err);
+        this.logger.warn(
+          `Could not apply profile update for recruiter ${recruiterId}`,
+          err,
+        );
       }
     }
 
@@ -165,15 +200,20 @@ export class BillyWorker {
       try {
         const parsed = JSON.parse(searchMatch[1]) as {
           query: string;
-          filters: Record<string, unknown>;
+          filters: SearchFilters;
         };
         visibleContent =
-          rawContent.replace(/\[SEARCH_READY\].*?\[\/SEARCH_READY\]/s, '').trim() ||
-          'Great! I have everything I need. Launching search...';
+          rawContent
+            .replace(/\[SEARCH_READY\].*?\[\/SEARCH_READY\]/s, '')
+            .trim() || 'Great! I have everything I need. Launching search...';
 
         extractedFilters = parsed.filters;
-        await this.session.updateSearchCriteria(conversationId, recruiterId, parsed.filters as never);
-        searchResults = await this.runSearch(parsed.filters);
+        await this.session.updateSearchCriteria(
+          conversationId,
+          recruiterId,
+          parsed.filters as never,
+        );
+        searchResults = await this.runSearch(parsed.query, parsed.filters);
       } catch {
         // keep raw content if parse fails
       }
@@ -184,23 +224,35 @@ export class BillyWorker {
       content: visibleContent,
       timestamp: new Date(),
     };
-    await this.session.appendMessage(conversationId, recruiterId, assistantMessage);
+    await this.session.appendMessage(
+      conversationId,
+      recruiterId,
+      assistantMessage,
+    );
 
     try {
-      const updatedSession = await this.session.getSession(conversationId, recruiterId);
+      const updatedSession = await this.session.getSession(
+        conversationId,
+        recruiterId,
+      );
       await this.conversations.persistMessages(
         conversationId,
         updatedSession.messages,
         updatedSession.searchCriteria,
       );
 
-      const firstUserMsg = updatedSession.messages.find((m) => m.role === 'user');
+      const firstUserMsg = updatedSession.messages.find(
+        (m) => m.role === 'user',
+      );
       if (firstUserMsg && message === firstUserMsg.content) {
         const title = firstUserMsg.content.slice(0, 50).trim();
         await this.conversations.updateTitle(conversationId, title);
       }
     } catch (dbErr) {
-      this.logger.warn(`Could not persist messages for conversation ${conversationId}`, dbErr);
+      this.logger.warn(
+        `Could not persist messages for conversation ${conversationId}`,
+        dbErr,
+      );
     }
 
     this.eventEmitter.emit('billy.response', {
@@ -224,42 +276,60 @@ export class BillyWorker {
 
     const response = await this.openai.chat.completions.create({
       model: 'gpt-4o-mini',
-      messages: [{ role: 'system', content: ONBOARDING_SYSTEM_PROMPT }, ...messages],
+      messages: [
+        { role: 'system', content: ONBOARDING_SYSTEM_PROMPT },
+        ...messages,
+      ],
       temperature: 0.7,
       max_tokens: 300,
     });
 
     const rawContent = response.choices[0].message.content ?? '';
 
-    const profileMatch = rawContent.match(/\[PROFILE_READY\](.*?)\[\/PROFILE_READY\]/s);
+    const profileMatch = rawContent.match(
+      /\[PROFILE_READY\](.*?)\[\/PROFILE_READY\]/s,
+    );
     let visibleContent = rawContent;
 
     // Always strip code fences before showing any message (model sometimes leaks them)
-    visibleContent = visibleContent.replace(/```[\w]*\s*[\s\S]*?```/g, '').replace(/\s+/g, ' ').trim();
+    visibleContent = visibleContent
+      .replace(/```[\w]*\s*[\s\S]*?```/g, '')
+      .replace(/\s+/g, ' ')
+      .trim();
 
     if (profileMatch) {
       try {
-        const profileData = JSON.parse(profileMatch[1]) as Record<string, unknown>;
+        const profileData = JSON.parse(
+          profileMatch[1],
+        ) as UpdateRecruiterProfileDto;
         const summaryLines: string[] = [];
-        if (profileData['university']) summaryLines.push(`🏫 University: ${profileData['university']}`);
-        if (profileData['location']) summaryLines.push(`📍 Location: ${profileData['location']}`);
-        if (profileData['scholarshipType']) summaryLines.push(`🎓 Scholarship: ${profileData['scholarshipType']}`);
-        if (profileData['sport']) summaryLines.push(`🏆 Sport: ${profileData['sport']}`);
-        if (profileData['division']) summaryLines.push(`📊 Division: ${profileData['division']}`);
-        if (profileData['gender']) summaryLines.push(`👥 Athletes: ${profileData['gender']}`);
-        if (profileData['openings']) summaryLines.push(`🔢 Open spots: ${profileData['openings']}`);
+        if (profileData.university)
+          summaryLines.push(`🏫 University: ${profileData.university}`);
+        if (profileData.location)
+          summaryLines.push(`📍 Location: ${profileData.location}`);
+        if (profileData.scholarshipType)
+          summaryLines.push(`🎓 Scholarship: ${profileData.scholarshipType}`);
+        if (profileData.sport)
+          summaryLines.push(`🏆 Sport: ${profileData.sport}`);
+        if (profileData.division)
+          summaryLines.push(`📊 Division: ${profileData.division}`);
+        if (profileData.gender)
+          summaryLines.push(`👥 Athletes: ${profileData.gender}`);
+        if (profileData.openings)
+          summaryLines.push(`🔢 Open spots: ${profileData.openings}`);
         visibleContent = `You're all set! Here's your program profile:\n\n${summaryLines.join('\n')}\n\nWelcome to First Stringers — let's find your next great athlete.`;
 
         const pitch = await this.generateRecruiterPitch(profileData);
 
+        // Cherry-pick known fields only — never forward arbitrary LLM JSON keys to Prisma.
         await this.recruiterService.updateProfile(recruiterId, {
-          university: profileData.university as string | undefined,
-          location: profileData.location as string | undefined,
-          scholarshipType: profileData.scholarshipType as string | undefined,
-          sport: profileData.sport as string | undefined,
-          gender: profileData.gender as string | undefined,
-          division: profileData.division as string | undefined,
-          openings: profileData.openings as number | undefined,
+          university: profileData.university,
+          location: profileData.location,
+          scholarshipType: profileData.scholarshipType,
+          sport: profileData.sport,
+          gender: profileData.gender,
+          division: profileData.division,
+          openings: profileData.openings,
           onboardingCompleted: true,
           pitch,
         });
@@ -267,9 +337,15 @@ export class BillyWorker {
         // Flip the session out of onboarding mode
         await this.session.setOnboardingComplete(conversationId, recruiterId);
 
-        this.eventEmitter.emit('billy.onboarding_complete', { recruiterId, conversationId });
+        this.eventEmitter.emit('billy.onboarding_complete', {
+          recruiterId,
+          conversationId,
+        });
       } catch (err) {
-        this.logger.warn(`Could not parse or save onboarding profile for recruiter ${recruiterId}`, err);
+        this.logger.warn(
+          `Could not parse or save onboarding profile for recruiter ${recruiterId}`,
+          err,
+        );
       }
     }
 
@@ -278,13 +354,27 @@ export class BillyWorker {
       content: visibleContent,
       timestamp: new Date(),
     };
-    await this.session.appendMessage(conversationId, recruiterId, assistantMessage);
+    await this.session.appendMessage(
+      conversationId,
+      recruiterId,
+      assistantMessage,
+    );
 
     try {
-      const updatedSession = await this.session.getSession(conversationId, recruiterId);
-      await this.conversations.persistMessages(conversationId, updatedSession.messages, {});
+      const updatedSession = await this.session.getSession(
+        conversationId,
+        recruiterId,
+      );
+      await this.conversations.persistMessages(
+        conversationId,
+        updatedSession.messages,
+        {},
+      );
     } catch (dbErr) {
-      this.logger.warn(`Could not persist onboarding messages for conversation ${conversationId}`, dbErr);
+      this.logger.warn(
+        `Could not persist onboarding messages for conversation ${conversationId}`,
+        dbErr,
+      );
     }
 
     this.eventEmitter.emit('billy.response', {
@@ -294,14 +384,16 @@ export class BillyWorker {
     });
   }
 
-  private async generateRecruiterPitch(profile: Record<string, unknown>): Promise<string> {
+  private async generateRecruiterPitch(
+    profile: UpdateRecruiterProfileDto,
+  ): Promise<string> {
     const lines = [
-      profile['university'] && `University: ${profile['university']}`,
-      profile['location'] && `Location: ${profile['location']}`,
-      profile['scholarshipType'] && `Scholarship: ${profile['scholarshipType']}`,
-      profile['sport'] && `Sport: ${profile['sport']}`,
-      profile['division'] && `Division: ${profile['division']}`,
-      profile['openings'] && `Open spots: ${profile['openings']}`,
+      profile.university && `University: ${profile.university}`,
+      profile.location && `Location: ${profile.location}`,
+      profile.scholarshipType && `Scholarship: ${profile.scholarshipType}`,
+      profile.sport && `Sport: ${profile.sport}`,
+      profile.division && `Division: ${profile.division}`,
+      profile.openings && `Open spots: ${profile.openings}`,
     ]
       .filter(Boolean)
       .join('\n');
@@ -330,14 +422,15 @@ export class BillyWorker {
     }
   }
 
-  private async runSearch(filters: Record<string, unknown>): Promise<unknown[]> {
+  private async runSearch(
+    query: string,
+    filters: SearchFilters,
+  ): Promise<unknown[]> {
     try {
-      this.logger.log(`Running search with filters: ${JSON.stringify(filters)}`);
-      const result = await this.scout.search(
-        (filters['query'] as string) ?? '',
-        filters as any,
-        5,
+      this.logger.log(
+        `Running search "${query}" with filters: ${JSON.stringify(filters)}`,
       );
+      const result = await this.scout.search(query, filters, 5);
       this.logger.log(`Scout found ${result.athletes.length} athletes`);
       return result.athletes;
     } catch (error) {

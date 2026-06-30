@@ -3,7 +3,7 @@ import {
   createTestApp,
   closeTestApp,
   truncateAll,
-  getApp,
+  getHttpServer,
   getPrisma,
 } from './helpers/test-app';
 import {
@@ -12,6 +12,10 @@ import {
   login,
   decodeJwt,
 } from './helpers/auth.helper';
+import {
+  SendOtpResponse,
+  RefreshTokenResponse,
+} from './helpers/response-types';
 
 beforeAll(async () => {
   await createTestApp();
@@ -51,7 +55,7 @@ describe('Auth (e2e)', () => {
     it('rejects duplicate email with 409', async () => {
       await registerAthlete('A', 'dup@test.com');
 
-      await request(getApp().getHttpServer())
+      await request(getHttpServer())
         .post('/auth/register')
         .send({
           email: 'dup@test.com',
@@ -63,7 +67,7 @@ describe('Auth (e2e)', () => {
     });
 
     it('rejects short password with 400', async () => {
-      await request(getApp().getHttpServer())
+      await request(getHttpServer())
         .post('/auth/register')
         .send({ email: 'x@test.com', password: '123', name: 'X' })
         .expect(400);
@@ -81,14 +85,14 @@ describe('Auth (e2e)', () => {
     it('rejects invalid password with 401', async () => {
       await registerAthlete('A', 'a@test.com', 'Pass1234!');
 
-      await request(getApp().getHttpServer())
+      await request(getHttpServer())
         .post('/auth/login')
         .send({ email: 'a@test.com', password: 'wrong' })
         .expect(401);
     });
 
     it('rejects nonexistent email with 401', async () => {
-      await request(getApp().getHttpServer())
+      await request(getHttpServer())
         .post('/auth/login')
         .send({ email: 'nope@test.com', password: 'Pass1234!' })
         .expect(401);
@@ -109,7 +113,7 @@ describe('Auth (e2e)', () => {
     it('send-otp creates a code and verify-email rejects a wrong one', async () => {
       const auth = await registerAthlete('OTP Test', 'otp@test.com');
 
-      await request(getApp().getHttpServer())
+      await request(getHttpServer())
         .post('/auth/send-otp')
         .set('Authorization', `Bearer ${auth.access_token}`)
         .expect(201);
@@ -122,7 +126,7 @@ describe('Auth (e2e)', () => {
       expect(count).toBeGreaterThanOrEqual(1);
 
       // Wrong code is rejected
-      await request(getApp().getHttpServer())
+      await request(getHttpServer())
         .post('/auth/verify-email')
         .set('Authorization', `Bearer ${auth.access_token}`)
         .send({ code: '000000' })
@@ -139,12 +143,13 @@ describe('Auth (e2e)', () => {
         data: { emailVerified: true },
       });
 
-      const res = await request(getApp().getHttpServer())
+      const res = await request(getHttpServer())
         .post('/auth/send-otp')
         .set('Authorization', `Bearer ${auth.access_token}`)
         .expect(201);
+      const body = res.body as SendOtpResponse;
 
-      expect(res.body.sent).toBe(true);
+      expect(body.sent).toBe(true);
     });
   });
 
@@ -152,19 +157,20 @@ describe('Auth (e2e)', () => {
     it('refreshes tokens with a valid refresh token', async () => {
       const reg = await registerAthlete();
 
-      const res = await request(getApp().getHttpServer())
+      const res = await request(getHttpServer())
         .post('/auth/refresh')
         .send({ refresh_token: reg.refresh_token })
         .expect(201);
+      const body = res.body as RefreshTokenResponse;
 
-      expect(res.body.access_token).toBeDefined();
-      expect(res.body.refresh_token).toBeDefined();
+      expect(body.access_token).toBeDefined();
+      expect(body.refresh_token).toBeDefined();
     });
 
     it('rejects an access token used as refresh token', async () => {
       const reg = await registerAthlete();
 
-      await request(getApp().getHttpServer())
+      await request(getHttpServer())
         .post('/auth/refresh')
         .send({ refresh_token: reg.access_token })
         .expect(401);

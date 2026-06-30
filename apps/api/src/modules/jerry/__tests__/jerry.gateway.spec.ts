@@ -1,7 +1,12 @@
 /* eslint-disable @typescript-eslint/unbound-method */
+import type { Queue } from 'bull';
+import type { JwtService } from '@nestjs/jwt';
+import type { EventEmitter2 } from '@nestjs/event-emitter';
 import { JerryGateway } from '../jerry.gateway';
 import { Server, Socket } from 'socket.io';
 import { JerrySessionState } from '../../../shared/types';
+import type { PrismaService } from '../../../shared/prisma/prisma.service';
+import type { SessionService } from '../session.service';
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -50,11 +55,11 @@ const VALID_TOKEN = 'valid-jwt-token';
 
 function makeGateway(): JerryGateway {
   const gateway = new JerryGateway(
-    mockJerryQueue as any,
-    mockJwtService as any,
-    mockPrisma as any,
-    mockSession as any,
-    mockEventEmitter as any,
+    mockJerryQueue as unknown as Queue,
+    mockJwtService as unknown as JwtService,
+    mockPrisma as unknown as PrismaService,
+    mockSession as unknown as SessionService,
+    mockEventEmitter as unknown as EventEmitter2,
   );
   gateway.server = mockServer as unknown as Server;
   return gateway;

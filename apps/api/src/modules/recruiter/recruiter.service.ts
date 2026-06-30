@@ -70,14 +70,23 @@ export class RecruiterService {
       return await this.llm.chat({
         systemPrompt:
           'Write a 2–3 sentence introduction for a college sports recruiter that will be shown to an athlete receiving a connection request. Be specific, warm, and professional. Highlight what makes the program attractive. No quotes, no bullet points — flowing text only.',
-        messages: [{ role: 'user', content: `Program details:\n${lines}`, timestamp: new Date() }],
+        messages: [
+          {
+            role: 'user',
+            content: `Program details:\n${lines}`,
+            timestamp: new Date(),
+          },
+        ],
       });
     } catch {
       return '';
     }
   }
 
-  async updateProfile(id: string, data: UpdateRecruiterProfileDto): Promise<void> {
+  async updateProfile(
+    id: string,
+    data: UpdateRecruiterProfileDto,
+  ): Promise<void> {
     const exists = await this.prisma.recruiter.findUnique({ where: { id } });
     if (!exists) throw new NotFoundException('Recruiter not found');
     await this.prisma.recruiter.update({ where: { id }, data });

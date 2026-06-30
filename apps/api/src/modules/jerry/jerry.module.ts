@@ -29,7 +29,7 @@ import { JerryPitchService } from './jerry-pitch.service';
     ValidatorService,
     StrategyPlannerService,
     PromptBuilderService,
-    JerryPitchService
+    JerryPitchService,
   ],
   exports: [JerryPitchService],
 })
