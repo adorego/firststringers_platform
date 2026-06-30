@@ -19,7 +19,7 @@ async function main() {
 
   const recruiterRecord = await prisma.recruiter.upsert({
     where: { email: 'coach@university.edu' },
-    update: {},
+    update: { verificationStatus: 'verified', onboardingCompleted: true },
     create: {
       id: 'e0b6c0c8-2b27-4521-9b26-46ace16b4983',
       organizationId: org.id,
@@ -33,6 +33,7 @@ async function main() {
       division: 'D1',
       openings: 3,
       onboardingCompleted: true,
+      verificationStatus: 'verified',
       pitch: 'Coach Rivera leads a competitive D1 Football program at State University in Austin, TX — one of the most vibrant college towns in the country. We offer full scholarships and have three open roster spots this cycle, making this a rare opportunity to join a program with strong winning culture and genuine investment in player development.',
     },
   });

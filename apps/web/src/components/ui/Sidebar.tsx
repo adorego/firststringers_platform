@@ -64,6 +64,7 @@ export function RecruiterSidebar({
     .toUpperCase();
   const [conversations, setConversations] = useState<BillyConversationSummary[]>([]);
   const [creating, setCreating] = useState(false);
+  const [counts, setCounts] = useState({ pipeline: 0, connections: 0, introductions: 0 });
   const [menuOpen, setMenuOpen] = useState(false);
   const [learnBillyOpen, setLearnBillyOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -85,6 +86,27 @@ export function RecruiterSidebar({
     if (!recruiterId) return;
     listBillyConversations(recruiterId).then(setConversations);
   }, [recruiterId]);
+
+  useEffect(() => {
+    const token = session?.accessToken as string | undefined;
+    if (!token) return;
+    const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001";
+    const headers = { Authorization: `Bearer ${token}` };
+    Promise.all([
+      fetch(`${API_URL}/pipeline`, { headers })
+        .then((r) => (r.ok ? r.json() : []))
+        .catch(() => []),
+      fetch(`${API_URL}/conversations/me/counts`, { headers })
+        .then((r) => (r.ok ? r.json() : { connections: 0, introductions: 0 }))
+        .catch(() => ({ connections: 0, introductions: 0 })),
+    ]).then(([pipeline, convCounts]) => {
+      setCounts({
+        pipeline: Array.isArray(pipeline) ? pipeline.length : 0,
+        connections: convCounts.connections ?? 0,
+        introductions: convCounts.introductions ?? 0,
+      });
+    });
+  }, [session?.accessToken]);
 
   const startEditing = (conv: BillyConversationSummary, e: React.MouseEvent) => {
     e.preventDefault();
@@ -145,9 +167,9 @@ export function RecruiterSidebar({
     | { key: string; icon: React.ReactNode; label: string; count: number; href: string; onClick?: never };
 
   const navItems: NavItem[] = [
-    { key: "pipeline", icon: <Layers size={15} />, label: "Pipeline", count: 3, onClick: onPipelineClick ?? (() => {}) },
-    { key: "connections", icon: <Users size={15} />, label: "Connections", count: 2, onClick: onConnectionsClick ?? (() => {}) },
-    { key: "introductions", icon: <Share2 size={15} />, label: "Introductions", count: 3, onClick: onIntroductionsClick ?? (() => {}) },
+    { key: "pipeline", icon: <Layers size={15} />, label: "Pipeline", count: counts.pipeline, onClick: onPipelineClick ?? (() => {}) },
+    { key: "connections", icon: <Users size={15} />, label: "Connections", count: counts.connections, onClick: onConnectionsClick ?? (() => {}) },
+    { key: "introductions", icon: <Share2 size={15} />, label: "Introductions", count: counts.introductions, onClick: onIntroductionsClick ?? (() => {}) },
   ];
 
   const closeOnMobile = () => onClose?.();

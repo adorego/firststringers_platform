@@ -30,11 +30,12 @@ function timeAgo(dateStr: string): string {
 interface PipelineDrawerProps {
   isOpen: boolean;
   onClose: () => void;
+  hiddenAthleteIds?: Set<string>;
   onViewDossier?: (athlete: AthleteResult) => void;
   onRequestIntro?: (athlete: AthleteResult) => void;
 }
 
-export function PipelineDrawer({ isOpen, onClose, onViewDossier, onRequestIntro }: PipelineDrawerProps) {
+export function PipelineDrawer({ isOpen, onClose, hiddenAthleteIds, onViewDossier, onRequestIntro }: PipelineDrawerProps) {
   const [entries, setEntries] = useState<PipelineEntry[]>([]);
   const [loading, setLoading] = useState(false);
 
@@ -96,7 +97,7 @@ export function PipelineDrawer({ isOpen, onClose, onViewDossier, onRequestIntro 
 
         {/* Athlete list */}
         <div className="divide-y divide-[#E8E3DD]">
-          {entries.map((entry) => {
+          {entries.filter((e) => !hiddenAthleteIds?.has(e.athleteId)).map((entry) => {
             const initials = entry.fullName
               .split(" ")
               .map((n) => n[0])

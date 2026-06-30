@@ -11,9 +11,17 @@ export class ConversationsService {
     private readonly eventEmitter: EventEmitter2,
   ) {}
 
+  async getCountsForRecruiter(recruiterId: string): Promise<{ connections: number; introductions: number }> {
+    const [connections, introductions] = await Promise.all([
+      this.prisma.directConversation.count({ where: { recruiterId, status: 'accepted' } }),
+      this.prisma.directConversation.count({ where: { recruiterId, status: 'pending' } }),
+    ]);
+    return { connections, introductions };
+  }
+
   async getConversationsForRecruiter(recruiterId: string) {
     return this.prisma.directConversation.findMany({
-      where: { recruiterId },
+      where: { recruiterId, status: 'accepted' },
       include: {
         athlete: {
           select: { id: true, name: true, sport: true, position: true, dossier: { select: { data: true } } },

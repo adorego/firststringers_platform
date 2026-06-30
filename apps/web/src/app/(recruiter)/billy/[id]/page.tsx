@@ -361,6 +361,14 @@ export default function BillyChatPage() {
           setOpenToIntro(false);
         }}
         onAddToPipeline={handleAddToPipeline}
+        onRequestIntro={async (athlete) => {
+          try {
+            await api.requestIntroduction(athlete.id);
+            return true;
+          } catch {
+            return false;
+          }
+        }}
         isInPipeline={selectedAthlete ? pipelineIds.has(selectedAthlete.id) : false}
       />
     </>

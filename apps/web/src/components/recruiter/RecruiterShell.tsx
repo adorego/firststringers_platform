@@ -23,6 +23,7 @@ export function RecruiterShell({ children }: { children: React.ReactNode }) {
   const [dossierAthlete, setDossierAthlete] = useState<AthleteResult | null>(null);
   const [dossierOpenToIntro, setDossierOpenToIntro] = useState(false);
   const [pipelineIds, setPipelineIds] = useState<Set<string>>(new Set());
+  const [introSentIds, setIntroSentIds] = useState<Set<string>>(new Set());
   const [activeConversation, setActiveConversation] =
     useState<DirectConversation | null>(null);
 
@@ -40,11 +41,14 @@ export function RecruiterShell({ children }: { children: React.ReactNode }) {
     }
   };
 
-  const handleRequestIntro = async (athlete: AthleteResult) => {
+  const handleRequestIntro = async (athlete: AthleteResult): Promise<boolean> => {
     try {
       await api.requestIntroduction(athlete.id);
+      setIntroSentIds((prev) => new Set(prev).add(athlete.id));
+      api.removeFromPipeline(athlete.id).catch(() => {});
+      return true;
     } catch {
-      // DossierPanel already shows a "sent" confirmation optimistically
+      return false;
     }
   };
 
@@ -113,6 +117,7 @@ export function RecruiterShell({ children }: { children: React.ReactNode }) {
       <PipelineDrawer
         isOpen={pipelineOpen}
         onClose={() => setPipelineOpen(false)}
+        hiddenAthleteIds={introSentIds}
         onViewDossier={(athlete) => {
           setPipelineIds((prev) => new Set(prev).add(athlete.id));
           setDossierOpenToIntro(false);

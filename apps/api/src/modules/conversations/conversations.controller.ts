@@ -61,6 +61,15 @@ export class ConversationsController {
     return this.conversationsService.declineRequest(id, user.athleteId);
   }
 
+  // Recruiter: counts for sidebar (JWT-authenticated, uses own identity)
+  @Get('me/counts')
+  getMyRecruiterCounts(
+    @CurrentUser() user: { id: string; role: string; recruiterId: string | null },
+  ) {
+    if (!user.recruiterId) return { connections: 0, introductions: 0, pipeline: 0 };
+    return this.conversationsService.getCountsForRecruiter(user.recruiterId);
+  }
+
   @Public()
   @Get('recruiter/:recruiterId')
   getForRecruiter(@Param('recruiterId') recruiterId: string) {

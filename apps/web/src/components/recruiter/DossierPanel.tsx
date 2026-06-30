@@ -39,12 +39,12 @@ interface DossierPanelProps {
   athlete: AthleteResult | null;
   onClose: () => void;
   onAddToPipeline?: (athlete: AthleteResult) => void;
-  onRequestIntro?: (athlete: AthleteResult) => void;
+  onRequestIntro?: (athlete: AthleteResult) => Promise<boolean> | void;
   openToIntro?: boolean;
   isInPipeline?: boolean;
 }
 
-type IntroState = "idle" | "confirming" | "sent";
+type IntroState = "idle" | "confirming" | "sending" | "sent" | "error";
 
 export function DossierPanel({
   athlete,
@@ -200,15 +200,38 @@ export function DossierPanel({
                 Cancel
               </button>
               <button
-                onClick={() => {
-                  onRequestIntro?.(athlete);
-                  setIntroState("sent");
+                onClick={async () => {
+                  if (!onRequestIntro) { setIntroState("error"); return; }
+                  setIntroState("sending");
+                  try {
+                    const result = await onRequestIntro(athlete);
+                    setIntroState(result === false ? "error" : "sent");
+                  } catch {
+                    setIntroState("error");
+                  }
                 }}
                 className="flex-1 rounded-xl bg-[#1A1A1A] py-2.5 text-sm font-semibold text-white transition-colors hover:bg-[#3B6FE8]"
               >
                 Confirm &amp; Send
               </button>
             </div>
+          </div>
+        </div>
+      </>
+    );
+  }
+
+  if (introState === "sending") {
+    return (
+      <>
+        <div className={backdropClass} onClick={handleClose} />
+        <div className={panelClass}>
+          <div className="flex h-full flex-col items-center justify-center gap-4 px-8 text-center">
+            <svg className="h-8 w-8 animate-spin text-[#ADA8A5]" viewBox="0 0 24 24" fill="none">
+              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+            </svg>
+            <p className="text-sm text-[#6B6561]">Sending request…</p>
           </div>
         </div>
       </>
@@ -234,6 +257,39 @@ export function DossierPanel({
             >
               Close
             </button>
+          </div>
+        </div>
+      </>
+    );
+  }
+
+  if (introState === "error") {
+    return (
+      <>
+        <div className={backdropClass} onClick={handleClose} />
+        <div className={panelClass}>
+          <div className="flex h-full flex-col items-center justify-center gap-4 px-8 text-center">
+            <div className="flex h-12 w-12 items-center justify-center rounded-full bg-red-100">
+              <X size={24} className="text-red-500" />
+            </div>
+            <p className="text-lg font-semibold text-[#1A1A1A]">Request failed</p>
+            <p className="max-w-[280px] text-sm leading-relaxed text-[#6B6561]">
+              There was a problem sending the request. Make sure your account is verified and try again.
+            </p>
+            <div className="mt-2 flex gap-3">
+              <button
+                onClick={() => setIntroState("confirming")}
+                className="rounded-xl bg-[#1A1A1A] px-8 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-[#3B6FE8]"
+              >
+                Try again
+              </button>
+              <button
+                onClick={handleClose}
+                className="rounded-xl border border-[#E8E3DD] px-8 py-2.5 text-sm font-medium text-[#6B6561] transition-colors hover:bg-[#EDEAE5]"
+              >
+                Close
+              </button>
+            </div>
           </div>
         </div>
       </>

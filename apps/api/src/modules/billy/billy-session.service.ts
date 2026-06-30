@@ -25,7 +25,10 @@ export class BillySessionService {
 
     if (data) {
       try {
-        return JSON.parse(data) as BillySessionState;
+        const cached = JSON.parse(data) as BillySessionState;
+        // DB is authoritative for onboarding state — always override cached value
+        cached.isOnboarding = isOnboarding;
+        return cached;
       } catch (err) {
         this.logger.warn(`Corrupted session for conversation ${conversationId}, loading from DB`, err);
       }

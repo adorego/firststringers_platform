@@ -29,6 +29,7 @@ export interface DirectConversation {
     id: string;
     name: string;
     email: string;
+    pitch?: string | null;
     organization?: { name: string } | null;
   };
   messages?: DirectMessage[];
