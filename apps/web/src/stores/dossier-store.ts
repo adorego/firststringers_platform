@@ -83,7 +83,7 @@ interface DossierState {
   setDossier: (data: DossierData, completeness: number) => void;
 }
 
-export const useDossierStore = create<DossierState>((set, get) => ({
+export const useDossierStore = create<DossierState>((set) => ({
   data: null,
   completeness: 0,
   lastUpdated: null,
