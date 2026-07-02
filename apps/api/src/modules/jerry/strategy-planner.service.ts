@@ -84,7 +84,9 @@ export class StrategyPlannerService {
     if (session.messages.length <= 1) {
       // A representable athlete returning after the session expired gets a
       // proactive check-in, not the onboarding welcome
-      return alreadyRepresentable ? { type: 'continuous' } : { type: 'welcome' };
+      return alreadyRepresentable
+        ? { type: 'continuous' }
+        : { type: 'welcome' };
     }
 
     if (this.detectFrustration(session.messages)) {
@@ -169,9 +171,7 @@ export class StrategyPlannerService {
     };
   }
 
-  private detectSectionTransition(
-    nextField: string | undefined,
-  ): boolean {
+  private detectSectionTransition(nextField: string | undefined): boolean {
     if (!nextField) return false;
     return SECTION_FIRST_FIELDS.has(nextField);
   }

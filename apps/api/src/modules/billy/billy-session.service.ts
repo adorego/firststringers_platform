@@ -23,7 +23,11 @@ export class BillySessionService {
   // reads it fresh from the recruiter's DB record) — pass it explicitly to override
   // the cached value. Internal callers that just need the current session (appendMessage,
   // the worker, etc.) omit it so they don't accidentally clobber the flag back to false.
-  async getSession(conversationId: string, recruiterId: string, isOnboarding?: boolean): Promise<BillySessionState> {
+  async getSession(
+    conversationId: string,
+    recruiterId: string,
+    isOnboarding?: boolean,
+  ): Promise<BillySessionState> {
     const key = this.buildKey(conversationId);
     const data = await this.redis.get(key);
 
@@ -35,13 +39,17 @@ export class BillySessionService {
         }
         return cached;
       } catch (err) {
-        this.logger.warn(`Corrupted session for conversation ${conversationId}, loading from DB`, err);
+        this.logger.warn(
+          `Corrupted session for conversation ${conversationId}, loading from DB`,
+          err,
+        );
       }
     }
 
     // Redis miss — warm from DB
     const messages = await this.conversations.getMessages(conversationId);
-    const searchCriteria = await this.conversations.getSearchCriteria(conversationId);
+    const searchCriteria =
+      await this.conversations.getSearchCriteria(conversationId);
 
     const session: BillySessionState = {
       conversationId,
@@ -58,13 +66,20 @@ export class BillySessionService {
     return session;
   }
 
-  async appendMessage(conversationId: string, recruiterId: string, message: BillyMessage): Promise<void> {
+  async appendMessage(
+    conversationId: string,
+    recruiterId: string,
+    message: BillyMessage,
+  ): Promise<void> {
     const session = await this.getSession(conversationId, recruiterId);
     session.messages.push(message);
     session.updatedAt = new Date();
 
     if (session.messages.length > this.MAX_MESSAGES) {
-      session.messages = [session.messages[0], ...session.messages.slice(-this.MAX_MESSAGES + 1)];
+      session.messages = [
+        session.messages[0],
+        ...session.messages.slice(-this.MAX_MESSAGES + 1),
+      ];
     }
 
     await this.saveSession(conversationId, session);
@@ -81,7 +96,10 @@ export class BillySessionService {
     await this.saveSession(conversationId, session);
   }
 
-  async setOnboardingComplete(conversationId: string, recruiterId: string): Promise<void> {
+  async setOnboardingComplete(
+    conversationId: string,
+    recruiterId: string,
+  ): Promise<void> {
     const session = await this.getSession(conversationId, recruiterId);
     session.isOnboarding = false;
     await this.saveSession(conversationId, session);
@@ -93,7 +111,10 @@ export class BillySessionService {
 
   // Bridges onboarding completion (old conversation) to the first message of the
   // fresh conversation Billy opens right after — short-lived, consumed on next connect.
-  async setPendingSuggestions(recruiterId: string, suggestions: string[]): Promise<void> {
+  async setPendingSuggestions(
+    recruiterId: string,
+    suggestions: string[],
+  ): Promise<void> {
     await this.redis.setex(
       this.buildPendingKey(recruiterId),
       this.PENDING_SUGGESTIONS_TTL,
@@ -101,7 +122,9 @@ export class BillySessionService {
     );
   }
 
-  async getAndClearPendingSuggestions(recruiterId: string): Promise<string[] | null> {
+  async getAndClearPendingSuggestions(
+    recruiterId: string,
+  ): Promise<string[] | null> {
     const key = this.buildPendingKey(recruiterId);
     const data = await this.redis.get(key);
     if (!data) return null;
@@ -113,8 +136,15 @@ export class BillySessionService {
     }
   }
 
-  private async saveSession(conversationId: string, session: BillySessionState): Promise<void> {
-    await this.redis.setex(this.buildKey(conversationId), this.SESSION_TTL, JSON.stringify(session));
+  private async saveSession(
+    conversationId: string,
+    session: BillySessionState,
+  ): Promise<void> {
+    await this.redis.setex(
+      this.buildKey(conversationId),
+      this.SESSION_TTL,
+      JSON.stringify(session),
+    );
   }
 
   private buildKey(conversationId: string): string {

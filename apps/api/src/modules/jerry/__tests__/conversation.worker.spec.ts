@@ -11,6 +11,8 @@ import type { StrategyPlannerService } from '../strategy-planner.service';
 import type { PromptBuilderService } from '../prompt-builder.service';
 import type { LLMService } from '../../../shared/llm/llm.service';
 import type { EventEmitter2 } from '@nestjs/event-emitter';
+import type { JwtService } from '@nestjs/jwt';
+import type { PrismaService } from '../../../shared/prisma/prisma.service';
 import {
   MessageJob,
   JerrySessionState,
@@ -284,8 +286,8 @@ describe('JerryGateway — appendMessage precedes queue enqueue', () => {
 
     const gateway = new JerryGateway(
       mockJerryQueue as unknown as Queue,
-      mockJwtService as any,
-      mockPrisma as any,
+      mockJwtService as unknown as JwtService,
+      mockPrisma as unknown as PrismaService,
       mockSessionGateway as unknown as SessionService,
       mockEventEmitterGateway as unknown as EventEmitter2,
     );

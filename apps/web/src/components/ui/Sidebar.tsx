@@ -18,8 +18,6 @@ import {
   Users,
   Share2,
   X,
-  Bell,
-  Eye,
   HelpCircle,
   LogOut,
   ClipboardList,
@@ -113,7 +111,6 @@ export function RecruiterSidebar({
     });
     // refreshCountsKey changes when a connection's chat opens/closes so the
     // unread badge clears once messages have actually been read server-side.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [session?.accessToken, refreshCountsKey]);
 
   const startEditing = (conv: BillyConversationSummary, e: React.MouseEvent) => {

@@ -25,7 +25,9 @@ interface ClientInfo {
   },
   namespace: '/conversations',
 })
-export class ConversationsGateway implements OnGatewayConnection, OnGatewayDisconnect {
+export class ConversationsGateway
+  implements OnGatewayConnection, OnGatewayDisconnect
+{
   @WebSocketServer()
   server: Server;
 
@@ -48,7 +50,9 @@ export class ConversationsGateway implements OnGatewayConnection, OnGatewayDisco
       : { userId: athleteId, role: 'athlete' };
 
     this.clients.set(client.id, info);
-    client.join(`user:${info.userId}`);
+    // Fire-and-forget: socket.io types join() as Promise<void> to support
+    // distributed adapters; the in-memory adapter resolves synchronously.
+    void client.join(`user:${info.userId}`);
     this.logger.log(`${info.role} ${info.userId} connected to conversations`);
   }
 
@@ -63,9 +67,11 @@ export class ConversationsGateway implements OnGatewayConnection, OnGatewayDisco
     @ConnectedSocket() client: Socket,
     @MessageBody() dto: { conversationId: string },
   ) {
-    client.join(`conv:${dto.conversationId}`);
+    void client.join(`conv:${dto.conversationId}`);
 
-    const messages = await this.conversationsService.getMessages(dto.conversationId);
+    const messages = await this.conversationsService.getMessages(
+      dto.conversationId,
+    );
     client.emit('history', messages);
 
     const info = this.clients.get(client.id);

@@ -36,7 +36,8 @@ export class BillyConversationService {
 
     return convs.map((c) => {
       const messages = (c.messages as BillyMessage[] | null) ?? [];
-      const lastMessage = messages.length > 0 ? messages[messages.length - 1] : null;
+      const lastMessage =
+        messages.length > 0 ? messages[messages.length - 1] : null;
       return {
         id: c.id,
         recruiterId: c.recruiterId,
@@ -44,20 +45,30 @@ export class BillyConversationService {
         createdAt: c.createdAt,
         updatedAt: c.updatedAt,
         lastMessage: lastMessage
-          ? { role: lastMessage.role, content: lastMessage.content, timestamp: lastMessage.timestamp }
+          ? {
+              role: lastMessage.role,
+              content: lastMessage.content,
+              timestamp: lastMessage.timestamp,
+            }
           : null,
       };
     });
   }
 
   async getMessages(conversationId: string): Promise<BillyMessage[]> {
-    const conv = await this.prisma.billyConversation.findUnique({ where: { id: conversationId } });
+    const conv = await this.prisma.billyConversation.findUnique({
+      where: { id: conversationId },
+    });
     if (!conv) return [];
     return (conv.messages as BillyMessage[] | null) ?? [];
   }
 
-  async getSearchCriteria(conversationId: string): Promise<Partial<SearchCriteria>> {
-    const conv = await this.prisma.billyConversation.findUnique({ where: { id: conversationId } });
+  async getSearchCriteria(
+    conversationId: string,
+  ): Promise<Partial<SearchCriteria>> {
+    const conv = await this.prisma.billyConversation.findUnique({
+      where: { id: conversationId },
+    });
     if (!conv) return {};
     return (conv.searchCriteria as Partial<SearchCriteria> | null) ?? {};
   }
@@ -84,6 +95,8 @@ export class BillyConversationService {
   }
 
   async delete(conversationId: string): Promise<void> {
-    await this.prisma.billyConversation.delete({ where: { id: conversationId } });
+    await this.prisma.billyConversation.delete({
+      where: { id: conversationId },
+    });
   }
 }

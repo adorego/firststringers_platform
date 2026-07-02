@@ -41,6 +41,7 @@ export function PipelineDrawer({ isOpen, onClose, hiddenAthleteIds, onViewDossie
 
   useEffect(() => {
     if (!isOpen) return;
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- loading flag for an in-flight fetch triggered by the drawer opening
     setLoading(true);
     api
       .getPipeline()

@@ -71,7 +71,10 @@ export class ConversationWorker {
         message: response,
       });
     } catch (error) {
-      this.logger.error(`Error processing message for athlete ${athleteId}`, error);
+      this.logger.error(
+        `Error processing message for athlete ${athleteId}`,
+        error,
+      );
       this.eventEmitter.emit('jerry.error', {
         athleteId,
         error: 'Hubo un problema procesando tu mensaje. Intenta de nuevo.',

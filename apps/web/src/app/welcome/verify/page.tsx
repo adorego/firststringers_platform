@@ -1,14 +1,13 @@
 "use client";
 
 import { Suspense, useCallback, useEffect, useRef, useState } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import { useSession } from "next-auth/react";
 import Link from "next/link";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001";
 
 function VerifyForm() {
-  const router = useRouter();
   const searchParams = useSearchParams();
   const { data: session } = useSession();
   const contact = searchParams.get("contact") ?? session?.user?.email ?? "";

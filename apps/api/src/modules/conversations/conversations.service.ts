@@ -1,4 +1,8 @@
-import { Injectable, ForbiddenException, NotFoundException } from '@nestjs/common';
+import {
+  Injectable,
+  ForbiddenException,
+  NotFoundException,
+} from '@nestjs/common';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { PrismaService } from '../../shared/prisma/prisma.service';
 import { RecruiterService } from '../recruiter/recruiter.service';
@@ -11,12 +15,18 @@ export class ConversationsService {
     private readonly eventEmitter: EventEmitter2,
   ) {}
 
-  async getCountsForRecruiter(
-    recruiterId: string,
-  ): Promise<{ connections: number; introductions: number; unreadConnections: number }> {
+  async getCountsForRecruiter(recruiterId: string): Promise<{
+    connections: number;
+    introductions: number;
+    unreadConnections: number;
+  }> {
     const [connections, introductions, unreadConnections] = await Promise.all([
-      this.prisma.directConversation.count({ where: { recruiterId, status: 'accepted' } }),
-      this.prisma.directConversation.count({ where: { recruiterId, status: 'pending' } }),
+      this.prisma.directConversation.count({
+        where: { recruiterId, status: 'accepted' },
+      }),
+      this.prisma.directConversation.count({
+        where: { recruiterId, status: 'pending' },
+      }),
       this.prisma.directConversation.count({
         where: {
           recruiterId,
@@ -28,7 +38,9 @@ export class ConversationsService {
     return { connections, introductions, unreadConnections };
   }
 
-  async getCountsForAthlete(athleteId: string): Promise<{ unreadConnections: number }> {
+  async getCountsForAthlete(
+    athleteId: string,
+  ): Promise<{ unreadConnections: number }> {
     const unreadConnections = await this.prisma.directConversation.count({
       where: {
         athleteId,
@@ -44,7 +56,13 @@ export class ConversationsService {
       where: { recruiterId, status: 'accepted' },
       include: {
         athlete: {
-          select: { id: true, name: true, sport: true, position: true, dossier: { select: { data: true } } },
+          select: {
+            id: true,
+            name: true,
+            sport: true,
+            position: true,
+            dossier: { select: { data: true } },
+          },
         },
         messages: {
           orderBy: { createdAt: 'desc' },
@@ -123,7 +141,9 @@ export class ConversationsService {
       create: { recruiterId, athleteId, status: 'pending' },
       update: {},
       include: {
-        athlete: { select: { id: true, name: true, sport: true, position: true } },
+        athlete: {
+          select: { id: true, name: true, sport: true, position: true },
+        },
         recruiter: {
           select: {
             id: true,
@@ -165,7 +185,8 @@ export class ConversationsService {
       where: { id: conversationId },
     });
     if (!conv) throw new NotFoundException('Conversation not found');
-    if (conv.athleteId !== athleteId) throw new ForbiddenException('Not your conversation');
+    if (conv.athleteId !== athleteId)
+      throw new ForbiddenException('Not your conversation');
     if (conv.status === 'accepted') return conv;
 
     return this.prisma.directConversation.update({
@@ -182,7 +203,8 @@ export class ConversationsService {
       where: { id: conversationId },
     });
     if (!conv) throw new NotFoundException('Conversation not found');
-    if (conv.athleteId !== athleteId) throw new ForbiddenException('Not your conversation');
+    if (conv.athleteId !== athleteId)
+      throw new ForbiddenException('Not your conversation');
 
     return this.prisma.directConversation.update({
       where: { id: conversationId },

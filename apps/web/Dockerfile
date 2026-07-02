@@ -10,6 +10,13 @@ COPY apps/web/package.json apps/web/next.config.mjs apps/web/postcss.config.mjs 
 COPY apps/web/src ./apps/web/src
 COPY apps/web/public ./apps/web/public
 COPY apps/web/tsconfig.json ./apps/web/tsconfig.json
+
+ARG NEXTAUTH_SECRET
+ARG NEXT_PUBLIC_API_URL
+ARG NEXT_PUBLIC_WS_URL
+ENV NEXTAUTH_SECRET=$NEXTAUTH_SECRET
+ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL
+ENV NEXT_PUBLIC_WS_URL=$NEXT_PUBLIC_WS_URL
  
 RUN pnpm install --frozen-lockfile
 RUN pnpm --dir apps/web build

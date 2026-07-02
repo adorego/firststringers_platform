@@ -68,9 +68,26 @@ export const POSITION_LABELS: Record<string, Record<string, string>> = {
   },
 };
 
-export interface AthleteMatch {
+// Flattened shape of Dossier.data (a Prisma Json column) as Scout reads it.
+// Mirrors the subset of DossierData (see index.ts) that ranking cares about.
+export interface DossierScoutFields {
+  leagueLevel?: string;
+  gpa?: number | null;
+  graduationYear?: number | null;
+  ncaaEligible?: boolean;
+  inTransferPortal?: boolean;
+  preferredRegions?: string[];
+  trajectory?: string;
+  keyStrengths?: string[];
+  fitTags?: string[];
+  recruiterPitch?: string | null;
+}
+
+// Athlete shape after Scout flattens dossier.data, before ranking is applied.
+export interface ScoutAthleteCandidate {
   id: string;
   fullName: string;
+  name: string;
   sport: string;
   position: string;
   leagueLevel: string;
@@ -81,13 +98,23 @@ export interface AthleteMatch {
   preferredRegions: string[];
   trajectory: string;
   keyStrengths: string[];
+  fitTags: string[];
   completenessScore: number;
+  similarity: number;
+  dossier: { summary: string | null; recruiterPitch: string | null } | null;
+}
+
+export interface FitExplanation {
+  similarity: number;
+  completeness: number;
+  trajectory: number;
+  topMatchingFactors: string[];
+}
+
+export interface RankedAthlete extends ScoutAthleteCandidate {
   fitScore: number;
+  fitExplanation: FitExplanation;
   matchReasons: string[];
-  dossier?: {
-    summary: string | null;
-    recruiterPitch: string | null;
-  } | null;
 }
 
 export interface ScoutResult {
@@ -95,5 +122,5 @@ export interface ScoutResult {
   filters: SearchFilters;
   totalFound: number;
   latencyMs: number;
-  athletes: AthleteMatch[];
+  athletes: RankedAthlete[];
 }

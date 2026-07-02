@@ -89,7 +89,14 @@ export class AuthService {
       });
     });
 
-    const tokens = this.generateTokens(user.id, user.email, user.role, dto.name, user.athleteId, user.recruiterId);
+    const tokens = this.generateTokens(
+      user.id,
+      user.email,
+      user.role,
+      dto.name,
+      user.athleteId,
+      user.recruiterId,
+    );
 
     // Fire OTP asynchronously — don't block registration
     void this.sendOtp(user.id).catch(() => {});
@@ -117,7 +124,14 @@ export class AuthService {
     }
 
     const name = user.athlete?.name ?? user.recruiter?.name ?? user.email;
-    return this.generateTokens(user.id, user.email, user.role, name, user.athleteId, user.recruiterId);
+    return this.generateTokens(
+      user.id,
+      user.email,
+      user.role,
+      name,
+      user.athleteId,
+      user.recruiterId,
+    );
   }
 
   async refresh(refreshToken: string) {
@@ -148,8 +162,19 @@ export class AuthService {
         throw new UnauthorizedException('User not found');
       }
 
-      const name = user.athlete?.name ?? user.recruiter?.name ?? payload.name ?? user.email;
-      return this.generateTokens(user.id, user.email, user.role, name, user.athleteId, user.recruiterId);
+      const name =
+        user.athlete?.name ??
+        user.recruiter?.name ??
+        payload.name ??
+        user.email;
+      return this.generateTokens(
+        user.id,
+        user.email,
+        user.role,
+        name,
+        user.athleteId,
+        user.recruiterId,
+      );
     } catch {
       throw new UnauthorizedException('Invalid refresh token');
     }
@@ -181,9 +206,7 @@ export class AuthService {
       data: {
         userId,
         code: hashedCode,
-        expiresAt: new Date(
-          Date.now() + this.OTP_EXPIRY_MINUTES * 60 * 1000,
-        ),
+        expiresAt: new Date(Date.now() + this.OTP_EXPIRY_MINUTES * 60 * 1000),
       },
     });
 
@@ -195,10 +218,7 @@ export class AuthService {
     return { sent: true };
   }
 
-  async verifyEmail(
-    userId: string,
-    code: string,
-  ): Promise<{ verified: true }> {
+  async verifyEmail(userId: string, code: string): Promise<{ verified: true }> {
     const records = await this.prisma.verificationCode.findMany({
       where: { userId },
       orderBy: { createdAt: 'desc' },
@@ -206,7 +226,9 @@ export class AuthService {
     });
 
     if (records.length === 0) {
-      throw new BadRequestException('No verification code found. Request a new one.');
+      throw new BadRequestException(
+        'No verification code found. Request a new one.',
+      );
     }
 
     const record = records[0];

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useSession } from "next-auth/react";
 import { X, MapPin, ArrowLeft, CheckCircle } from "lucide-react";
 import { AthleteResult } from "@/hooks/useBilly";
@@ -43,26 +43,15 @@ export function DossierPanel({
   } | null>(null);
 
   useEffect(() => {
-    console.log("Fetching recruiter profile with token:", session?.user);
-    console.log(session?.accessToken)
     const token = session?.accessToken as string | undefined;
     if (!token) return;
     fetch(`${process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3001"}/recruiter/profile`, {
       headers: { Authorization: `Bearer ${token}` },
     })
       .then((r) => (r.ok ? r.json() : null))
-      .then((data) => { 
-        console.log("Recruiter profile data:", data);
-        if (data) setRecruiterProfile(data); })
+      .then((data) => { if (data) setRecruiterProfile(data); })
       .catch(() => {});
   }, [session]);
-
-  useEffect(() => {
-    console.log("session or openToIntro changed", { session, openToIntro });
-    if (openToIntro) {
-      setIntroState("confirming");
-    }
-  }, [openToIntro, session]);
 
   const recruiterName = session?.user?.name ?? session?.user?.email ?? "Recruiter";
   const recruiterInitials = recruiterName
@@ -84,9 +73,14 @@ export function DossierPanel({
     return `${recruiterProfile.university}${parts.length ? " — " + parts.join(", ") + "." : "."}`;
   })();
 
-  useEffect(() => {
+  // Sync introState when the athlete changes — done during render (not in an
+  // effect) to avoid react-hooks/set-state-in-effect. React re-renders once
+  // when setState is called this way; the ref prevents infinite loops.
+  const prevAthleteIdRef = useRef(athlete?.id);
+  if (prevAthleteIdRef.current !== athlete?.id) {
+    prevAthleteIdRef.current = athlete?.id;
     setIntroState(openToIntro ? "confirming" : "idle");
-  }, [athlete?.id]);
+  }
   const isOpen = athlete !== null;
 
   // Reset intro flow whenever the panel opens a new athlete or closes

@@ -1,4 +1,5 @@
 import { DataExtractorService } from '../data-extractor.service';
+import type { LLMService } from '../../../shared/llm/llm.service';
 
 const mockLlm = { extract: jest.fn() };
 
@@ -7,7 +8,7 @@ describe('DataExtractorService', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
-    service = new DataExtractorService(mockLlm as any);
+    service = new DataExtractorService(mockLlm as unknown as LLMService);
   });
 
   describe('guard de intención — retorna null sin llamar al LLM', () => {

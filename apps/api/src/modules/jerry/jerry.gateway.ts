@@ -78,7 +78,9 @@ export class JerryGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
       const athleteId = payload.athleteId;
       this.connectedAthletes.set(client.id, athleteId);
-      client.join(`athlete:${athleteId}`);
+      // Fire-and-forget: socket.io types join() as Promise<void> to support
+      // distributed adapters; the in-memory adapter resolves synchronously.
+      void client.join(`athlete:${athleteId}`);
 
       this.logger.log(`Athlete ${athleteId} connected — socket ${client.id}`);
 

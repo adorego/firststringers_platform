@@ -34,7 +34,9 @@ export class ConversationsController {
     if (!user.athleteId) {
       throw new NotFoundException('No athlete profile linked to this user');
     }
-    return this.conversationsService.getPendingRequestsForAthlete(user.athleteId);
+    return this.conversationsService.getPendingRequestsForAthlete(
+      user.athleteId,
+    );
   }
 
   // Athlete: accept a connection request
@@ -66,7 +68,12 @@ export class ConversationsController {
   @Get('me/counts')
   getMyCounts(
     @CurrentUser()
-    user: { id: string; role: string; recruiterId: string | null; athleteId: string | null },
+    user: {
+      id: string;
+      role: string;
+      recruiterId: string | null;
+      athleteId: string | null;
+    },
   ) {
     if (user.recruiterId) {
       return this.conversationsService.getCountsForRecruiter(user.recruiterId);
@@ -105,7 +112,10 @@ export class ConversationsController {
     @CurrentUser() user: { recruiterId: string },
     @Body() dto: { athleteId: string },
   ) {
-    return this.conversationsService.requestIntroduction(user.recruiterId, dto.athleteId);
+    return this.conversationsService.requestIntroduction(
+      user.recruiterId,
+      dto.athleteId,
+    );
   }
 
   @Public()

@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../shared/prisma/prisma.service';
+import { DossierData } from '../../shared/types';
 
 export interface PipelineEntryDto {
   pipelineId: string;
@@ -11,7 +12,11 @@ export interface PipelineEntryDto {
   graduationYear: number | null;
   completenessScore: number;
   addedAt: Date;
-  latestUpdate: { content: string; publishedAt: Date; source: 'athlete' | 'jerry_pitch' } | null;
+  latestUpdate: {
+    content: string;
+    publishedAt: Date;
+    source: 'athlete' | 'jerry_pitch';
+  } | null;
 }
 
 @Injectable()
@@ -28,7 +33,9 @@ export class PipelineService {
   }
 
   async remove(recruiterId: string, athleteId: string): Promise<void> {
-    await this.prisma.pipelineEntry.deleteMany({ where: { recruiterId, athleteId } });
+    await this.prisma.pipelineEntry.deleteMany({
+      where: { recruiterId, athleteId },
+    });
   }
 
   async list(recruiterId: string): Promise<PipelineEntryDto[]> {
@@ -48,7 +55,7 @@ export class PipelineService {
 
     return entries.map((entry) => {
       const athlete = entry.athlete;
-      const d = (athlete.dossier?.data as Record<string, any>) ?? {};
+      const d = (athlete.dossier?.data as DossierData) ?? {};
       const session = athlete.sessions[0];
       const latestAthleteUpdate = athlete.updates[0];
 
@@ -61,7 +68,11 @@ export class PipelineService {
             source: 'athlete',
           }
         : session?.currentPitch && session.lastPitchAt
-          ? { content: session.currentPitch, publishedAt: session.lastPitchAt, source: 'jerry_pitch' }
+          ? {
+              content: session.currentPitch,
+              publishedAt: session.lastPitchAt,
+              source: 'jerry_pitch',
+            }
           : null;
 
       return {

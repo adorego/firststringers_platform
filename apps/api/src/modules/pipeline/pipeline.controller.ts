@@ -12,12 +12,18 @@ export class PipelineController {
   }
 
   @Post()
-  add(@CurrentUser() user: { recruiterId: string }, @Body() body: { athleteId: string }) {
+  add(
+    @CurrentUser() user: { recruiterId: string },
+    @Body() body: { athleteId: string },
+  ) {
     return this.pipelineService.add(user.recruiterId, body.athleteId);
   }
 
   @Delete(':athleteId')
-  remove(@CurrentUser() user: { recruiterId: string }, @Param('athleteId') athleteId: string) {
+  remove(
+    @CurrentUser() user: { recruiterId: string },
+    @Param('athleteId') athleteId: string,
+  ) {
     return this.pipelineService.remove(user.recruiterId, athleteId);
   }
 }

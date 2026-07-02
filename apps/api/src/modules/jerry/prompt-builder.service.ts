@@ -35,7 +35,7 @@ export class PromptBuilderService {
       timeline:
         'Urgency shapes strategy. Ask: "When are you looking to make a move — this year, next year, or longer term?"',
       'preferred regions':
-        "Geography narrows the search. Ask: \"Are there specific regions or states where you would or wouldn't want to go?\"",
+        'Geography narrows the search. Ask: "Are there specific regions or states where you would or wouldn\'t want to go?"',
       'relocation openness':
         'Flexibility matters. Ask: "How open are you to relocating far from home?"',
       GPA: 'Academic eligibility is required for most programs. Ask: "What is your current GPA?"',
@@ -124,5 +124,4 @@ Adapt the tone naturally and reference something specific they shared. Key messa
       - Keep messages short and direct, maximum 3 sentences
     `;
   }
-
 }
