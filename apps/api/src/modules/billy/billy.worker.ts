@@ -6,8 +6,9 @@ import OpenAI from 'openai';
 import { BillySessionService } from './billy-session.service';
 import { BillyConversationService } from './billy-conversation.service';
 import { BillyMessage, BillyMessageJob } from '../../shared/types/billy.types';
-import { ScoutService } from '../scout/scout.service';
+import { ScoutService, ScoutResult } from '../scout/scout.service';
 import { RecruiterService } from '../recruiter/recruiter.service';
+import { POSITION_LABELS } from '../../shared/types/scout.types';
 
 const SEARCH_SYSTEM_PROMPT = `You are Billy, an intelligent sports recruitment assistant helping a coach or recruiter find the right athlete.
 
@@ -155,6 +156,7 @@ export class BillyWorker {
     let visibleContent = rawContent;
     let searchResults: unknown[] | undefined;
     let extractedFilters: Record<string, unknown> | undefined;
+    let scoutRelaxedPosition: string | undefined;
 
     if (updateMatch) {
       try {
@@ -180,13 +182,14 @@ export class BillyWorker {
           query: string;
           filters: Record<string, unknown>;
         };
-        visibleContent =
-          rawContent.replace(/\[SEARCH_READY\].*?\[\/SEARCH_READY\]/s, '').trim() ||
-          'Great! I have everything I need. Launching search...';
 
         extractedFilters = parsed.filters;
         await this.session.updateSearchCriteria(conversationId, recruiterId, parsed.filters as never);
-        searchResults = await this.runSearch(parsed.filters);
+        const scoutResult = await this.runSearch(parsed.filters);
+        searchResults = scoutResult.athletes;
+        scoutRelaxedPosition = scoutResult.relaxedPosition;
+
+        visibleContent = this.buildSearchMessage(rawContent, scoutResult);
       } catch {
         // keep raw content if parse fails
       }
@@ -221,6 +224,7 @@ export class BillyWorker {
       message: visibleContent,
       searchCriteria: extractedFilters,
       searchResults,
+      isFallbackRecommendation: !!scoutRelaxedPosition,
     });
   }
 
@@ -387,7 +391,7 @@ export class BillyWorker {
     }
   }
 
-  private async runSearch(filters: Record<string, unknown>): Promise<unknown[]> {
+  private async runSearch(filters: Record<string, unknown>): Promise<ScoutResult> {
     try {
       this.logger.log(`Running search with filters: ${JSON.stringify(filters)}`);
       const result = await this.scout.search(
@@ -396,10 +400,40 @@ export class BillyWorker {
         5,
       );
       this.logger.log(`Scout found ${result.athletes.length} athletes`);
-      return result.athletes;
+      return result;
     } catch (error) {
       this.logger.error('Scout search failed', error);
-      return [];
+      return { query: '', filters: filters as any, totalFound: 0, latencyMs: 0, athletes: [] };
     }
+  }
+
+  // Billy still has something useful to say even when nothing matches exactly —
+  // fall back to a related recommendation instead of going quiet.
+  private buildSearchMessage(rawContent: string, scoutResult: ScoutResult): string {
+    if (scoutResult.athletes.length === 0) {
+      return "Right now I couldn't find an athlete with those descriptions. Try broadening your criteria — a different region, GPA range, or graduating class — and I'll take another look.";
+    }
+
+    if (scoutResult.relaxedPosition) {
+      const sportLabels = scoutResult.filters.sport
+        ? POSITION_LABELS[scoutResult.filters.sport.toLowerCase()]
+        : undefined;
+      const requestedLabel =
+        sportLabels?.[scoutResult.relaxedPosition.toUpperCase()] ?? scoutResult.relaxedPosition;
+      const foundPositions = Array.from(
+        new Set(scoutResult.athletes.map((a) => a.position).filter(Boolean)),
+      );
+      const foundLabel =
+        foundPositions.length === 1
+          ? sportLabels?.[foundPositions[0].toUpperCase()] ?? foundPositions[0]
+          : 'a few other positions worth a look';
+
+      return `Right now I couldn't find an athlete with those descriptions — no available ${requestedLabel} match right now — but I can introduce you to ${foundLabel} who share a similar profile and could still be a great fit for your program.`;
+    }
+
+    return (
+      rawContent.replace(/\[SEARCH_READY\].*?\[\/SEARCH_READY\]/s, '').trim() ||
+      'Great! I have everything I need. Launching search...'
+    );
   }
 }

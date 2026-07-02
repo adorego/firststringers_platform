@@ -58,6 +58,7 @@ export class ConversationWorker {
 
       if (extractedData && Object.keys(extractedData).length > 0) {
         await this.session.updateDossierSnapshot(athleteId, extractedData);
+        await this.session.recordUpdate(athleteId, message);
 
         this.eventEmitter.emit('dossier.update', {
           athleteId,

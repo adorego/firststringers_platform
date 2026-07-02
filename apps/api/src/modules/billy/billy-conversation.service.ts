@@ -16,16 +16,21 @@ export interface BillyConversationSummary {
 export class BillyConversationService {
   constructor(private readonly prisma: PrismaService) {}
 
-  async create(recruiterId: string): Promise<{ id: string; recruiterId: string; title: string }> {
+  async create(
+    recruiterId: string,
+    isOnboarding = false,
+  ): Promise<{ id: string; recruiterId: string; title: string }> {
     const conv = await this.prisma.billyConversation.create({
-      data: { recruiterId, title: 'New search' },
+      data: { recruiterId, title: 'New search', isOnboarding },
     });
     return { id: conv.id, recruiterId: conv.recruiterId, title: conv.title };
   }
 
+  // The onboarding conversation is a one-off, scripted intro — it never shows up
+  // alongside the recruiter's real search history in the sidebar.
   async findAll(recruiterId: string): Promise<BillyConversationSummary[]> {
     const convs = await this.prisma.billyConversation.findMany({
-      where: { recruiterId },
+      where: { recruiterId, isOnboarding: false },
       orderBy: { updatedAt: 'desc' },
     });
 

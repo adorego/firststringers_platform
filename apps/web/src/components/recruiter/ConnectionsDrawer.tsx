@@ -120,11 +120,30 @@ export function ConnectionsDrawer({
             conversations.map((conv) => {
               const athlete = conv.athlete;
               const lastMsg = conv.messages?.[0];
+              const unread = lastMsg?.senderRole === "athlete" && lastMsg.readAt === null;
 
               return (
                 <button
                   key={conv.id}
-                  onClick={() => onSelectConversation(conv)}
+                  onClick={() => {
+                    // Optimistically clear the unread state — the panel we're
+                    // about to open marks the messages read server-side too.
+                    if (unread) {
+                      setConversations((prev) =>
+                        prev.map((c) =>
+                          c.id === conv.id
+                            ? {
+                                ...c,
+                                messages: c.messages?.map((m, i) =>
+                                  i === 0 ? { ...m, readAt: new Date().toISOString() } : m,
+                                ),
+                              }
+                            : c,
+                        ),
+                      );
+                    }
+                    onSelectConversation(conv);
+                  }}
                   className="flex w-full items-start gap-4 px-7 py-5 text-left transition-colors hover:bg-[#F0EDE9]"
                 >
                   {/* Avatar */}
@@ -138,16 +157,25 @@ export function ConnectionsDrawer({
 
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center justify-between">
-                      <p className="font-semibold text-[#1A1A1A]">{athlete?.name}</p>
-                      {lastMsg && (
-                        <TimeAgo date={lastMsg.createdAt} />
-                      )}
+                      <p className={`text-[#1A1A1A] ${unread ? "font-bold" : "font-semibold"}`}>
+                        {athlete?.name}
+                      </p>
+                      <div className="flex flex-shrink-0 items-center gap-2">
+                        {lastMsg && <TimeAgo date={lastMsg.createdAt} />}
+                        {unread && (
+                          <span className="h-2.5 w-2.5 rounded-full bg-[#3B6FE8]" />
+                        )}
+                      </div>
                     </div>
                     <p className="text-sm text-[#ADA8A5]">
                       {[athlete?.position, athlete?.sport].filter(Boolean).join(" · ")}
                     </p>
                     {lastMsg && (
-                      <p className="mt-1 line-clamp-2 text-sm text-[#4B4745]">
+                      <p
+                        className={`mt-1 line-clamp-2 text-sm ${
+                          unread ? "font-medium text-[#1A1A1A]" : "text-[#4B4745]"
+                        }`}
+                      >
                         {lastMsg.content}
                       </p>
                     )}

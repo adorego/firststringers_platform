@@ -79,6 +79,19 @@ export class SessionService {
     return result;
   }
 
+  // Logs the athlete's own words whenever Jerry extracts something concrete
+  // from them (stats, a game result, an achievement, etc.) — this is what the
+  // recruiter's Pipeline shows as "latest update" before falling back to
+  // Jerry's AI-generated pitch.
+  async recordUpdate(athleteId: string, content: string): Promise<void> {
+    const trimmed = content.trim().slice(0, 500);
+    if (!trimmed) return;
+
+    await this.prisma.athleteUpdate.create({
+      data: { athleteId, content: trimmed },
+    });
+  }
+
   async persistSessionToDb(athleteId: string): Promise<void> {
     const session = await this.getSession(athleteId);
 

@@ -2,6 +2,8 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useSession } from "next-auth/react";
+import { useEffect, useState } from "react";
 import { MessageCircle, User, NotebookTabs } from "lucide-react";
 
 interface NavItem {
@@ -24,35 +26,53 @@ const jerryIconActive = (
   </div>
 );
 
-const items: NavItem[] = [
-  {
-    href: "/chat",
-    icon: jerryIcon,
-    activeIcon: jerryIconActive,
-    label: "Jerry",
-  },
-  {
-    href: "/conversations",
-    icon: <MessageCircle size={22} />,
-    activeIcon: <MessageCircle size={22} />,
-    label: "Conversations",
-  },
-  {
-    href: "/dossier",
-    icon: <NotebookTabs size={22} />,
-    activeIcon: <NotebookTabs size={22} />,
-    label: "Dossier",
-  },
-  {
-    href: "/profile",
-    icon: <User size={22} />,
-    activeIcon: <User size={22} />,
-    label: "Profile",
-  },
-];
+const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001";
 
 export function BottomNav() {
   const pathname = usePathname();
+  const { data: session } = useSession();
+  const [hasUnreadConversations, setHasUnreadConversations] = useState(false);
+
+  useEffect(() => {
+    const token = session?.accessToken as string | undefined;
+    if (!token) return;
+    fetch(`${API_URL}/conversations/me/counts`, {
+      headers: { Authorization: `Bearer ${token}` },
+    })
+      .then((r) => (r.ok ? r.json() : { unreadConnections: 0 }))
+      .then((data) => setHasUnreadConversations((data.unreadConnections ?? 0) > 0))
+      .catch(() => {});
+    // Re-check whenever the route changes — covers coming back from a
+    // conversation thread right after its messages were marked read.
+  }, [session?.accessToken, pathname]);
+
+  const items: NavItem[] = [
+    {
+      href: "/chat",
+      icon: jerryIcon,
+      activeIcon: jerryIconActive,
+      label: "Jerry",
+    },
+    {
+      href: "/conversations",
+      icon: <MessageCircle size={22} />,
+      activeIcon: <MessageCircle size={22} />,
+      label: "Conversations",
+      badge: hasUnreadConversations,
+    },
+    {
+      href: "/dossier",
+      icon: <NotebookTabs size={22} />,
+      activeIcon: <NotebookTabs size={22} />,
+      label: "Dossier",
+    },
+    {
+      href: "/profile",
+      icon: <User size={22} />,
+      activeIcon: <User size={22} />,
+      label: "Profile",
+    },
+  ];
 
   return (
     <nav className="flex h-16 items-center border-t border-[#E8E8E4] bg-[#F5F5F0]">
@@ -74,7 +94,9 @@ export function BottomNav() {
                 <span className="absolute -right-1 -top-1 h-2 w-2 rounded-full bg-[#3D3D3D]" />
               )}
             </div>
-            <span className="text-[11px] font-medium">{item.label}</span>
+            <span className={`text-[11px] ${item.badge ? "font-bold" : "font-medium"}`}>
+              {item.label}
+            </span>
           </Link>
         );
       })}

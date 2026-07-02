@@ -263,8 +263,9 @@ export default function BillyChatPage() {
                       </p>
                       {msg.searchResults && msg.searchResults.length > 0 && (
                         <p className="mt-3 text-xs text-[#ADA8A5]">
-                          Found {msg.searchResults.length} athletes matching your recruiting
-                          criteria
+                          {msg.isFallbackRecommendation
+                            ? `${msg.searchResults.length} related athlete${msg.searchResults.length === 1 ? "" : "s"} you might like`
+                            : `Found ${msg.searchResults.length} athletes matching your recruiting criteria`}
                         </p>
                       )}
                     </div>

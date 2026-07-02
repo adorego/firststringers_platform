@@ -11,6 +11,7 @@ export interface BillyMessage {
   searchResults?: AthleteResult[];
   options?: MessageOption[];
   athleteId?: string;
+  isFallbackRecommendation?: boolean;
 }
 
 export interface MessageOption {

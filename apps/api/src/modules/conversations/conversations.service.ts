@@ -11,12 +11,32 @@ export class ConversationsService {
     private readonly eventEmitter: EventEmitter2,
   ) {}
 
-  async getCountsForRecruiter(recruiterId: string): Promise<{ connections: number; introductions: number }> {
-    const [connections, introductions] = await Promise.all([
+  async getCountsForRecruiter(
+    recruiterId: string,
+  ): Promise<{ connections: number; introductions: number; unreadConnections: number }> {
+    const [connections, introductions, unreadConnections] = await Promise.all([
       this.prisma.directConversation.count({ where: { recruiterId, status: 'accepted' } }),
       this.prisma.directConversation.count({ where: { recruiterId, status: 'pending' } }),
+      this.prisma.directConversation.count({
+        where: {
+          recruiterId,
+          status: 'accepted',
+          messages: { some: { senderRole: 'athlete', readAt: null } },
+        },
+      }),
     ]);
-    return { connections, introductions };
+    return { connections, introductions, unreadConnections };
+  }
+
+  async getCountsForAthlete(athleteId: string): Promise<{ unreadConnections: number }> {
+    const unreadConnections = await this.prisma.directConversation.count({
+      where: {
+        athleteId,
+        status: 'accepted',
+        messages: { some: { senderRole: 'recruiter', readAt: null } },
+      },
+    });
+    return { unreadConnections };
   }
 
   async getConversationsForRecruiter(recruiterId: string) {
@@ -86,11 +106,13 @@ export class ConversationsService {
       );
     }
 
-    if (recruiter.verificationStatus !== 'verified') {
-      throw new ForbiddenException(
-        'Your account must be verified before contacting athletes',
-      );
-    }
+    // TODO: re-enable once we're past early testing — any verified-email account
+    // should be able to search and contact athletes for now.
+    // if (recruiter.verificationStatus !== 'verified') {
+    //   throw new ForbiddenException(
+    //     'Your account must be verified before contacting athletes',
+    //   );
+    // }
   }
 
   async createRequest(recruiterId: string, athleteId: string) {

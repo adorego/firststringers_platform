@@ -145,20 +145,24 @@ export function PipelineDrawer({ isOpen, onClose, hiddenAthleteIds, onViewDossie
                   </div>
                 </div>
 
-                {/* Latest published by the athlete (Jerry's most recent pitch) */}
+                {/* What the athlete last reported to Jerry (training, games,
+                    achievements) — falls back to Jerry's pitch if there's
+                    nothing newer to show. */}
                 <div className="mt-4 rounded-xl bg-[#F0EDE9] px-4 py-3">
                   <div className="mb-1 flex items-center gap-2">
                     <TrendingUp size={13} className="text-[#ADA8A5]" />
                     <span className="text-[11px] font-semibold uppercase tracking-wide text-[#ADA8A5]">
                       {entry.latestUpdate
-                        ? `Latest update · ${timeAgo(entry.latestUpdate.publishedAt)}`
+                        ? entry.latestUpdate.source === "athlete"
+                          ? `Latest update · ${timeAgo(entry.latestUpdate.publishedAt)}`
+                          : `Jerry's pitch · ${timeAgo(entry.latestUpdate.publishedAt)}`
                         : "No updates yet"}
                     </span>
                   </div>
                   <p className="text-sm text-[#4B4745]">
                     {entry.latestUpdate
                       ? entry.latestUpdate.content
-                      : "This athlete hasn't published an update through Jerry yet."}
+                      : "This athlete hasn't shared an update through Jerry yet."}
                   </p>
                 </div>
               </div>

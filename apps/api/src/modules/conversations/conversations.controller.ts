@@ -61,13 +61,20 @@ export class ConversationsController {
     return this.conversationsService.declineRequest(id, user.athleteId);
   }
 
-  // Recruiter: counts for sidebar (JWT-authenticated, uses own identity)
+  // Counts for the nav badges (JWT-authenticated, uses own identity) — shape
+  // differs by role since recruiters and athletes have different nav items.
   @Get('me/counts')
-  getMyRecruiterCounts(
-    @CurrentUser() user: { id: string; role: string; recruiterId: string | null },
+  getMyCounts(
+    @CurrentUser()
+    user: { id: string; role: string; recruiterId: string | null; athleteId: string | null },
   ) {
-    if (!user.recruiterId) return { connections: 0, introductions: 0, pipeline: 0 };
-    return this.conversationsService.getCountsForRecruiter(user.recruiterId);
+    if (user.recruiterId) {
+      return this.conversationsService.getCountsForRecruiter(user.recruiterId);
+    }
+    if (user.athleteId) {
+      return this.conversationsService.getCountsForAthlete(user.athleteId);
+    }
+    return { connections: 0, introductions: 0, unreadConnections: 0 };
   }
 
   @Public()

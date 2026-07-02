@@ -19,15 +19,20 @@ export class BillySessionService {
     private readonly conversations: BillyConversationService,
   ) {}
 
-  async getSession(conversationId: string, recruiterId: string, isOnboarding = false): Promise<BillySessionState> {
+  // `isOnboarding` is only known authoritatively by the caller (the gateway, which
+  // reads it fresh from the recruiter's DB record) — pass it explicitly to override
+  // the cached value. Internal callers that just need the current session (appendMessage,
+  // the worker, etc.) omit it so they don't accidentally clobber the flag back to false.
+  async getSession(conversationId: string, recruiterId: string, isOnboarding?: boolean): Promise<BillySessionState> {
     const key = this.buildKey(conversationId);
     const data = await this.redis.get(key);
 
     if (data) {
       try {
         const cached = JSON.parse(data) as BillySessionState;
-        // DB is authoritative for onboarding state — always override cached value
-        cached.isOnboarding = isOnboarding;
+        if (isOnboarding !== undefined) {
+          cached.isOnboarding = isOnboarding;
+        }
         return cached;
       } catch (err) {
         this.logger.warn(`Corrupted session for conversation ${conversationId}, loading from DB`, err);
@@ -44,7 +49,7 @@ export class BillySessionService {
       messages,
       searchCriteria,
       missingFields: ['sport', 'position', 'leagueLevel'],
-      isOnboarding,
+      isOnboarding: isOnboarding ?? false,
       createdAt: new Date(),
       updatedAt: new Date(),
     };

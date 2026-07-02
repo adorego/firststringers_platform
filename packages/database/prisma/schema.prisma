@@ -26,11 +26,26 @@ model Athlete {
   position       String?
   dossier        Dossier?
   sessions       JerrySession[]
+  updates        AthleteUpdate[]
   user           User?
   conversations  DirectConversation[]
   pipelineEntries PipelineEntry[]
   createdAt      DateTime             @default(now())
   updatedAt      DateTime             @updatedAt
+}
+
+// Raw, athlete-authored news reported to Jerry (training, games, achievements,
+// etc.) — kept separate from Dossier.data (which only holds the current merged
+// snapshot) so recruiters can see what the athlete actually said, and when.
+model AthleteUpdate {
+  id        String   @id @default(uuid())
+  athleteId String
+  athlete   Athlete  @relation(fields: [athleteId], references: [id], onDelete: Cascade)
+  content   String
+  createdAt DateTime @default(now())
+
+  @@index([athleteId, createdAt])
+  @@map("athlete_updates")
 }
 
 model Dossier {
@@ -165,6 +180,7 @@ model BillyConversation {
   title          String   @default("New search")
   messages       Json     @default("[]")
   searchCriteria Json     @default("{}")
+  isOnboarding   Boolean  @default(false)
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
 

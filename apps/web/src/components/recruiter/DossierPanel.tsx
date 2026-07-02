@@ -2,31 +2,8 @@
 
 import { useState, useEffect } from "react";
 import { useSession } from "next-auth/react";
-import { X, MapPin, TrendingUp, ArrowLeft, CheckCircle } from "lucide-react";
+import { X, MapPin, ArrowLeft, CheckCircle } from "lucide-react";
 import { AthleteResult } from "@/hooks/useBilly";
-
-interface ProfileUpdate {
-  title: string;
-  detail: string;
-}
-
-// Mock profile updates — will come from backend when dossier history is implemented
-const MOCK_UPDATES: Record<string, ProfileUpdate[]> = {};
-
-function getMockUpdates(athleteId: string): ProfileUpdate[] {
-  if (MOCK_UPDATES[athleteId]) return MOCK_UPDATES[athleteId];
-  // Generic fallback updates
-  return [
-    {
-      title: "Updated measurements",
-      detail: "Height: 6'1\" → 6'2.5\" · Weight: 185 → 192 lbs",
-    },
-    {
-      title: "New footage added",
-      detail: "2025 Spring Camp highlights (3:45) uploaded 4 days ago",
-    },
-  ];
-}
 
 function getProspectTag(score: number): { label: string; color: string; bg: string } | null {
   if (score >= 0.85) return { label: "Hot Prospect", color: "#C0392B", bg: "#FDECEA" };
@@ -131,7 +108,6 @@ export function DossierPanel({
     .slice(0, 2);
 
   const tag = getProspectTag(athlete.completenessScore);
-  const updates = getMockUpdates(athlete.id);
 
   const metaLine = [
     athlete.position,
@@ -356,23 +332,6 @@ export function DossierPanel({
             >
               Request Introduction
             </button>
-          </div>
-
-          <div className="rounded-xl bg-[#F0EDE9] px-5 py-4">
-            <div className="mb-3 flex items-center gap-2">
-              <TrendingUp size={13} className="text-[#ADA8A5]" />
-              <span className="text-[11px] font-semibold uppercase tracking-wide text-[#ADA8A5]">
-                Profile Updates
-              </span>
-            </div>
-            <div className="flex flex-col gap-3">
-              {updates.map((u, i) => (
-                <div key={i}>
-                  <p className="text-sm font-semibold text-[#1A1A1A]">{u.title}</p>
-                  <p className="text-sm text-[#ADA8A5]">{u.detail}</p>
-                </div>
-              ))}
-            </div>
           </div>
 
           {athlete.dossier?.summary && (

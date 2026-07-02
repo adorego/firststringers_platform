@@ -81,6 +81,7 @@ export function RecruiterShell({ children }: { children: React.ReactNode }) {
         recruiterId={recruiterId}
         isOpen={sidebarOpen}
         onClose={closeSidebar}
+        refreshCountsKey={`${connectionsOpen}:${activeConversation?.id ?? ""}`}
         onPipelineClick={() => {
           setConnectionsOpen(false);
           setIntroductionsOpen(false);
@@ -167,6 +168,7 @@ export function RecruiterShell({ children }: { children: React.ReactNode }) {
           />
           <DirectChatPanel
             conversation={activeConversation}
+            recruiterId={recruiterId}
             onBack={handleBackToConnections}
           />
         </>

@@ -44,6 +44,7 @@ export function RecruiterSidebar({
   onIntroductionsClick,
   isOpen = false,
   onClose,
+  refreshCountsKey,
 }: {
   recruiterId: string;
   onPipelineClick?: () => void;
@@ -51,6 +52,9 @@ export function RecruiterSidebar({
   onIntroductionsClick?: () => void;
   isOpen?: boolean;
   onClose?: () => void;
+  // Bump this (e.g. drawer open/close, active chat id) to re-fetch unread counts
+  // so the Connections badge clears once a conversation has been read.
+  refreshCountsKey?: string;
 }) {
   const pathname = usePathname();
   const router = useRouter();
@@ -64,7 +68,7 @@ export function RecruiterSidebar({
     .toUpperCase();
   const [conversations, setConversations] = useState<BillyConversationSummary[]>([]);
   const [creating, setCreating] = useState(false);
-  const [counts, setCounts] = useState({ pipeline: 0, connections: 0, introductions: 0 });
+  const [counts, setCounts] = useState({ pipeline: 0, connections: 0, introductions: 0, unreadConnections: 0 });
   const [menuOpen, setMenuOpen] = useState(false);
   const [learnBillyOpen, setLearnBillyOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -97,16 +101,20 @@ export function RecruiterSidebar({
         .then((r) => (r.ok ? r.json() : []))
         .catch(() => []),
       fetch(`${API_URL}/conversations/me/counts`, { headers })
-        .then((r) => (r.ok ? r.json() : { connections: 0, introductions: 0 }))
-        .catch(() => ({ connections: 0, introductions: 0 })),
+        .then((r) => (r.ok ? r.json() : { connections: 0, introductions: 0, unreadConnections: 0 }))
+        .catch(() => ({ connections: 0, introductions: 0, unreadConnections: 0 })),
     ]).then(([pipeline, convCounts]) => {
       setCounts({
         pipeline: Array.isArray(pipeline) ? pipeline.length : 0,
         connections: convCounts.connections ?? 0,
         introductions: convCounts.introductions ?? 0,
+        unreadConnections: convCounts.unreadConnections ?? 0,
       });
     });
-  }, [session?.accessToken]);
+    // refreshCountsKey changes when a connection's chat opens/closes so the
+    // unread badge clears once messages have actually been read server-side.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [session?.accessToken, refreshCountsKey]);
 
   const startEditing = (conv: BillyConversationSummary, e: React.MouseEvent) => {
     e.preventDefault();
@@ -163,12 +171,12 @@ export function RecruiterSidebar({
   };
 
   type NavItem =
-    | { key: string; icon: React.ReactNode; label: string; count: number; onClick: () => void; href?: never }
-    | { key: string; icon: React.ReactNode; label: string; count: number; href: string; onClick?: never };
+    | { key: string; icon: React.ReactNode; label: string; count: number; unread?: boolean; onClick: () => void; href?: never }
+    | { key: string; icon: React.ReactNode; label: string; count: number; unread?: boolean; href: string; onClick?: never };
 
   const navItems: NavItem[] = [
     { key: "pipeline", icon: <Layers size={15} />, label: "Pipeline", count: counts.pipeline, onClick: onPipelineClick ?? (() => {}) },
-    { key: "connections", icon: <Users size={15} />, label: "Connections", count: counts.connections, onClick: onConnectionsClick ?? (() => {}) },
+    { key: "connections", icon: <Users size={15} />, label: "Connections", count: counts.connections, unread: counts.unreadConnections > 0, onClick: onConnectionsClick ?? (() => {}) },
     { key: "introductions", icon: <Share2 size={15} />, label: "Introductions", count: counts.introductions, onClick: onIntroductionsClick ?? (() => {}) },
   ];
 
@@ -230,8 +238,13 @@ export function RecruiterSidebar({
           const inner = (
             <>
               <div className="flex items-center gap-3">
-                {item.icon}
-                <span>{item.label}</span>
+                <span className="relative flex">
+                  {item.icon}
+                  {item.unread && (
+                    <span className="absolute -right-1 -top-1 h-2 w-2 rounded-full bg-[#3B6FE8]" />
+                  )}
+                </span>
+                <span className={item.unread ? "font-semibold" : undefined}>{item.label}</span>
               </div>
               <span className="text-xs text-[#ADA8A5]">{item.count}</span>
             </>

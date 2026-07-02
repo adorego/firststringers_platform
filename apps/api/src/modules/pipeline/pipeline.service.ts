@@ -11,7 +11,7 @@ export interface PipelineEntryDto {
   graduationYear: number | null;
   completenessScore: number;
   addedAt: Date;
-  latestUpdate: { content: string; publishedAt: Date } | null;
+  latestUpdate: { content: string; publishedAt: Date; source: 'athlete' | 'jerry_pitch' } | null;
 }
 
 @Injectable()
@@ -40,6 +40,7 @@ export class PipelineService {
           include: {
             dossier: { select: { data: true, completeness: true } },
             sessions: { orderBy: { updatedAt: 'desc' }, take: 1 },
+            updates: { orderBy: { createdAt: 'desc' }, take: 1 },
           },
         },
       },
@@ -49,6 +50,19 @@ export class PipelineService {
       const athlete = entry.athlete;
       const d = (athlete.dossier?.data as Record<string, any>) ?? {};
       const session = athlete.sessions[0];
+      const latestAthleteUpdate = athlete.updates[0];
+
+      // Prefer what the athlete actually reported (training, games, achievements);
+      // fall back to Jerry's AI-authored pitch when there's nothing newer.
+      const latestUpdate: PipelineEntryDto['latestUpdate'] = latestAthleteUpdate
+        ? {
+            content: latestAthleteUpdate.content,
+            publishedAt: latestAthleteUpdate.createdAt,
+            source: 'athlete',
+          }
+        : session?.currentPitch && session.lastPitchAt
+          ? { content: session.currentPitch, publishedAt: session.lastPitchAt, source: 'jerry_pitch' }
+          : null;
 
       return {
         pipelineId: entry.id,
@@ -60,10 +74,7 @@ export class PipelineService {
         graduationYear: d.identity?.graduationYear ?? null,
         completenessScore: athlete.dossier?.completeness ?? 0,
         addedAt: entry.createdAt,
-        latestUpdate:
-          session?.currentPitch && session.lastPitchAt
-            ? { content: session.currentPitch, publishedAt: session.lastPitchAt }
-            : null,
+        latestUpdate,
       };
     });
   }

@@ -183,7 +183,7 @@ export interface PipelineEntry {
   graduationYear: number | null;
   completenessScore: number;
   addedAt: string;
-  latestUpdate: { content: string; publishedAt: string } | null;
+  latestUpdate: { content: string; publishedAt: string; source: "athlete" | "jerry_pitch" } | null;
 }
 
 export default api;
