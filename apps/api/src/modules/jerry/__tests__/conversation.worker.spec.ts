@@ -49,11 +49,15 @@ function makeSession(
 // ─── Shared mocks ────────────────────────────────────────────────────────────
 
 const mockSession: jest.Mocked<
-  Pick<SessionService, 'getSession' | 'appendMessage' | 'updateDossierSnapshot'>
+  Pick<
+    SessionService,
+    'getSession' | 'appendMessage' | 'updateDossierSnapshot' | 'recordUpdate'
+  >
 > = {
   getSession: jest.fn(),
   appendMessage: jest.fn(),
   updateDossierSnapshot: jest.fn(),
+  recordUpdate: jest.fn(),
 };
 
 const mockIntentClassifier: jest.Mocked<
@@ -112,6 +116,7 @@ describe('ConversationWorker', () => {
     mockSession.getSession.mockResolvedValue(makeSession());
     mockSession.appendMessage.mockResolvedValue(undefined);
     mockSession.updateDossierSnapshot.mockResolvedValue(undefined);
+    mockSession.recordUpdate.mockResolvedValue(undefined);
     mockIntentClassifier.classify.mockResolvedValue('other');
     mockDataExtractor.extract.mockResolvedValue(null);
     mockValidator.getMissingFields.mockResolvedValue(['GPA']);
