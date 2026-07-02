@@ -6,6 +6,13 @@ import {
   SearchFilters,
   DossierScoutFields,
 } from '../../shared/types/scout.types';
+import { DossierData } from '../../shared/types';
+
+// Jerry's real conversation pipeline (data-extractor, dossier.worker) writes
+// the nested DossierData shape (identity/performance/academic/availability).
+// Seed data — and older code — wrote flat DossierScoutFields directly. Search
+// needs to read whichever one is actually present, nested first.
+type RawDossierData = DossierScoutFields & Partial<DossierData>;
 
 export interface ScoutResult {
   query: string;
@@ -152,9 +159,10 @@ export class ScoutService {
       `Scout DB returned ${athletes.length} athletes before filter`,
     );
 
-    // Aplanar datos del dossier.data
+    // Aplanar datos del dossier.data — soporta tanto el formato anidado real
+    // de Jerry como el formato plano usado por el seed.
     const normalized = athletes.map((a) => {
-      const d = (a.dossier?.data as DossierScoutFields | null) ?? {};
+      const d = this.flattenDossier(a.dossier?.data as RawDossierData | null);
       return {
         id: a.id,
         fullName: a.name,
@@ -200,6 +208,28 @@ export class ScoutService {
     return {
       totalFound: filtered.length,
       athletes: ranked.slice(0, limit),
+    };
+  }
+
+  // Real Jerry conversations store data nested (identity/performance/academic/
+  // availability); the seed and older code store it flat. Prefer the nested
+  // (real) value when present, falling back to the flat one.
+  private flattenDossier(raw: RawDossierData | null): DossierScoutFields {
+    const d = raw ?? {};
+    return {
+      leagueLevel: d.performance?.leagueLevel ?? d.leagueLevel ?? '',
+      gpa: d.academic?.gpa ?? d.gpa ?? null,
+      graduationYear: d.identity?.graduationYear ?? d.graduationYear ?? null,
+      ncaaEligible: d.academic?.ncaaEligibility ?? d.ncaaEligible ?? false,
+      inTransferPortal:
+        d.availability?.transferPortal ?? d.inTransferPortal ?? false,
+      preferredRegions:
+        d.availability?.preferredRegions ?? d.preferredRegions ?? [],
+      // No nested equivalent exists for these — Jerry never asks about them today.
+      trajectory: d.trajectory ?? 'STABLE',
+      keyStrengths: d.performance?.strengths ?? d.keyStrengths ?? [],
+      fitTags: d.fitTags ?? [],
+      recruiterPitch: d.recruiterPitch ?? null,
     };
   }
 

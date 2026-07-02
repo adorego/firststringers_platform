@@ -1,5 +1,6 @@
 import { PrismaClient } from '@prisma/client';
 import * as bcrypt from 'bcrypt';
+import athletesSeedData from './athletes_seed.json';
 
 const prisma = new PrismaClient();
 
@@ -19,7 +20,9 @@ async function main() {
 
   const recruiterRecord = await prisma.recruiter.upsert({
     where: { email: 'coach@university.edu' },
-    update: { verificationStatus: 'verified', onboardingCompleted: true },
+    // Only set on create — re-running the seed (e.g. every staging deploy)
+    // must not reset onboarding progress a real login already completed.
+    update: { verificationStatus: 'verified' },
     create: {
       id: 'e0b6c0c8-2b27-4521-9b26-46ace16b4983',
       organizationId: org.id,
@@ -32,7 +35,9 @@ async function main() {
       gender: 'male',
       division: 'D1',
       openings: 3,
-      onboardingCompleted: true,
+      // Left false intentionally — the first login should walk through
+      // Billy's onboarding chat rather than skip straight to search.
+      onboardingCompleted: false,
       verificationStatus: 'verified',
       pitch: 'Coach Rivera leads a competitive D1 Football program at State University in Austin, TX — one of the most vibrant college towns in the country. We offer full scholarships and have three open roster spots this cycle, making this a rare opportunity to join a program with strong winning culture and genuine investment in player development.',
     },
@@ -50,231 +55,197 @@ async function main() {
   });
   console.log(`  ✓ Recruiter: coach@university.edu / recruiter123`);
 
+  // ── Coaches adicionales (uno por deporte) ───────────────────────────────────
+  const additionalRecruiters = [
+    {
+      email: 'coach.reyes@university.edu',
+      name: 'Coach Ana Reyes',
+      university: 'Coastal State University',
+      location: 'Miami, FL',
+      scholarshipType: 'partial',
+      sport: 'baseball',
+      gender: 'male',
+      division: 'D1',
+      openings: 4,
+      organizationType: 'College / University',
+      recruiterRole: 'Head Coach',
+      positions: 'Pitchers, Catchers',
+      graduatingClasses: '2026, 2027',
+      evaluationPriority: 'Athleticism',
+      filterCriteria: 'Minimum GPA, Position',
+      pitch: 'Coach Reyes runs a competitive D1 Baseball program at Coastal State University in Miami, FL, with four open roster spots and a strong track record of developing pitchers and catchers for pro ball.',
+    },
+    {
+      email: 'coach.obrien@university.edu',
+      name: "Coach Liam O'Brien",
+      university: 'Pacific Coast University',
+      location: 'San Diego, CA',
+      scholarshipType: 'full',
+      sport: 'soccer',
+      gender: 'female',
+      division: 'D1',
+      openings: 2,
+      organizationType: 'College / University',
+      recruiterRole: 'Assistant Coach',
+      positions: 'Forwards, Midfielders',
+      graduatingClasses: '2027, 2028',
+      evaluationPriority: 'Development Potential',
+      filterCriteria: 'Location',
+      pitch: "Coach O'Brien coaches D1 Women's Soccer at Pacific Coast University in San Diego, CA, offering full scholarships and a proven development pipeline for forwards and midfielders.",
+    },
+    {
+      email: 'coach.patel@university.edu',
+      name: 'Coach Priya Patel',
+      university: 'Lakeshore University',
+      location: 'Chicago, IL',
+      scholarshipType: 'full',
+      sport: 'volleyball',
+      gender: 'female',
+      division: 'D2',
+      openings: 3,
+      organizationType: 'College / University',
+      recruiterRole: 'Head Coach',
+      positions: 'Outside Hitters, Setters',
+      graduatingClasses: '2026, 2027, 2028',
+      evaluationPriority: 'Coachability',
+      filterCriteria: 'Height / Weight',
+      pitch: "Coach Patel leads D2 Volleyball at Lakeshore University in Chicago, IL, with three open spots this cycle for outside hitters and setters who thrive in a high-coachability culture.",
+    },
+    {
+      email: 'coach.turner@university.edu',
+      name: 'Coach Malik Turner',
+      university: 'Northgate University',
+      location: 'Charlotte, NC',
+      scholarshipType: 'full',
+      sport: 'basketball',
+      gender: 'male',
+      division: 'D1',
+      openings: 2,
+      organizationType: 'College / University',
+      recruiterRole: 'Recruiting Coordinator',
+      positions: 'Guards, Forwards',
+      graduatingClasses: '2025, 2026',
+      evaluationPriority: 'Film',
+      filterCriteria: 'Minimum GPA',
+      pitch: 'Coach Turner recruits for D1 Basketball at Northgate University in Charlotte, NC, with two full-scholarship spots open for guards and forwards who grade out well on film.',
+    },
+    {
+      email: 'coach.stone@university.edu',
+      name: 'Coach Emily Stone',
+      university: 'Ridgeview University',
+      location: 'Columbus, OH',
+      scholarshipType: 'partial',
+      sport: 'football',
+      gender: 'male',
+      division: 'D2',
+      openings: 5,
+      organizationType: 'College / University',
+      recruiterRole: 'Position Coach',
+      positions: 'Offensive Line, Defensive Backs',
+      graduatingClasses: '2026, 2027',
+      evaluationPriority: 'Physical Traits',
+      filterCriteria: 'Position, Location',
+      pitch: 'Coach Stone develops offensive linemen and defensive backs for D2 Football at Ridgeview University in Columbus, OH, with five open roster spots this cycle.',
+    },
+  ];
+
+  for (const r of additionalRecruiters) {
+    const recruiter = await prisma.recruiter.upsert({
+      where: { email: r.email },
+      // Only set on create — re-running the seed (e.g. every staging deploy)
+      // must not reset onboarding progress a real login already completed.
+      update: { verificationStatus: 'verified' },
+      create: {
+        organizationId: org.id,
+        email: r.email,
+        name: r.name,
+        university: r.university,
+        location: r.location,
+        scholarshipType: r.scholarshipType,
+        sport: r.sport,
+        gender: r.gender,
+        division: r.division,
+        openings: r.openings,
+        organizationType: r.organizationType,
+        recruiterRole: r.recruiterRole,
+        positions: r.positions,
+        graduatingClasses: r.graduatingClasses,
+        evaluationPriority: r.evaluationPriority,
+        filterCriteria: r.filterCriteria,
+        // Left false intentionally — the first login should walk through
+        // Billy's onboarding chat rather than skip straight to search.
+        onboardingCompleted: false,
+        verificationStatus: 'verified',
+        pitch: r.pitch,
+      },
+    });
+
+    await prisma.user.upsert({
+      where: { email: r.email },
+      update: { recruiterId: recruiter.id },
+      create: {
+        email: r.email,
+        password: recruiterPassword,
+        role: 'RECRUITER',
+        recruiterId: recruiter.id,
+      },
+    });
+
+    console.log(`  ✓ Recruiter: ${r.email} / recruiter123 (${r.sport})`);
+  }
+
   // ── Atletas ───────────────────────────────────────────────────────────────
   const athletePassword = await bcrypt.hash('athlete123', 12);
 
-  const athletes = [
-    {
-      email: 'marcus.johnson@athlete.fscout.ai',
-      name: 'Marcus Johnson',
-      sport: 'football',
-      position: 'QB',
+  interface AthleteSeedJson {
+    fullName: string;
+    email: string;
+    sport: string;
+    position: string;
+    leagueLevel: string;
+    heightCm: number;
+    weightKg: number;
+    nationality: string;
+    graduationYear: number;
+    ncaaEligible: boolean;
+    inTransferPortal: boolean;
+    preferredRegions: string[];
+    scholarshipNeed: boolean;
+    gpa: number;
+    satScore: number;
+    intendedMajor: string;
+    trajectory: string;
+    highlightUrls: string[];
+    keyStrengths: string[];
+    fitTags: string[];
+    narrativeScore: number;
+    completenessScore: number;
+    stats: Record<string, number>;
+  }
+
+  const athletes = (athletesSeedData as AthleteSeedJson[]).map((a) => {
+    const { fullName, email, sport, position, narrativeScore, completenessScore, trajectory, ...rest } = a;
+    const trajectoryUpper = trajectory.toUpperCase();
+    const trajectoryLabel =
+      trajectoryUpper === 'IMPROVING'
+        ? 'a rapidly improving'
+        : trajectoryUpper === 'DECLINING'
+          ? 'a declining'
+          : 'a consistent';
+
+    return {
+      email,
+      name: fullName,
+      sport,
+      position,
       dossier: {
-        completeness: 0.95,
-        narrative: 'Elite dual-threat QB with 3 years of D1 experience.',
-        advocacyScore: 0.91,
-        data: {
-          leagueLevel: 'D1', heightCm: 188, weightKg: 95,
-          graduationYear: 2025, ncaaEligible: true, inTransferPortal: true,
-          preferredRegions: ['Midwest', 'South'], scholarshipNeed: true,
-          gpa: 3.7, intendedMajor: 'Business Administration',
-          trajectory: 'IMPROVING',
-          keyStrengths: ['dual-threat', 'pocket presence', 'leadership', 'arm strength'],
-          fitTags: ['QB', 'dual-threat', 'D1', 'Midwest', 'transfer'],
-          stats: { passing_yards: 3240, touchdowns: 28, interceptions: 6, completion_rate: 0.67, rushing_yards: 540 },
-          recruiterPitch: 'Marcus Johnson is a D1 QB with 3.7 GPA. Elite dual-threat with 28 TDs and improving trajectory.',
-        },
+        completeness: completenessScore,
+        narrative: `${rest.leagueLevel} ${position} in ${sport} with ${trajectoryLabel} trajectory. Key strengths: ${rest.keyStrengths.slice(0, 3).join(', ')}.`,
+        advocacyScore: narrativeScore,
+        data: { ...rest, trajectory: trajectoryUpper },
       },
-    },
-    {
-      email: 'jordan.williams@athlete.fscout.ai',
-      name: 'Jordan Williams',
-      sport: 'football',
-      position: 'WR',
-      dossier: {
-        completeness: 0.88,
-        narrative: 'Explosive WR with elite route running and YAC ability.',
-        advocacyScore: 0.85,
-        data: {
-          leagueLevel: 'D1', heightCm: 185, weightKg: 88,
-          graduationYear: 2025, ncaaEligible: true, inTransferPortal: false,
-          preferredRegions: ['Northeast', 'Midwest'], scholarshipNeed: false,
-          gpa: 3.5, intendedMajor: 'Communications',
-          trajectory: 'IMPROVING',
-          keyStrengths: ['route running', 'hands', 'speed', 'YAC'],
-          fitTags: ['WR', 'speed', 'D1', 'Northeast'],
-          stats: { receptions: 72, receiving_yards: 1140, touchdowns: 11, yards_per_reception: 15.8 },
-          recruiterPitch: 'Jordan Williams is a D1 WR with elite route running and 1140 receiving yards.',
-        },
-      },
-    },
-    {
-      email: 'darius.thompson@athlete.fscout.ai',
-      name: 'Darius Thompson',
-      sport: 'football',
-      position: 'QB',
-      dossier: {
-        completeness: 0.82,
-        narrative: 'Strong-armed D2 QB looking to step up to D1.',
-        advocacyScore: 0.78,
-        data: {
-          leagueLevel: 'D2', heightCm: 190, weightKg: 98,
-          graduationYear: 2026, ncaaEligible: true, inTransferPortal: true,
-          preferredRegions: ['South', 'Midwest', 'West'], scholarshipNeed: true,
-          gpa: 3.2, intendedMajor: 'Kinesiology',
-          trajectory: 'STABLE',
-          keyStrengths: ['arm strength', 'mobility', 'red zone efficiency'],
-          fitTags: ['QB', 'D2', 'transfer', 'South'],
-          stats: { passing_yards: 2800, touchdowns: 22, interceptions: 8, completion_rate: 0.62, rushing_yards: 320 },
-          recruiterPitch: 'Darius Thompson is a D2 QB in the transfer portal with strong arm and 22 TDs.',
-        },
-      },
-    },
-    {
-      email: 'tyrell.jackson@athlete.fscout.ai',
-      name: 'Tyrell Jackson',
-      sport: 'football',
-      position: 'RB',
-      dossier: {
-        completeness: 0.92,
-        narrative: 'Complete back with elite vision and receiving ability.',
-        advocacyScore: 0.89,
-        data: {
-          leagueLevel: 'D1', heightCm: 180, weightKg: 92,
-          graduationYear: 2025, ncaaEligible: true, inTransferPortal: true,
-          preferredRegions: ['South', 'Southeast'], scholarshipNeed: false,
-          gpa: 3.8, intendedMajor: 'Sports Management',
-          trajectory: 'IMPROVING',
-          keyStrengths: ['vision', 'burst', 'pass blocking', 'hands'],
-          fitTags: ['RB', 'D1', 'South', 'transfer', 'high-GPA'],
-          stats: { rushing_yards: 1420, touchdowns: 14, yards_per_carry: 5.8, receptions: 34, receiving_yards: 280 },
-          recruiterPitch: 'Tyrell Jackson is a D1 RB with 3.8 GPA and 1420 rushing yards. Elite hands out of the backfield.',
-        },
-      },
-    },
-    {
-      email: 'cameron.rodriguez@athlete.fscout.ai',
-      name: 'Cameron Rodriguez',
-      sport: 'football',
-      position: 'QB',
-      dossier: {
-        completeness: 0.90,
-        narrative: 'High-IQ dual-threat QB who thrives under pressure.',
-        advocacyScore: 0.88,
-        data: {
-          leagueLevel: 'D1', heightCm: 186, weightKg: 93,
-          graduationYear: 2025, ncaaEligible: true, inTransferPortal: false,
-          preferredRegions: ['West', 'Southwest'], scholarshipNeed: true,
-          gpa: 3.6, intendedMajor: 'Psychology',
-          trajectory: 'IMPROVING',
-          keyStrengths: ['dual-threat', 'football IQ', 'clutch performance', 'leadership'],
-          fitTags: ['QB', 'dual-threat', 'D1', 'West'],
-          stats: { passing_yards: 2980, touchdowns: 25, interceptions: 5, completion_rate: 0.69, rushing_yards: 620 },
-          recruiterPitch: 'Cameron Rodriguez is a D1 QB with 3.6 GPA. Elite football IQ and clutch performer.',
-        },
-      },
-    },
-    {
-      email: 'devon.marshall@athlete.fscout.ai',
-      name: 'Devon Marshall',
-      sport: 'basketball',
-      position: 'PG',
-      dossier: {
-        completeness: 0.96,
-        narrative: 'Elite playmaker with one of the highest GPAs in the portal.',
-        advocacyScore: 0.93,
-        data: {
-          leagueLevel: 'D1', heightCm: 183, weightKg: 79,
-          graduationYear: 2025, ncaaEligible: true, inTransferPortal: true,
-          preferredRegions: ['Northeast', 'Midwest'], scholarshipNeed: false,
-          gpa: 3.9, intendedMajor: 'Computer Science',
-          trajectory: 'IMPROVING',
-          keyStrengths: ['court vision', 'playmaking', 'three-point shooting', 'defense'],
-          fitTags: ['PG', 'basketball', 'D1', 'high-GPA', 'transfer'],
-          stats: { points_per_game: 18.4, assists_per_game: 7.2, rebounds_per_game: 4.1, three_point_pct: 0.41 },
-          recruiterPitch: 'Devon Marshall is a D1 PG with 3.9 GPA averaging 18.4 PPG and 7.2 APG.',
-        },
-      },
-    },
-    {
-      email: 'isaiah.carter@athlete.fscout.ai',
-      name: 'Isaiah Carter',
-      sport: 'basketball',
-      position: 'SF',
-      dossier: {
-        completeness: 0.85,
-        narrative: 'Athletic wing with elite defensive instincts.',
-        advocacyScore: 0.82,
-        data: {
-          leagueLevel: 'D1', heightCm: 201, weightKg: 102,
-          graduationYear: 2026, ncaaEligible: true, inTransferPortal: false,
-          preferredRegions: ['South', 'Southeast', 'Midwest'], scholarshipNeed: true,
-          gpa: 3.3, intendedMajor: 'Exercise Science',
-          trajectory: 'IMPROVING',
-          keyStrengths: ['athleticism', 'versatility', 'rebounding', 'shot blocking'],
-          fitTags: ['SF', 'basketball', 'D1', 'South'],
-          stats: { points_per_game: 15.2, rebounds_per_game: 8.4, blocks_per_game: 1.9, fg_percentage: 0.52 },
-          recruiterPitch: 'Isaiah Carter is a D1 SF with elite athleticism and 1.9 blocks per game.',
-        },
-      },
-    },
-    {
-      email: 'trevor.adams@athlete.fscout.ai',
-      name: 'Trevor Adams',
-      sport: 'football',
-      position: 'OL',
-      dossier: {
-        completeness: 0.83,
-        narrative: 'Experienced OL with elite pass protection skills.',
-        advocacyScore: 0.80,
-        data: {
-          leagueLevel: 'D1', heightCm: 196, weightKg: 140,
-          graduationYear: 2025, ncaaEligible: true, inTransferPortal: true,
-          preferredRegions: ['South', 'Midwest'], scholarshipNeed: false,
-          gpa: 3.4, intendedMajor: 'Business',
-          trajectory: 'STABLE',
-          keyStrengths: ['pass protection', 'run blocking', 'footwork', 'strength'],
-          fitTags: ['OL', 'D1', 'South', 'transfer'],
-          stats: { pancake_blocks: 42, pressures_allowed: 8, sacks_allowed: 2 },
-          recruiterPitch: 'Trevor Adams is a D1 OL with only 2 sacks allowed all season.',
-        },
-      },
-    },
-    {
-      email: 'jaylen.brooks@athlete.fscout.ai',
-      name: 'Jaylen Brooks',
-      sport: 'football',
-      position: 'CB',
-      dossier: {
-        completeness: 0.80,
-        narrative: 'Press corner with elite ball-hawking instincts.',
-        advocacyScore: 0.77,
-        data: {
-          leagueLevel: 'D1', heightCm: 182, weightKg: 84,
-          graduationYear: 2025, ncaaEligible: true, inTransferPortal: true,
-          preferredRegions: ['Northeast', 'Mid-Atlantic'], scholarshipNeed: true,
-          gpa: 3.1, intendedMajor: 'Criminal Justice',
-          trajectory: 'IMPROVING',
-          keyStrengths: ['man coverage', 'ball hawk', 'press technique', 'speed'],
-          fitTags: ['CB', 'D1', 'Northeast', 'defense'],
-          stats: { interceptions: 5, pass_breakups: 14, tackles: 38, forced_fumbles: 2 },
-          recruiterPitch: 'Jaylen Brooks is a D1 CB with 5 INTs and elite press coverage.',
-        },
-      },
-    },
-    {
-      email: 'marcus.webb@athlete.fscout.ai',
-      name: 'Marcus Webb',
-      sport: 'football',
-      position: 'QB',
-      dossier: {
-        completeness: 0.86,
-        narrative: 'Surgical pocket passer with elite accuracy numbers.',
-        advocacyScore: 0.83,
-        data: {
-          leagueLevel: 'D2', heightCm: 184, weightKg: 91,
-          graduationYear: 2026, ncaaEligible: true, inTransferPortal: true,
-          preferredRegions: ['Midwest', 'Great Plains'], scholarshipNeed: true,
-          gpa: 3.5, intendedMajor: 'Education',
-          trajectory: 'IMPROVING',
-          keyStrengths: ['accuracy', 'pocket presence', 'decision making', 'leadership'],
-          fitTags: ['QB', 'D2', 'Midwest', 'accuracy'],
-          stats: { passing_yards: 3100, touchdowns: 26, interceptions: 4, completion_rate: 0.71, rushing_yards: 180 },
-          recruiterPitch: 'Marcus Webb is a D2 QB with 71% completion rate. Ready to step up to D1.',
-        },
-      },
-    },
-  ];
+    };
+  });
 
   for (const { email, name, sport, position, dossier } of athletes) {
     // Crear usuario con contraseña hasheada
@@ -327,9 +298,11 @@ async function main() {
   }
 
   console.log('\n📋 Credentials:');
-  console.log('  Recruiter: coach@university.edu / recruiter123');
-  console.log('  Athletes:  [email] / athlete123');
-  console.log(`\n✅ Seed complete — ${athletes.length} athletes + 1 recruiter`);
+  console.log('  Recruiters: coach@university.edu / recruiter123 (+5 more, same password)');
+  console.log('  Athletes:   [email] / athlete123');
+  console.log(
+    `\n✅ Seed complete — ${athletes.length} athletes + ${1 + additionalRecruiters.length} recruiters`,
+  );
   // Generar pitches iniciales para todos los atletas
   console.log('\n🤖 Generating Jerry pitches...');
   const allAthletes = await prisma.athlete.findMany({ include: { dossier: true } });
