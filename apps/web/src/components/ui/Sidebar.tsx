@@ -174,7 +174,7 @@ export function RecruiterSidebar({
   const navItems: NavItem[] = [
     { key: "pipeline", icon: <Layers size={15} />, label: "Pipeline", count: counts.pipeline, onClick: onPipelineClick ?? (() => {}) },
     { key: "connections", icon: <Users size={15} />, label: "Connections", count: counts.connections, unread: counts.unreadConnections > 0, onClick: onConnectionsClick ?? (() => {}) },
-    { key: "introductions", icon: <Share2 size={15} />, label: "Introductions", count: counts.introductions, onClick: onIntroductionsClick ?? (() => {}) },
+    // { key: "introductions", icon: <Share2 size={15} />, label: "Introductions", count: counts.introductions, onClick: onIntroductionsClick ?? (() => {}) },
   ];
 
   const closeOnMobile = () => onClose?.();
