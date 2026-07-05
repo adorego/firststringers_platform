@@ -7,6 +7,7 @@ import { Server, Socket } from 'socket.io';
 import { JerrySessionState } from '../../../shared/types';
 import type { PrismaService } from '../../../shared/prisma/prisma.service';
 import type { SessionService } from '../session.service';
+import type { MailService } from '../../mail/mail.service';
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -44,9 +45,10 @@ function makeSession(messageCount = 0): JerrySessionState {
 
 const mockJerryQueue = { add: jest.fn() };
 const mockJwtService = { verify: jest.fn() };
-const mockPrisma = { user: { findUnique: jest.fn() } };
+const mockPrisma = { user: { findUnique: jest.fn() }, athlete: { findUnique: jest.fn() } };
 const mockSession = { getSession: jest.fn(), appendMessage: jest.fn() };
 const mockEventEmitter = { emit: jest.fn() };
+const mockMail = { sendConnectionRequestEmail: jest.fn().mockResolvedValue(undefined) };
 
 const mockSocketRoom = { emit: jest.fn() };
 const mockServer = { to: jest.fn().mockReturnValue(mockSocketRoom) };
@@ -60,6 +62,7 @@ function makeGateway(): JerryGateway {
     mockPrisma as unknown as PrismaService,
     mockSession as unknown as SessionService,
     mockEventEmitter as unknown as EventEmitter2,
+    mockMail as unknown as MailService,
   );
   gateway.server = mockServer as unknown as Server;
   return gateway;

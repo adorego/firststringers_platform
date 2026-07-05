@@ -1,18 +1,23 @@
 import {
   Injectable,
   ForbiddenException,
+  Logger,
   NotFoundException,
 } from '@nestjs/common';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { PrismaService } from '../../shared/prisma/prisma.service';
 import { RecruiterService } from '../recruiter/recruiter.service';
+import { MailService } from '../mail/mail.service';
 
 @Injectable()
 export class ConversationsService {
+  private readonly logger = new Logger(ConversationsService.name);
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly recruiterService: RecruiterService,
     private readonly eventEmitter: EventEmitter2,
+    private readonly mail: MailService,
   ) {}
 
   async getCountsForRecruiter(recruiterId: string): Promise<{
@@ -189,13 +194,28 @@ export class ConversationsService {
       throw new ForbiddenException('Not your conversation');
     if (conv.status === 'accepted') return conv;
 
-    return this.prisma.directConversation.update({
+    const updated = await this.prisma.directConversation.update({
       where: { id: conversationId },
       data: { status: 'accepted' },
       include: {
         recruiter: { select: { id: true, name: true, email: true } },
+        athlete: { select: { name: true } },
       },
     });
+
+    if (updated.recruiter?.email) {
+      void this.mail.sendConnectionAcceptedEmail({
+        to: updated.recruiter.email,
+        athleteName: updated.athlete?.name ?? 'An athlete',
+        conversationId,
+      }).catch((err: unknown) => {
+        this.logger.warn(
+          `Failed to send connection-accepted email to ${updated.recruiter?.email}: ${String(err)}`,
+        );
+      });
+    }
+
+    return updated;
   }
 
   async declineRequest(conversationId: string, athleteId: string) {

@@ -10,6 +10,7 @@ import { ConfigService } from '@nestjs/config';
 import * as bcrypt from 'bcrypt';
 import { randomInt } from 'crypto';
 import { PrismaService } from '../../shared/prisma/prisma.service';
+import { MailService } from '../mail/mail.service';
 import { RegisterDto } from './dto/register.dto';
 import { LoginDto } from './dto/login.dto';
 
@@ -23,6 +24,7 @@ export class AuthService {
     private prisma: PrismaService,
     private jwt: JwtService,
     private config: ConfigService,
+    private mail: MailService,
   ) {
     this.refreshSecret =
       this.config.get<string>('JWT_REFRESH_SECRET') ||
@@ -98,8 +100,11 @@ export class AuthService {
       user.recruiterId,
     );
 
-    // Fire OTP asynchronously — don't block registration
+    // Fire emails asynchronously — don't block registration
     void this.sendOtp(user.id).catch(() => {});
+    void this.mail.sendWelcomeEmail({ to: user.email, name: dto.name }).catch((err: unknown) => {
+      this.logger.warn(`Failed to send welcome email to ${user.email}: ${String(err)}`);
+    });
 
     return tokens;
   }
@@ -210,10 +215,9 @@ export class AuthService {
       },
     });
 
-    // TODO: Replace with real email provider (Resend, SendGrid, etc.)
-    this.logger.log(
-      `[EMAIL VERIFICATION] Code for ${user.email}: ${plainCode}`,
-    );
+    void this.mail.sendOtpEmail({ to: user.email, code: plainCode }).catch((err: unknown) => {
+      this.logger.warn(`Failed to send OTP email to ${user.email}: ${String(err)}`);
+    });
 
     return { sent: true };
   }

@@ -15,6 +15,7 @@ import { EventEmitter2 } from '@nestjs/event-emitter';
 import { InjectQueue } from '@nestjs/bull';
 import type { Queue } from 'bull';
 import { PrismaService } from '../../shared/prisma/prisma.service';
+import { MailService } from '../mail/mail.service';
 import { SessionService } from './session.service';
 import { SendMessageDto } from './dto/send-message.dto';
 import { JerryMessage, MessageJob, DossierData } from '../../shared/types';
@@ -40,6 +41,7 @@ export class JerryGateway implements OnGatewayConnection, OnGatewayDisconnect {
     private readonly prisma: PrismaService,
     private readonly session: SessionService,
     private readonly eventEmitter: EventEmitter2,
+    private readonly mail: MailService,
   ) {}
 
   async handleConnection(client: Socket) {
@@ -199,6 +201,7 @@ export class JerryGateway implements OnGatewayConnection, OnGatewayDisconnect {
   @OnEvent('contact.initiated')
   async handleContactInitiated(payload: {
     athleteId: string;
+    athleteName?: string;
     recruiterName: string;
     organizationName?: string;
     conversationId: string;
@@ -230,6 +233,26 @@ export class JerryGateway implements OnGatewayConnection, OnGatewayDisconnect {
       this.logger.log(
         `Jerry notified athlete ${payload.athleteId} of connection request from ${from}`,
       );
+
+      // Email fallback for athletes who are offline when the request arrives
+      const athlete = await this.prisma.athlete.findUnique({
+        where: { id: payload.athleteId },
+        select: { email: true, name: true },
+      });
+      if (athlete) {
+        void this.mail.sendConnectionRequestEmail({
+          to: athlete.email,
+          athleteName: payload.athleteName ?? athlete.name,
+          recruiterName: payload.recruiterName,
+          organizationName: payload.organizationName,
+          pitch: payload.pitch,
+          conversationId: payload.conversationId,
+        }).catch((err: unknown) => {
+          this.logger.warn(
+            `Failed to send connection-request email to ${athlete.email}: ${String(err)}`,
+          );
+        });
+      }
     } catch (err) {
       this.logger.error(
         `Failed to notify athlete ${payload.athleteId} of connection request`,
