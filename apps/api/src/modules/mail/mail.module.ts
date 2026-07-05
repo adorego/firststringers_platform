@@ -4,7 +4,8 @@ import { MailController } from './mail.controller';
 import { MailerModule } from '@nestjs-modules/mailer';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { HandlebarsAdapter } from '@nestjs-modules/mailer/adapters/handlebars.adapter';
-import * as sgTransport from 'nodemailer-sendgrid';
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+const sgTransport = require('nodemailer-sendgrid') as (opts: { apiKey: string }) => unknown;
 
 import { join } from 'path';
 
