@@ -3,7 +3,7 @@ import { MailService } from './mail.service';
 import { MailController } from './mail.controller';
 import { MailerModule } from '@nestjs-modules/mailer';
 import { ConfigModule, ConfigService } from '@nestjs/config';
-import { HandlebarsAdapter } from '@nestjs-modules/mailer/dist/adapters/handlebars.adapter';
+import { HandlebarsAdapter } from '@nestjs-modules/mailer/adapters/handlebars.adapter';
 import * as sgTransport from 'nodemailer-sendgrid';
 
 import { join } from 'path';
