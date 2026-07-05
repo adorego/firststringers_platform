@@ -240,18 +240,20 @@ export class JerryGateway implements OnGatewayConnection, OnGatewayDisconnect {
         select: { email: true, name: true },
       });
       if (athlete) {
-        void this.mail.sendConnectionRequestEmail({
-          to: athlete.email,
-          athleteName: payload.athleteName ?? athlete.name,
-          recruiterName: payload.recruiterName,
-          organizationName: payload.organizationName,
-          pitch: payload.pitch,
-          conversationId: payload.conversationId,
-        }).catch((err: unknown) => {
-          this.logger.warn(
-            `Failed to send connection-request email to ${athlete.email}: ${String(err)}`,
-          );
-        });
+        void this.mail
+          .sendConnectionRequestEmail({
+            to: athlete.email,
+            athleteName: payload.athleteName ?? athlete.name,
+            recruiterName: payload.recruiterName,
+            organizationName: payload.organizationName,
+            pitch: payload.pitch,
+            conversationId: payload.conversationId,
+          })
+          .catch((err: unknown) => {
+            this.logger.warn(
+              `Failed to send connection-request email to ${athlete.email}: ${String(err)}`,
+            );
+          });
       }
     } catch (err) {
       this.logger.error(

@@ -127,9 +127,16 @@ export class RecruiterService {
       },
     });
 
-    void this.mail.sendVerificationSubmittedEmail({ to: recruiter.email, name: recruiter.name }).catch((err: unknown) => {
-      this.logger.warn(`Failed to send verification-submitted email to ${recruiter.email}: ${String(err)}`);
-    });
+    void this.mail
+      .sendVerificationSubmittedEmail({
+        to: recruiter.email,
+        name: recruiter.name,
+      })
+      .catch((err: unknown) => {
+        this.logger.warn(
+          `Failed to send verification-submitted email to ${recruiter.email}: ${String(err)}`,
+        );
+      });
 
     return { verificationStatus: 'under_review' };
   }
@@ -152,13 +159,17 @@ export class RecruiterService {
       },
     });
 
-    void this.mail.sendVerificationResultEmail({
-      to: recruiter.email,
-      name: recruiter.name,
-      approved: status === 'verified',
-    }).catch((err: unknown) => {
-      this.logger.warn(`Failed to send verification-result email to ${recruiter.email}: ${String(err)}`);
-    });
+    void this.mail
+      .sendVerificationResultEmail({
+        to: recruiter.email,
+        name: recruiter.name,
+        approved: status === 'verified',
+      })
+      .catch((err: unknown) => {
+        this.logger.warn(
+          `Failed to send verification-result email to ${recruiter.email}: ${String(err)}`,
+        );
+      });
   }
 
   async listPendingVerifications() {

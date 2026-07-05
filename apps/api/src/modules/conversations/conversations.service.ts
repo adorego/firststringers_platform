@@ -204,15 +204,17 @@ export class ConversationsService {
     });
 
     if (updated.recruiter?.email) {
-      void this.mail.sendConnectionAcceptedEmail({
-        to: updated.recruiter.email,
-        athleteName: updated.athlete?.name ?? 'An athlete',
-        conversationId,
-      }).catch((err: unknown) => {
-        this.logger.warn(
-          `Failed to send connection-accepted email to ${updated.recruiter?.email}: ${String(err)}`,
-        );
-      });
+      void this.mail
+        .sendConnectionAcceptedEmail({
+          to: updated.recruiter.email,
+          athleteName: updated.athlete?.name ?? 'An athlete',
+          conversationId,
+        })
+        .catch((err: unknown) => {
+          this.logger.warn(
+            `Failed to send connection-accepted email to ${updated.recruiter?.email}: ${String(err)}`,
+          );
+        });
     }
 
     return updated;

@@ -102,16 +102,21 @@ export class AuthService {
 
     // Fire emails asynchronously — don't block registration
     void this.sendOtp(user.id).catch((mailError: unknown) => {
-      const err = mailError instanceof Error ? mailError : new Error(String(mailError));
+      const err =
+        mailError instanceof Error ? mailError : new Error(String(mailError));
       this.logger.error(
         `User ${user.email} registered successfully but verification email failed. ` +
-        `User may need to request resend. Error: ${err.message}`,
+          `User may need to request resend. Error: ${err.message}`,
         err.stack,
       );
     });
-    void this.mail.sendWelcomeEmail({ to: user.email, name: dto.name }).catch((err: unknown) => {
-      this.logger.warn(`Failed to send welcome email to ${user.email}: ${String(err)}`);
-    });
+    void this.mail
+      .sendWelcomeEmail({ to: user.email, name: dto.name })
+      .catch((err: unknown) => {
+        this.logger.warn(
+          `Failed to send welcome email to ${user.email}: ${String(err)}`,
+        );
+      });
 
     return tokens;
   }
@@ -222,9 +227,13 @@ export class AuthService {
       },
     });
 
-    void this.mail.sendOtpEmail({ to: user.email, code: plainCode }).catch((err: unknown) => {
-      this.logger.warn(`Failed to send OTP email to ${user.email}: ${String(err)}`);
-    });
+    void this.mail
+      .sendOtpEmail({ to: user.email, code: plainCode })
+      .catch((err: unknown) => {
+        this.logger.warn(
+          `Failed to send OTP email to ${user.email}: ${String(err)}`,
+        );
+      });
 
     return { sent: true };
   }

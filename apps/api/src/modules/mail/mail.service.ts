@@ -2,11 +2,11 @@ import { Injectable, Logger } from '@nestjs/common';
 import { MailerService } from '@nestjs-modules/mailer';
 import { randomUUID } from 'node:crypto';
 
-const TRACKING_BASE = process.env.TRACKING_BASE ?? 'https://api.firststringers.com/email';
+const TRACKING_BASE =
+  process.env.TRACKING_BASE ?? 'https://api.firststringers.com/email';
 const FRONTEND_URL = process.env.FRONTEND_URL ?? 'https://firststringers.com';
 
 type Recipient = { to: string; name?: string };
-
 
 @Injectable()
 export class MailService {
@@ -145,7 +145,14 @@ export class MailService {
     pitch?: string;
     conversationId: string;
   }) {
-    const { to, athleteName, recruiterName, organizationName, pitch, conversationId } = params;
+    const {
+      to,
+      athleteName,
+      recruiterName,
+      organizationName,
+      pitch,
+      conversationId,
+    } = params;
     const year = new Date().getFullYear();
     const from = organizationName
       ? `${recruiterName} from ${organizationName}`
@@ -174,7 +181,9 @@ export class MailService {
       `${from} wants to connect with you on First Stringers.`,
       pitch ? `"${pitch}"` : '',
       `Review the request at: ${ctaUrl}`,
-    ].filter(Boolean).join('\n\n');
+    ]
+      .filter(Boolean)
+      .join('\n\n');
 
     await this.mailer.sendMail({
       to,
@@ -219,7 +228,7 @@ export class MailService {
     // Límite de concurrencia simple (evita saturar SMTP). Ajusta según tu proveedor.
     const CONCURRENCY = 5;
     const queue = [...recipients];
-    const results: Array<{ to: string; ok: boolean; error?: any; messageId?: string }> = [];
+    const results: Array<{ to: string; ok: boolean; error?: string }> = [];
 
     const worker = async () => {
       while (queue.length) {
@@ -247,22 +256,20 @@ export class MailService {
               ${pixel}
             </div>`.trim();
 
-          const info = await this.mailer.sendMail({
+          await this.mailer.sendMail({
             to: r.to,
             subject,
-            text, // siempre incluir texto plano para deliverability
+            text,
             html,
-            headers: {
-              'X-FS-Correlation': correlationId,
-              // Cabeceras útiles: List-Unsubscribe si corresponde
-              // 'List-Unsubscribe': '<mailto:unsubscribe@firststringers.com>, <https://firststringers.com/unsub>'
-            },
+            headers: { 'X-FS-Correlation': correlationId },
           });
 
-          results.push({ to: r.to, ok: true, messageId: info?.messageId });
+          results.push({ to: r.to, ok: true });
         } catch (error) {
-          this.logger.warn(`Mail failed to ${r.to}: ${error?.message ?? error}`);
-          results.push({ to: r.to, ok: false, error: error?.message ?? String(error) });
+          const message =
+            error instanceof Error ? error.message : String(error);
+          this.logger.warn(`Mail failed to ${r.to}: ${message}`);
+          results.push({ to: r.to, ok: false, error: message });
         }
       }
     };

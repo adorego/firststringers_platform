@@ -45,10 +45,15 @@ function makeSession(messageCount = 0): JerrySessionState {
 
 const mockJerryQueue = { add: jest.fn() };
 const mockJwtService = { verify: jest.fn() };
-const mockPrisma = { user: { findUnique: jest.fn() }, athlete: { findUnique: jest.fn() } };
+const mockPrisma = {
+  user: { findUnique: jest.fn() },
+  athlete: { findUnique: jest.fn() },
+};
 const mockSession = { getSession: jest.fn(), appendMessage: jest.fn() };
 const mockEventEmitter = { emit: jest.fn() };
-const mockMail = { sendConnectionRequestEmail: jest.fn().mockResolvedValue(undefined) };
+const mockMail = {
+  sendConnectionRequestEmail: jest.fn().mockResolvedValue(undefined),
+};
 
 const mockSocketRoom = { emit: jest.fn() };
 const mockServer = { to: jest.fn().mockReturnValue(mockSocketRoom) };
