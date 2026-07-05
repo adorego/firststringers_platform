@@ -1,7 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { MailerService } from '@nestjs-modules/mailer';
-import { randomUUID} from 'node:crypto';
-import { join } from 'path';
+import { randomUUID } from 'node:crypto';
 
 const TRACKING_BASE = process.env.TRACKING_BASE ?? 'https://api.firststringers.com/email';
 const FRONTEND_URL = process.env.FRONTEND_URL ?? 'https://firststringers.com';
@@ -14,51 +13,38 @@ export class MailService {
   private readonly logger = new Logger(MailService.name);
   constructor(private readonly mailer: MailerService) {}
 
-  async sendWelcomeEmail(params: {
-    to: string;
-    name: string;
-    useCidImage?: boolean; // usa CID si no tienes la imagen hosteada
-  }) {
-    const { to, name, useCidImage = true } = params;
-
-    const ctx = {
-      subject: "YOU’RE IN!",
-      preheader: "Welcome to First Stringers, the athletes network.",
-      name,
-      heroUrl: process.env.FS_HERO_URL,   // si usas URL pública
-      heroCid: "welcome-hero",            // si usas CID
-      year: new Date().getFullYear(),
-    };
+  async sendWelcomeEmail(params: { to: string; name: string }) {
+    const { to, name } = params;
+    const year = new Date().getFullYear();
+    const html = `
+      <!doctype html>
+      <meta name="color-scheme" content="light">
+      <div style="font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;line-height:1.6;max-width:520px;margin:0 auto">
+        <span style="display:none;visibility:hidden;opacity:0;height:0;width:0">Welcome to First Stringers, the athletes network.</span>
+        <div style="background:#000;padding:24px 32px;border-radius:8px 8px 0 0">
+          <h1 style="margin:0;color:#00D4AA;font-size:28px;letter-spacing:1px">YOU'RE IN!</h1>
+        </div>
+        <div style="background:#111827;padding:32px;border-radius:0 0 8px 8px;color:#e5e7eb">
+          <p style="margin:0 0 16px">Hey <b>${name}</b>,</p>
+          <p style="margin:0 0 16px">You just took the first step toward being part of something bigger.</p>
+          <p style="margin:0 0 16px">Whether you're an athlete chasing your dreams or a recruiter searching for the next big talent, you're now officially on the inside.</p>
+          <p style="margin:0 0 24px">We'll keep you updated as we gear up. Expect sneak peeks, news, and insider updates on everything coming your way.</p>
+          <a href="${FRONTEND_URL}" style="display:inline-block;background:#00D4AA;color:#000;text-decoration:none;padding:12px 28px;border-radius:6px;font-weight:700">Go to First Stringers →</a>
+          <p style="font-size:12px;color:#6b7280;margin-top:32px">&copy; ${year} First Stringers</p>
+        </div>
+      </div>`.trim();
 
     await this.mailer.sendMail({
       to,
-      subject: "YOU’RE IN! – First Stringers",
-      template: 'fs_welcome',           // templates/fs_welcome.hbs
-      context: { ...ctx, heroCid: 'welcome-hero' },
+      subject: "YOU'RE IN! – First Stringers",
       text: [
-        `You're in! Welcome to First Stringers, the athletes network.`,
+        `You're in! Welcome to First Stringers, ${name}.`,
         ``,
-        `Hey ${name},`,
-        `You just took the first step toward being part of something bigger.`,
-        `Whether you’re an athlete chasing your dreams or a coach/recruiter searching for the next big talent, you’re now officially on the inside.`,
+        `You just took the first step toward being part of something bigger. We'll keep you updated as we gear up for the official launch.`,
         ``,
-        `At FS, we’re building a global sports community that connects talent with opportunity, giving athletes visibility and growth, while giving recruiters smarter tools to discover and connect.`,
-        ``,
-        `What’s next?`,
-        `We’ll keep you updated as we gear up for the official launch of First Stringers. Expect sneak peeks, news, and insider updates on everything coming your way.`,
+        `Visit us at: ${FRONTEND_URL}`,
       ].join('\n'),
-      attachments: useCidImage
-        ? [
-            {
-              // Reemplaza la ruta por donde tengas guardada la imagen en tu proyecto
-              filename: 'welcome-hero.png',
-              path: join(process.cwd(), 'assets/email/welcome-hero.png'),
-              cid: 'welcome-hero', // coincide con {{heroCid}}
-              contentType: 'image/png',
-              contentDisposition: 'inline',    
-            },
-          ]
-        : undefined,
+      html,
     });
   }
 

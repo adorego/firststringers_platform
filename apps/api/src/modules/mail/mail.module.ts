@@ -21,7 +21,7 @@ import { join } from 'path';
       apiKey: process.env.SENDGRID_API_KEY!, // ← clave de API
     }) as any, // cast para contentar a TS
         defaults: {
-          from: `${cfg.get('MAIL_FROM_NAME')} <${cfg.get('MAIL_FROM_ADDRESS')}>`,
+          from: process.env.MAIL_FROM ?? 'no-reply@firststringers.com',
         },
         template: {
           // si dejas los .hbs en la raíz del repo:
