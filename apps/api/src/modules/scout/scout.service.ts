@@ -46,7 +46,9 @@ export class ScoutService {
         ? (positionMap[filters.position.toLowerCase()] ?? filters.position)
         : undefined;
 
-      const where: any = {};
+      const where: any = {
+        representationStatus: { in: ['represented', 'verified'] },
+      };
       if (filters.sport)       where.sport    = { equals: filters.sport, mode: 'insensitive' };
       if (normalizedPosition)  where.position = { equals: normalizedPosition, mode: 'insensitive' };
 
