@@ -30,6 +30,21 @@ activation se dispara UNA vez (el turno que cruza el umbral) y despues
 todo corre en modo continuous: Jerry proactivo, orientacion conversacional,
 nunca lenguaje de formulario. La completitud es interna (pitch, Billy),
 jamas visible para el atleta.
+
+## Intelligence Core (brains/)
+El system prompt de Jerry se deriva de las Cognitive Specs en brains/
+(FS-CS-002 Jerry Operating Brain, FS-CS-003 Communication, FS-CS-004
+Identity). Cambios de razonamiento se documentan primero ahi (proceso de
+gobernanza en brains/README.md) y se reflejan en prompt-builder en el
+mismo PR.
+
+## Representation lifecycle (FS-CS-005)
+Athlete.representationStatus: registered → activation → represented →
+verified. RepresentationService persiste las transiciones desde el
+ConversationWorker: cualquier estrategia de onboarding → activation;
+estrategia activation o continuous → represented (idempotente).
+Scout solo devuelve atletas represented/verified — un atleta por debajo
+del umbral NO es visible para recruiters ni para Billy.
 ## Cuando agregar una nueva estrategia
 Agregar en strategy-planner.service.ts, luego en
 prompt-builder.service.ts, luego el test correspondiente.
