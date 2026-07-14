@@ -1,5 +1,11 @@
 export type UserRole = 'ATHLETE' | 'RECRUITER' | 'COACH' | 'ADMIN';
 
+export type RepresentationStatus =
+  | 'registered'
+  | 'activation'
+  | 'represented'
+  | 'verified';
+
 export type MessageRole = 'user' | 'assistant';
 
 export type JerryIntent =

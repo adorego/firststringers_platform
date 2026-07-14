@@ -9,6 +9,7 @@ import type { DataExtractorService } from '../data-extractor.service';
 import type { ValidatorService } from '../validator.service';
 import type { StrategyPlannerService } from '../strategy-planner.service';
 import type { PromptBuilderService } from '../prompt-builder.service';
+import type { RepresentationService } from '../representation.service';
 import type { LLMService } from '../../../shared/llm/llm.service';
 import type { EventEmitter2 } from '@nestjs/event-emitter';
 import {
@@ -77,6 +78,13 @@ const mockPromptBuilder: jest.Mocked<Pick<PromptBuilderService, 'build'>> = {
   build: jest.fn(),
 };
 
+const mockRepresentation: jest.Mocked<
+  Pick<RepresentationService, 'ensureActivation' | 'markRepresented'>
+> = {
+  ensureActivation: jest.fn(),
+  markRepresented: jest.fn(),
+};
+
 const mockLlm: jest.Mocked<Pick<LLMService, 'chat'>> = {
   chat: jest.fn(),
 };
@@ -93,6 +101,7 @@ function makeWorker(): ConversationWorker {
     mockValidator as unknown as ValidatorService,
     mockStrategyPlanner as unknown as StrategyPlannerService,
     mockPromptBuilder as unknown as PromptBuilderService,
+    mockRepresentation as unknown as RepresentationService,
     mockLlm as unknown as LLMService,
     mockEventEmitter as unknown as EventEmitter2,
   );
@@ -246,6 +255,41 @@ describe('ConversationWorker', () => {
     expect(emittedEvents).not.toContain('dossier.update');
     expect(mockSession.updateDossierSnapshot).not.toHaveBeenCalled();
     expect(emittedEvents).toContain('jerry.response');
+  });
+
+  it('marks the athlete represented when the strategy is activation', async () => {
+    mockStrategyPlanner.decide.mockReturnValue({ type: 'activation' });
+
+    await worker.handle(makeJob());
+
+    expect(mockRepresentation.markRepresented).toHaveBeenCalledWith(
+      'athlete-123',
+    );
+    expect(mockRepresentation.ensureActivation).not.toHaveBeenCalled();
+  });
+
+  it('marks the athlete represented when the strategy is continuous', async () => {
+    mockStrategyPlanner.decide.mockReturnValue({ type: 'continuous' });
+
+    await worker.handle(makeJob());
+
+    expect(mockRepresentation.markRepresented).toHaveBeenCalledWith(
+      'athlete-123',
+    );
+  });
+
+  it('moves the athlete into activation during onboarding strategies', async () => {
+    mockStrategyPlanner.decide.mockReturnValue({
+      type: 'strategic_ask',
+      targetField: 'GPA',
+    });
+
+    await worker.handle(makeJob());
+
+    expect(mockRepresentation.ensureActivation).toHaveBeenCalledWith(
+      'athlete-123',
+    );
+    expect(mockRepresentation.markRepresented).not.toHaveBeenCalled();
   });
 });
 

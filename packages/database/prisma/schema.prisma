@@ -28,6 +28,8 @@ model Athlete {
   sessions       JerrySession[]
   user           User?
   conversations  DirectConversation[]
+  representationStatus String    @default("registered")
+  representedAt        DateTime?
   createdAt      DateTime             @default(now())
   updatedAt      DateTime             @updatedAt
 }

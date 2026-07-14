@@ -8,6 +8,7 @@ import { DataExtractorService } from './data-extractor.service';
 import { ValidatorService } from './validator.service';
 import { StrategyPlannerService } from './strategy-planner.service';
 import { PromptBuilderService } from './prompt-builder.service';
+import { RepresentationService } from './representation.service';
 import { LLMService } from '../../shared/llm/llm.service';
 import { MessageJob, JerryMessage } from '../../shared/types';
 
@@ -22,6 +23,7 @@ export class ConversationWorker {
     private readonly validator: ValidatorService,
     private readonly strategyPlanner: StrategyPlannerService,
     private readonly promptBuilder: PromptBuilderService,
+    private readonly representation: RepresentationService,
     private readonly llm: LLMService,
     private readonly eventEmitter: EventEmitter2,
   ) {}
@@ -42,6 +44,12 @@ export class ConversationWorker {
         extractedData,
         session: sessionState,
       });
+
+      if (strategy.type === 'activation' || strategy.type === 'continuous') {
+        await this.representation.markRepresented(athleteId);
+      } else {
+        await this.representation.ensureActivation(athleteId);
+      }
 
       const response = await this.llm.chat({
         systemPrompt: this.promptBuilder.build(strategy),
