@@ -1,8 +1,19 @@
 import { RepresentationService } from '../representation.service';
 import type { PrismaService } from '../../../shared/prisma/prisma.service';
 
+type UpdateManyArgs = {
+  where: {
+    id: string;
+    representationStatus: string | { in: string[] };
+  };
+  data: {
+    representationStatus: string;
+    representedAt?: Date;
+  };
+};
+
 describe('RepresentationService', () => {
-  const updateMany = jest.fn();
+  const updateMany = jest.fn<Promise<{ count: number }>, [UpdateManyArgs]>();
   const prisma = {
     athlete: { updateMany },
   } as unknown as PrismaService;
@@ -36,7 +47,7 @@ describe('RepresentationService', () => {
         },
         data: {
           representationStatus: 'represented',
-          representedAt: expect.any(Date),
+          representedAt: expect.any(Date) as Date,
         },
       });
     });
@@ -44,9 +55,10 @@ describe('RepresentationService', () => {
     it('never targets athletes already represented or verified', async () => {
       await service.markRepresented('athlete-1');
 
-      const where = updateMany.mock.calls[0][0].where;
-      expect(where.representationStatus.in).not.toContain('represented');
-      expect(where.representationStatus.in).not.toContain('verified');
+      const { where } = updateMany.mock.calls[0][0];
+      const status = where.representationStatus as { in: string[] };
+      expect(status.in).not.toContain('represented');
+      expect(status.in).not.toContain('verified');
     });
   });
 });

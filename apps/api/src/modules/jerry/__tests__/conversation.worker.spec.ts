@@ -93,10 +93,11 @@ const mockRepresentation: jest.Mocked<
   markRepresented: jest.fn(),
 };
 
-const mockManualExtractor: jest.Mocked<Pick<ManualExtractorService, 'extract'>> =
-  {
-    extract: jest.fn(),
-  };
+const mockManualExtractor: jest.Mocked<
+  Pick<ManualExtractorService, 'extract'>
+> = {
+  extract: jest.fn(),
+};
 
 const mockOwnersManual: jest.Mocked<
   Pick<OwnersManualService, 'get' | 'merge'>
@@ -318,7 +319,7 @@ describe('ConversationWorker', () => {
     expect(mockRepresentation.markRepresented).not.toHaveBeenCalled();
   });
 
-  it('merges manual insights into the Owner\'s Manual when the extractor finds them', async () => {
+  it("merges manual insights into the Owner's Manual when the extractor finds them", async () => {
     const insights = { motivations: ['prove doubters wrong'] };
     mockManualExtractor.extract.mockResolvedValue(insights);
 
@@ -330,7 +331,7 @@ describe('ConversationWorker', () => {
     );
   });
 
-  it('does not touch the Owner\'s Manual when no insights are found', async () => {
+  it("does not touch the Owner's Manual when no insights are found", async () => {
     mockManualExtractor.extract.mockResolvedValue(null);
 
     await worker.handle(makeJob());
@@ -338,7 +339,7 @@ describe('ConversationWorker', () => {
     expect(mockOwnersManual.merge).not.toHaveBeenCalled();
   });
 
-  it('feeds the Owner\'s Manual into the prompt builder', async () => {
+  it("feeds the Owner's Manual into the prompt builder", async () => {
     const manual = { communicationStyle: 'direct and brief' };
     mockOwnersManual.get.mockResolvedValue(manual);
 

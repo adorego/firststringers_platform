@@ -1,9 +1,20 @@
 import { OwnersManualService } from '../owners-manual.service';
 import type { PrismaService } from '../../../shared/prisma/prisma.service';
+import type { OwnersManualData } from '../../../shared/types';
+
+type UpsertArgs = {
+  where: { athleteId: string };
+  create: { athleteId: string; data: OwnersManualData };
+  update: { data: OwnersManualData };
+};
 
 describe('OwnersManualService', () => {
   const findUnique = jest.fn();
-  const upsert = jest.fn();
+  const upsert = jest.fn<Promise<unknown>, [UpsertArgs]>();
+
+  function upsertedData(): OwnersManualData {
+    return upsert.mock.calls[0][0].update.data;
+  }
   const prisma = {
     ownersManual: { findUnique, upsert },
   } as unknown as PrismaService;
@@ -32,7 +43,9 @@ describe('OwnersManualService', () => {
 
   describe('merge', () => {
     it('creates the manual on first insight', async () => {
-      await service.merge('athlete-1', { motivations: ['be the first D1 in my family'] });
+      await service.merge('athlete-1', {
+        motivations: ['be the first D1 in my family'],
+      });
 
       expect(upsert).toHaveBeenCalledWith({
         where: { athleteId: 'athlete-1' },
@@ -51,7 +64,7 @@ describe('OwnersManualService', () => {
 
       await service.merge('athlete-1', { values: ['family', 'loyalty'] });
 
-      const data = upsert.mock.calls[0][0].update.data;
+      const data = upsertedData();
       expect(data.values).toEqual(['Family', 'discipline', 'loyalty']);
     });
 
@@ -64,7 +77,7 @@ describe('OwnersManualService', () => {
         communicationStyle: 'opens up when asked about games',
       });
 
-      const data = upsert.mock.calls[0][0].update.data;
+      const data = upsertedData();
       expect(data.communicationStyle).toBe('opens up when asked about games');
     });
 
@@ -75,7 +88,7 @@ describe('OwnersManualService', () => {
 
       await service.merge('athlete-1', { values: ['work ethic'] });
 
-      const data = upsert.mock.calls[0][0].update.data;
+      const data = upsertedData();
       expect(data.motivations).toEqual(['prove myself']);
       expect(data.learningStyle).toBe('visual');
       expect(data.values).toEqual(['work ethic']);
@@ -87,7 +100,7 @@ describe('OwnersManualService', () => {
         communicationStyle: '   ',
       });
 
-      const data = upsert.mock.calls[0][0].update.data;
+      const data = upsertedData();
       expect(data.values).toBeUndefined();
       expect(data.communicationStyle).toBeUndefined();
     });

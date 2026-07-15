@@ -36,7 +36,7 @@ describe('PromptBuilderService', () => {
       expect(result).toContain('never use sales language, hype');
     });
 
-    it('includes the Owner\'s Manual understanding when provided', () => {
+    it("includes the Owner's Manual understanding when provided", () => {
       const result = service.build(
         { type: 'continuous' },
         {

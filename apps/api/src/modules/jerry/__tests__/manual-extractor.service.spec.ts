@@ -12,14 +12,17 @@ describe('ManualExtractorService', () => {
     extractManualInsights.mockResolvedValue({ values: ['family'] });
   });
 
-  it.each<JerryIntent>(['personal', 'character', 'recruiting', 'availability', 'other'])(
-    'extracts understanding signals for %s messages',
-    async (intent) => {
-      const result = await service.extract('my family comes first', intent);
-      expect(extractManualInsights).toHaveBeenCalledWith('my family comes first');
-      expect(result).toEqual({ values: ['family'] });
-    },
-  );
+  it.each<JerryIntent>([
+    'personal',
+    'character',
+    'recruiting',
+    'availability',
+    'other',
+  ])('extracts understanding signals for %s messages', async (intent) => {
+    const result = await service.extract('my family comes first', intent);
+    expect(extractManualInsights).toHaveBeenCalledWith('my family comes first');
+    expect(result).toEqual({ values: ['family'] });
+  });
 
   it.each<JerryIntent>(['question', 'stats', 'academic', 'media'])(
     'skips extraction for %s messages',
