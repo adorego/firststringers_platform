@@ -25,6 +25,7 @@ model Athlete {
   sport          String?
   position       String?
   dossier        Dossier?
+  ownersManual   OwnersManual?
   sessions       JerrySession[]
   user           User?
   conversations  DirectConversation[]
@@ -32,6 +33,15 @@ model Athlete {
   representedAt        DateTime?
   createdAt      DateTime             @default(now())
   updatedAt      DateTime             @updatedAt
+}
+
+model OwnersManual {
+  id        String   @id @default(uuid())
+  athleteId String   @unique
+  athlete   Athlete  @relation(fields: [athleteId], references: [id])
+  data      Json     @default("{}")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 model Dossier {

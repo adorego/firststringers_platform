@@ -1,6 +1,11 @@
 import { Injectable, Logger } from '@nestjs/common';
 import OpenAI from 'openai';
-import { ChatParams, DossierData, JerryIntent } from '../types';
+import {
+  ChatParams,
+  DossierData,
+  JerryIntent,
+  OwnersManualData,
+} from '../types';
 
 const LLM_TIMEOUT_MS = 30_000;
 
@@ -85,6 +90,66 @@ export class LLMService {
     } catch {
       return null;
     }
+  }
+
+  async extractManualInsights(
+    text: string,
+  ): Promise<Partial<OwnersManualData> | null> {
+    const response = await this.client.chat.completions.create({
+      model: process.env.OPENAI_MODEL || 'gpt-4o',
+      max_tokens: 1024,
+      tools: [
+        {
+          type: 'function',
+          function: {
+            name: 'extract_understanding',
+            description:
+              'Extracts signals about who the athlete is as a person: what motivates them, what they value, how they communicate and make decisions, which environments help or limit them, and what they aspire to become. Only include a field when the text genuinely reveals it. Return an empty object when the text contains no such signal. Never infer or invent.',
+            parameters: this.manualInsightsSchema(),
+          },
+        },
+      ],
+      tool_choice: {
+        type: 'function',
+        function: { name: 'extract_understanding' },
+      },
+      messages: [
+        {
+          role: 'user',
+          content: `Extract understanding signals from this athlete message: "${text}"`,
+        },
+      ],
+    });
+
+    const toolCall = response.choices?.[0]?.message?.tool_calls?.[0];
+    if (!toolCall || toolCall.type !== 'function') return null;
+
+    try {
+      const parsed = JSON.parse(
+        toolCall.function.arguments,
+      ) as Partial<OwnersManualData>;
+      return Object.keys(parsed).length > 0 ? parsed : null;
+    } catch {
+      return null;
+    }
+  }
+
+  private manualInsightsSchema(): Record<string, unknown> {
+    return {
+      type: 'object',
+      properties: {
+        motivations: { type: 'array', items: { type: 'string' } },
+        values: { type: 'array', items: { type: 'string' } },
+        longTermAspirations: { type: 'array', items: { type: 'string' } },
+        communicationStyle: { type: 'string' },
+        learningStyle: { type: 'string' },
+        decisionMaking: { type: 'string' },
+        competitiveIdentity: { type: 'string' },
+        preferredEnvironments: { type: 'array', items: { type: 'string' } },
+        limitingEnvironments: { type: 'array', items: { type: 'string' } },
+        supportSystem: { type: 'string' },
+      },
+    };
   }
 
   async classify(text: string): Promise<JerryIntent> {
