@@ -280,7 +280,10 @@ describe('StrategyPlannerService', () => {
           intent: 'stats',
           missingFields: ['strengths', 'physical status'],
           extractedData: {
-            performance: { strengths: ['finishing'], physicalStatus: 'healthy' },
+            performance: {
+              strengths: ['finishing'],
+              physicalStatus: 'healthy',
+            },
           },
         }),
       );

@@ -1,4 +1,11 @@
-import { Controller, Post, Body, HttpException, HttpStatus, Logger } from '@nestjs/common';
+import {
+  Controller,
+  Post,
+  Body,
+  HttpException,
+  HttpStatus,
+  Logger,
+} from '@nestjs/common';
 import { ScoutService } from './scout.service';
 import { SearchFilters } from '../../shared/types/scout.types';
 

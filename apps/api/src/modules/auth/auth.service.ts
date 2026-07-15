@@ -10,6 +10,7 @@ import { ConfigService } from '@nestjs/config';
 import * as bcrypt from 'bcrypt';
 import { randomInt } from 'crypto';
 import { PrismaService } from '../../shared/prisma/prisma.service';
+import { MailService } from '../mail/mail.service';
 import { RegisterDto } from './dto/register.dto';
 import { LoginDto } from './dto/login.dto';
 
@@ -23,6 +24,7 @@ export class AuthService {
     private prisma: PrismaService,
     private jwt: JwtService,
     private config: ConfigService,
+    private mail: MailService,
   ) {
     this.refreshSecret =
       this.config.get<string>('JWT_REFRESH_SECRET') ||
@@ -89,10 +91,32 @@ export class AuthService {
       });
     });
 
-    const tokens = this.generateTokens(user.id, user.email, user.role, dto.name, user.athleteId, user.recruiterId);
+    const tokens = this.generateTokens(
+      user.id,
+      user.email,
+      user.role,
+      dto.name,
+      user.athleteId,
+      user.recruiterId,
+    );
 
-    // Fire OTP asynchronously — don't block registration
-    void this.sendOtp(user.id).catch(() => {});
+    // Fire emails asynchronously — don't block registration
+    void this.sendOtp(user.id).catch((mailError: unknown) => {
+      const err =
+        mailError instanceof Error ? mailError : new Error(String(mailError));
+      this.logger.error(
+        `User ${user.email} registered successfully but verification email failed. ` +
+          `User may need to request resend. Error: ${err.message}`,
+        err.stack,
+      );
+    });
+    void this.mail
+      .sendWelcomeEmail({ to: user.email, name: dto.name })
+      .catch((err: unknown) => {
+        this.logger.warn(
+          `Failed to send welcome email to ${user.email}: ${String(err)}`,
+        );
+      });
 
     return tokens;
   }
@@ -117,7 +141,14 @@ export class AuthService {
     }
 
     const name = user.athlete?.name ?? user.recruiter?.name ?? user.email;
-    return this.generateTokens(user.id, user.email, user.role, name, user.athleteId, user.recruiterId);
+    return this.generateTokens(
+      user.id,
+      user.email,
+      user.role,
+      name,
+      user.athleteId,
+      user.recruiterId,
+    );
   }
 
   async refresh(refreshToken: string) {
@@ -148,8 +179,19 @@ export class AuthService {
         throw new UnauthorizedException('User not found');
       }
 
-      const name = user.athlete?.name ?? user.recruiter?.name ?? payload.name ?? user.email;
-      return this.generateTokens(user.id, user.email, user.role, name, user.athleteId, user.recruiterId);
+      const name =
+        user.athlete?.name ??
+        user.recruiter?.name ??
+        payload.name ??
+        user.email;
+      return this.generateTokens(
+        user.id,
+        user.email,
+        user.role,
+        name,
+        user.athleteId,
+        user.recruiterId,
+      );
     } catch {
       throw new UnauthorizedException('Invalid refresh token');
     }
@@ -181,24 +223,22 @@ export class AuthService {
       data: {
         userId,
         code: hashedCode,
-        expiresAt: new Date(
-          Date.now() + this.OTP_EXPIRY_MINUTES * 60 * 1000,
-        ),
+        expiresAt: new Date(Date.now() + this.OTP_EXPIRY_MINUTES * 60 * 1000),
       },
     });
 
-    // TODO: Replace with real email provider (Resend, SendGrid, etc.)
-    this.logger.log(
-      `[EMAIL VERIFICATION] Code for ${user.email}: ${plainCode}`,
-    );
+    void this.mail
+      .sendOtpEmail({ to: user.email, code: plainCode })
+      .catch((err: unknown) => {
+        this.logger.warn(
+          `Failed to send OTP email to ${user.email}: ${String(err)}`,
+        );
+      });
 
     return { sent: true };
   }
 
-  async verifyEmail(
-    userId: string,
-    code: string,
-  ): Promise<{ verified: true }> {
+  async verifyEmail(userId: string, code: string): Promise<{ verified: true }> {
     const records = await this.prisma.verificationCode.findMany({
       where: { userId },
       orderBy: { createdAt: 'desc' },
@@ -206,7 +246,9 @@ export class AuthService {
     });
 
     if (records.length === 0) {
-      throw new BadRequestException('No verification code found. Request a new one.');
+      throw new BadRequestException(
+        'No verification code found. Request a new one.',
+      );
     }
 
     const record = records[0];

@@ -1,7 +1,18 @@
 import { Injectable, Logger } from '@nestjs/common';
+import type { Prisma } from '@firststringers/database';
 import { PrismaService } from '../../shared/prisma/prisma.service';
 import { RankingService, RankedAthlete } from './ranking.service';
-import { SearchFilters } from '../../shared/types/scout.types';
+import {
+  SearchFilters,
+  DossierScoutFields,
+} from '../../shared/types/scout.types';
+import { DossierData } from '../../shared/types';
+
+// Jerry's real conversation pipeline (data-extractor, dossier.worker) writes
+// the nested DossierData shape (identity/performance/academic/availability).
+// Seed data — and older code — wrote flat DossierScoutFields directly. Search
+// needs to read whichever one is actually present, nested first.
+type RawDossierData = DossierScoutFields & Partial<DossierData>;
 
 export interface ScoutResult {
   query: string;
@@ -9,7 +20,68 @@ export interface ScoutResult {
   totalFound: number;
   latencyMs: number;
   athletes: RankedAthlete[];
+  // Set when the exact position had no matches and we broadened the search
+  // to other positions in the same sport so Billy can still suggest someone.
+  relaxedPosition?: string;
 }
+
+// Keyed by sport because the same short code means different things in
+// different sports (e.g. "C" is a baseball catcher and a basketball center).
+const POSITION_MAP: Record<string, Record<string, string>> = {
+  football: {
+    quarterback: 'QB',
+    'wide receiver': 'WR',
+    'running back': 'RB',
+    cornerback: 'CB',
+    'offensive lineman': 'OL',
+    'tight end': 'TE',
+    'free safety': 'FS',
+    'strong safety': 'SS',
+    linebacker: 'LB',
+    'defensive end': 'DE',
+    'defensive tackle': 'DT',
+    kicker: 'K',
+    punter: 'P',
+  },
+  basketball: {
+    'point guard': 'PG',
+    'shooting guard': 'SG',
+    'small forward': 'SF',
+    'power forward': 'PF',
+    center: 'C',
+  },
+  baseball: {
+    pitcher: 'P',
+    catcher: 'C',
+    'first base': '1B',
+    'second base': '2B',
+    'third base': '3B',
+    shortstop: 'SS',
+    'left field': 'LF',
+    'center field': 'CF',
+    'right field': 'RF',
+    outfielder: 'OF',
+    'designated hitter': 'DH',
+  },
+  soccer: {
+    goalkeeper: 'GK',
+    defender: 'DF',
+    'center back': 'DF',
+    'full back': 'FB',
+    midfielder: 'MF',
+    winger: 'WG',
+    forward: 'FW',
+    striker: 'ST',
+  },
+  volleyball: {
+    setter: 'S',
+    'outside hitter': 'OH',
+    'opposite hitter': 'OPP',
+    'middle blocker': 'MB',
+    libero: 'L',
+    'defensive specialist': 'DS',
+  },
+};
 
 @Injectable()
 export class ScoutService {
@@ -20,37 +92,52 @@ export class ScoutService {
     private readonly ranking: RankingService,
   ) {}
 
-  async search(query: string, filters: SearchFilters, limit = 5): Promise<ScoutResult> {
+  async search(
+    query: string,
+    filters: SearchFilters,
+    limit = 5,
+  ): Promise<ScoutResult> {
     const start = Date.now();
 
-    // Solo filtros exactos que existen en el modelo Athlete
-     const positionMap: Record<string, string> = {
-        quarterback: 'QB',
-        'wide receiver': 'WR',
-        'running back': 'RB',
-        cornerback: 'CB',
-        'offensive lineman': 'OL',
-        'point guard': 'PG',
-        'small forward': 'SF',
-        'power forward': 'PF',
-        center: 'C',
-        'shooting guard': 'SG',
-        'free safety': 'FS',
-        'strong safety': 'SS',
-        linebacker: 'LB',
-        'defensive end': 'DE',
-        'defensive tackle': 'DT',
-      };
+    const primary = await this.runQuery(query, filters, limit);
+    if (primary.athletes.length > 0 || !filters.position) {
+      return { query, filters, latencyMs: Date.now() - start, ...primary };
+    }
 
-      const normalizedPosition = filters.position
-        ? (positionMap[filters.position.toLowerCase()] ?? filters.position)
-        : undefined;
+    // Nobody matched the requested position — broaden to other positions in
+    // the same sport so Billy can still offer a related recommendation.
+    const relaxedFilters: SearchFilters = { ...filters, position: undefined };
+    const relaxed = await this.runQuery(query, relaxedFilters, limit);
 
-      const where: any = {
-        representationStatus: { in: ['represented', 'verified'] },
-      };
-      if (filters.sport)       where.sport    = { equals: filters.sport, mode: 'insensitive' };
-      if (normalizedPosition)  where.position = { equals: normalizedPosition, mode: 'insensitive' };
+    return {
+      query,
+      filters,
+      latencyMs: Date.now() - start,
+      ...relaxed,
+      relaxedPosition:
+        relaxed.athletes.length > 0 ? filters.position : undefined,
+    };
+  }
+
+  private async runQuery(
+    query: string,
+    filters: SearchFilters,
+    limit: number,
+  ): Promise<{ totalFound: number; athletes: RankedAthlete[] }> {
+    const sportMap = filters.sport
+      ? POSITION_MAP[filters.sport.toLowerCase()]
+      : undefined;
+    const normalizedPosition = filters.position
+      ? (sportMap?.[filters.position.toLowerCase()] ?? filters.position)
+      : undefined;
+
+    const where: Prisma.AthleteWhereInput = {
+      representationStatus: { in: ['represented', 'verified'] },
+    };
+    if (filters.sport)
+      where.sport = { equals: filters.sport, mode: 'insensitive' };
+    if (normalizedPosition)
+      where.position = { equals: normalizedPosition, mode: 'insensitive' };
 
     this.logger.log(`Scout query: ${JSON.stringify(where)}`);
 
@@ -70,11 +157,14 @@ export class ScoutService {
       orderBy: { createdAt: 'desc' },
     });
 
-    this.logger.log(`Scout DB returned ${athletes.length} athletes before filter`);
+    this.logger.log(
+      `Scout DB returned ${athletes.length} athletes before filter`,
+    );
 
-    // Aplanar datos del dossier.data
-    const normalized = athletes.map(a => {
-      const d = (a.dossier?.data as any) ?? {};
+    // Aplanar datos del dossier.data — soporta tanto el formato anidado real
+    // de Jerry como el formato plano usado por el seed.
+    const normalized = athletes.map((a) => {
+      const d = this.flattenDossier(a.dossier?.data as RawDossierData | null);
       return {
         id: a.id,
         fullName: a.name,
@@ -100,8 +190,12 @@ export class ScoutService {
     });
 
     // Filtros en memoria sobre dossier.data — más flexibles
-    const filtered = normalized.filter(a => {
-      if (filters.leagueLevel && a.leagueLevel.toUpperCase() !== filters.leagueLevel.toUpperCase()) return false;
+    const filtered = normalized.filter((a) => {
+      if (
+        filters.leagueLevel &&
+        a.leagueLevel.toUpperCase() !== filters.leagueLevel.toUpperCase()
+      )
+        return false;
       if (filters.ncaaEligible && !a.ncaaEligible) return false;
       if (filters.transferPortal && !a.inTransferPortal) return false;
       if (filters.minGpa && (!a.gpa || a.gpa < filters.minGpa)) return false;
@@ -111,22 +205,41 @@ export class ScoutService {
 
     this.logger.log(`Scout after filter: ${filtered.length} athletes`);
 
-    const ranked = this.ranking.rankAthletes(
-      filtered,
-      query,
-      filters as Record<string, any>,
-    );
+    const ranked = this.ranking.rankAthletes(filtered, query, filters);
 
     return {
-      query,
-      filters,
       totalFound: filtered.length,
-      latencyMs: Date.now() - start,
       athletes: ranked.slice(0, limit),
     };
   }
 
-  private calcTextSimilarity(athlete: any, dossierData: any, query: string): number {
+  // Real Jerry conversations store data nested (identity/performance/academic/
+  // availability); the seed and older code store it flat. Prefer the nested
+  // (real) value when present, falling back to the flat one.
+  private flattenDossier(raw: RawDossierData | null): DossierScoutFields {
+    const d = raw ?? {};
+    return {
+      leagueLevel: d.performance?.leagueLevel ?? d.leagueLevel ?? '',
+      gpa: d.academic?.gpa ?? d.gpa ?? null,
+      graduationYear: d.identity?.graduationYear ?? d.graduationYear ?? null,
+      ncaaEligible: d.academic?.ncaaEligibility ?? d.ncaaEligible ?? false,
+      inTransferPortal:
+        d.availability?.transferPortal ?? d.inTransferPortal ?? false,
+      preferredRegions:
+        d.availability?.preferredRegions ?? d.preferredRegions ?? [],
+      // No nested equivalent exists for these — Jerry never asks about them today.
+      trajectory: d.trajectory ?? 'STABLE',
+      keyStrengths: d.performance?.strengths ?? d.keyStrengths ?? [],
+      fitTags: d.fitTags ?? [],
+      recruiterPitch: d.recruiterPitch ?? null,
+    };
+  }
+
+  private calcTextSimilarity(
+    athlete: { sport: string | null; position: string | null },
+    dossierData: DossierScoutFields,
+    query: string,
+  ): number {
     const queryWords = query.toLowerCase().split(/\s+/);
     const athleteText = [
       athlete.sport ?? '',
@@ -134,10 +247,13 @@ export class ScoutService {
       dossierData.leagueLevel ?? '',
       ...(dossierData.keyStrengths ?? []),
       ...(dossierData.fitTags ?? []),
-      dossierData.narrative ?? '',
-    ].join(' ').toLowerCase();
+    ]
+      .join(' ')
+      .toLowerCase();
 
-    const matches = queryWords.filter(w => w.length > 2 && athleteText.includes(w));
+    const matches = queryWords.filter(
+      (w) => w.length > 2 && athleteText.includes(w),
+    );
     return queryWords.length > 0
       ? Math.min(0.95, 0.4 + (matches.length / queryWords.length) * 0.6)
       : 0.5;

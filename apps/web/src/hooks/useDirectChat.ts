@@ -29,6 +29,7 @@ export interface DirectConversation {
     id: string;
     name: string;
     email: string;
+    pitch?: string | null;
     organization?: { name: string } | null;
   };
   messages?: DirectMessage[];
@@ -175,10 +176,12 @@ export function useDirectChat(
     };
   }, [userId, role]);
 
-  // Join a conversation room and load its history
+  // Join a conversation room and load its history.
+  // setMessages([]) removed — clearing state synchronously in an effect
+  // body causes cascading renders. The server's "history" event replaces
+  // stale messages once the room is joined.
   useEffect(() => {
     if (!conversationId || !socketRef.current?.connected) return;
-    setMessages([]);
     socketRef.current.emit("join_conversation", { conversationId });
   }, [conversationId]);
 

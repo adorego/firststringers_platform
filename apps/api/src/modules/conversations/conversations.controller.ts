@@ -34,7 +34,9 @@ export class ConversationsController {
     if (!user.athleteId) {
       throw new NotFoundException('No athlete profile linked to this user');
     }
-    return this.conversationsService.getPendingRequestsForAthlete(user.athleteId);
+    return this.conversationsService.getPendingRequestsForAthlete(
+      user.athleteId,
+    );
   }
 
   // Athlete: accept a connection request
@@ -61,6 +63,27 @@ export class ConversationsController {
     return this.conversationsService.declineRequest(id, user.athleteId);
   }
 
+  // Counts for the nav badges (JWT-authenticated, uses own identity) — shape
+  // differs by role since recruiters and athletes have different nav items.
+  @Get('me/counts')
+  getMyCounts(
+    @CurrentUser()
+    user: {
+      id: string;
+      role: string;
+      recruiterId: string | null;
+      athleteId: string | null;
+    },
+  ) {
+    if (user.recruiterId) {
+      return this.conversationsService.getCountsForRecruiter(user.recruiterId);
+    }
+    if (user.athleteId) {
+      return this.conversationsService.getCountsForAthlete(user.athleteId);
+    }
+    return { connections: 0, introductions: 0, unreadConnections: 0 };
+  }
+
   @Public()
   @Get('recruiter/:recruiterId')
   getForRecruiter(@Param('recruiterId') recruiterId: string) {
@@ -78,6 +101,19 @@ export class ConversationsController {
   create(@Body() dto: { recruiterId: string; athleteId: string }) {
     return this.conversationsService.getOrCreateConversation(
       dto.recruiterId,
+      dto.athleteId,
+    );
+  }
+
+  // Recruiter: request an introduction from outside an active Billy conversation
+  // (e.g. Pipeline, Dossier panel) — notifies the athlete via Jerry.
+  @Post('request-intro')
+  requestIntro(
+    @CurrentUser() user: { recruiterId: string },
+    @Body() dto: { athleteId: string },
+  ) {
+    return this.conversationsService.requestIntroduction(
+      user.recruiterId,
       dto.athleteId,
     );
   }

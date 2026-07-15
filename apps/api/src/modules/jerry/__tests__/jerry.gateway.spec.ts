@@ -1,7 +1,13 @@
 /* eslint-disable @typescript-eslint/unbound-method */
+import type { Queue } from 'bull';
+import type { JwtService } from '@nestjs/jwt';
+import type { EventEmitter2 } from '@nestjs/event-emitter';
 import { JerryGateway } from '../jerry.gateway';
 import { Server, Socket } from 'socket.io';
 import { JerrySessionState } from '../../../shared/types';
+import type { PrismaService } from '../../../shared/prisma/prisma.service';
+import type { SessionService } from '../session.service';
+import type { MailService } from '../../mail/mail.service';
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -39,9 +45,15 @@ function makeSession(messageCount = 0): JerrySessionState {
 
 const mockJerryQueue = { add: jest.fn() };
 const mockJwtService = { verify: jest.fn() };
-const mockPrisma = { user: { findUnique: jest.fn() } };
+const mockPrisma = {
+  user: { findUnique: jest.fn() },
+  athlete: { findUnique: jest.fn() },
+};
 const mockSession = { getSession: jest.fn(), appendMessage: jest.fn() };
 const mockEventEmitter = { emit: jest.fn() };
+const mockMail = {
+  sendConnectionRequestEmail: jest.fn().mockResolvedValue(undefined),
+};
 
 const mockSocketRoom = { emit: jest.fn() };
 const mockServer = { to: jest.fn().mockReturnValue(mockSocketRoom) };
@@ -50,11 +62,12 @@ const VALID_TOKEN = 'valid-jwt-token';
 
 function makeGateway(): JerryGateway {
   const gateway = new JerryGateway(
-    mockJerryQueue as any,
-    mockJwtService as any,
-    mockPrisma as any,
-    mockSession as any,
-    mockEventEmitter as any,
+    mockJerryQueue as unknown as Queue,
+    mockJwtService as unknown as JwtService,
+    mockPrisma as unknown as PrismaService,
+    mockSession as unknown as SessionService,
+    mockEventEmitter as unknown as EventEmitter2,
+    mockMail as unknown as MailService,
   );
   gateway.server = mockServer as unknown as Server;
   return gateway;

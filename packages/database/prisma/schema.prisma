@@ -27,10 +27,12 @@ model Athlete {
   dossier        Dossier?
   ownersManual   OwnersManual?
   sessions       JerrySession[]
+  updates        AthleteUpdate[]
   user           User?
   conversations  DirectConversation[]
   representationStatus String    @default("registered")
   representedAt        DateTime?
+  pipelineEntries PipelineEntry[]
   createdAt      DateTime             @default(now())
   updatedAt      DateTime             @updatedAt
 }
@@ -42,6 +44,20 @@ model OwnersManual {
   data      Json     @default("{}")
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+}
+
+// Raw, athlete-authored news reported to Jerry (training, games, achievements,
+// etc.) — kept separate from Dossier.data (which only holds the current merged
+// snapshot) so recruiters can see what the athlete actually said, and when.
+model AthleteUpdate {
+  id        String   @id @default(uuid())
+  athleteId String
+  athlete   Athlete  @relation(fields: [athleteId], references: [id], onDelete: Cascade)
+  content   String
+  createdAt DateTime @default(now())
+
+  @@index([athleteId, createdAt])
+  @@map("athlete_updates")
 }
 
 model Dossier {
@@ -77,12 +93,18 @@ model Recruiter {
   name                String
   // Program info collected during Billy onboarding
   university          String?
-  location            String?
-  scholarshipType     String?              // "full" | "partial" | "financial_aid"
+  location            String?              // recruiting region (e.g. "Florida", "Nationwide")
+  scholarshipType     String?
   sport               String?
-  gender              String?              // "male" | "female" | "both"
-  division            String?              // "D1" | "D2" | "D3" | "NAIA" | "JUCO"
+  gender              String?
+  division            String?
   openings            Int?
+  organizationType    String?              // High School | College/University | Club | Academy | Professional Organization | Other
+  recruiterRole       String?              // Head Coach | Assistant Coach | Recruiting Coordinator | Scout | Position Coach | Other
+  positions           String?              // positions they evaluate (e.g. "Quarterbacks, Wide Receivers")
+  graduatingClasses   String?              // classes actively recruiting (e.g. "2027, 2028")
+  evaluationPriority  String?              // what matters most when evaluating (recruiting philosophy)
+  filterCriteria      String?              // filters/limitations used (e.g. "Minimum GPA, Location")
   onboardingCompleted Boolean              @default(false)
   pitch               String?
   // Verification: pending → under_review → verified | rejected
@@ -95,6 +117,7 @@ model Recruiter {
   user                User?
   billyMessages       BillyMessage[]
   conversations       DirectConversation[]
+  pipelineEntries     PipelineEntry[]
 }
 
 model User {
@@ -169,9 +192,22 @@ model BillyConversation {
   title          String   @default("New search")
   messages       Json     @default("[]")
   searchCriteria Json     @default("{}")
+  isOnboarding   Boolean  @default(false)
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
 
   @@index([recruiterId])
   @@map("billy_conversations")
+}
+
+model PipelineEntry {
+  id          String    @id @default(uuid())
+  recruiterId String
+  recruiter   Recruiter @relation(fields: [recruiterId], references: [id], onDelete: Cascade)
+  athleteId   String
+  athlete     Athlete   @relation(fields: [athleteId], references: [id], onDelete: Cascade)
+  createdAt   DateTime  @default(now())
+
+  @@unique([recruiterId, athleteId])
+  @@map("pipeline_entries")
 }

@@ -14,6 +14,8 @@ import type { ManualExtractorService } from '../manual-extractor.service';
 import type { OwnersManualService } from '../owners-manual.service';
 import type { LLMService } from '../../../shared/llm/llm.service';
 import type { EventEmitter2 } from '@nestjs/event-emitter';
+import type { JwtService } from '@nestjs/jwt';
+import type { PrismaService } from '../../../shared/prisma/prisma.service';
 import {
   MessageJob,
   JerrySessionState,
@@ -50,11 +52,15 @@ function makeSession(
 // ─── Shared mocks ────────────────────────────────────────────────────────────
 
 const mockSession: jest.Mocked<
-  Pick<SessionService, 'getSession' | 'appendMessage' | 'updateDossierSnapshot'>
+  Pick<
+    SessionService,
+    'getSession' | 'appendMessage' | 'updateDossierSnapshot' | 'recordUpdate'
+  >
 > = {
   getSession: jest.fn(),
   appendMessage: jest.fn(),
   updateDossierSnapshot: jest.fn(),
+  recordUpdate: jest.fn(),
 };
 
 const mockIntentClassifier: jest.Mocked<
@@ -135,6 +141,7 @@ describe('ConversationWorker', () => {
     mockSession.getSession.mockResolvedValue(makeSession());
     mockSession.appendMessage.mockResolvedValue(undefined);
     mockSession.updateDossierSnapshot.mockResolvedValue(undefined);
+    mockSession.recordUpdate.mockResolvedValue(undefined);
     mockIntentClassifier.classify.mockResolvedValue('other');
     mockDataExtractor.extract.mockResolvedValue(null);
     mockValidator.getMissingFields.mockResolvedValue(['GPA']);
@@ -379,8 +386,8 @@ describe('JerryGateway — appendMessage precedes queue enqueue', () => {
 
     const gateway = new JerryGateway(
       mockJerryQueue as unknown as Queue,
-      mockJwtService as any,
-      mockPrisma as any,
+      mockJwtService as unknown as JwtService,
+      mockPrisma as unknown as PrismaService,
       mockSessionGateway as unknown as SessionService,
       mockEventEmitterGateway as unknown as EventEmitter2,
     );

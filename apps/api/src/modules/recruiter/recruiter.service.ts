@@ -1,6 +1,7 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../../shared/prisma/prisma.service';
 import { LLMService } from '../../shared/llm/llm.service';
+import { MailService } from '../mail/mail.service';
 
 export interface RecruiterProfile {
   id: string;
@@ -13,6 +14,12 @@ export interface RecruiterProfile {
   gender: string | null;
   division: string | null;
   openings: number | null;
+  organizationType: string | null;
+  recruiterRole: string | null;
+  positions: string | null;
+  graduatingClasses: string | null;
+  evaluationPriority: string | null;
+  filterCriteria: string | null;
   onboardingCompleted: boolean;
   pitch: string | null;
   verificationStatus: string;
@@ -30,15 +37,24 @@ export interface UpdateRecruiterProfileDto {
   gender?: string;
   division?: string;
   openings?: number;
+  organizationType?: string;
+  recruiterRole?: string;
+  positions?: string;
+  graduatingClasses?: string;
+  evaluationPriority?: string;
+  filterCriteria?: string;
   onboardingCompleted?: boolean;
   pitch?: string;
 }
 
 @Injectable()
 export class RecruiterService {
+  private readonly logger = new Logger(RecruiterService.name);
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly llm: LLMService,
+    private readonly mail: MailService,
   ) {}
 
   async findById(id: string): Promise<RecruiterProfile | null> {
@@ -70,14 +86,23 @@ export class RecruiterService {
       return await this.llm.chat({
         systemPrompt:
           'Write a 2–3 sentence introduction for a college sports recruiter that will be shown to an athlete receiving a connection request. Be specific, warm, and professional. Highlight what makes the program attractive. No quotes, no bullet points — flowing text only.',
-        messages: [{ role: 'user', content: `Program details:\n${lines}`, timestamp: new Date() }],
+        messages: [
+          {
+            role: 'user',
+            content: `Program details:\n${lines}`,
+            timestamp: new Date(),
+          },
+        ],
       });
     } catch {
       return '';
     }
   }
 
-  async updateProfile(id: string, data: UpdateRecruiterProfileDto): Promise<void> {
+  async updateProfile(
+    id: string,
+    data: UpdateRecruiterProfileDto,
+  ): Promise<void> {
     const exists = await this.prisma.recruiter.findUnique({ where: { id } });
     if (!exists) throw new NotFoundException('Recruiter not found');
     await this.prisma.recruiter.update({ where: { id }, data });
@@ -102,6 +127,17 @@ export class RecruiterService {
       },
     });
 
+    void this.mail
+      .sendVerificationSubmittedEmail({
+        to: recruiter.email,
+        name: recruiter.name,
+      })
+      .catch((err: unknown) => {
+        this.logger.warn(
+          `Failed to send verification-submitted email to ${recruiter.email}: ${String(err)}`,
+        );
+      });
+
     return { verificationStatus: 'under_review' };
   }
 
@@ -122,6 +158,18 @@ export class RecruiterService {
         verifiedAt: status === 'verified' ? new Date() : null,
       },
     });
+
+    void this.mail
+      .sendVerificationResultEmail({
+        to: recruiter.email,
+        name: recruiter.name,
+        approved: status === 'verified',
+      })
+      .catch((err: unknown) => {
+        this.logger.warn(
+          `Failed to send verification-result email to ${recruiter.email}: ${String(err)}`,
+        );
+      });
   }
 
   async listPendingVerifications() {

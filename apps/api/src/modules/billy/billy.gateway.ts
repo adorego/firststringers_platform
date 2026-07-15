@@ -63,13 +63,16 @@ export class BillyGateway implements OnGatewayConnection, OnGatewayDisconnect {
       for (const [sid, ctx] of this.clients.entries()) {
         if (ctx.conversationId === conversationId && sid !== client.id) {
           const stale = this.server.sockets.sockets.get(sid);
-          stale?.leave(`conversation:${conversationId}`);
+          // Fire-and-forget: socket.io types join/leave as Promise<void> to
+          // support distributed adapters, but the in-memory adapter used
+          // here resolves synchronously — nothing to await.
+          void stale?.leave(`conversation:${conversationId}`);
           this.clients.delete(sid);
         }
       }
 
       this.clients.set(client.id, { recruiterId, conversationId });
-      client.join(`conversation:${conversationId}`);
+      void client.join(`conversation:${conversationId}`);
 
       this.logger.log(
         `Recruiter ${recruiterId} connected on conversation ${conversationId} — socket ${client.id}`,
@@ -78,7 +81,11 @@ export class BillyGateway implements OnGatewayConnection, OnGatewayDisconnect {
       const recruiter = await this.recruiterService.findById(recruiterId);
       const isOnboarding = !recruiter?.onboardingCompleted;
 
-      const sessionState = await this.session.getSession(conversationId, recruiterId, isOnboarding);
+      const sessionState = await this.session.getSession(
+        conversationId,
+        recruiterId,
+        isOnboarding,
+      );
 
       if (sessionState.messages.length > 0) {
         client.emit('session_resumed', {
@@ -87,22 +94,42 @@ export class BillyGateway implements OnGatewayConnection, OnGatewayDisconnect {
           isOnboarding: sessionState.isOnboarding,
         });
       } else {
+        // A fresh conversation right after onboarding gets seeded with the
+        // suggestions Billy generated from the recruiter's answers.
+        const pendingSuggestions = !isOnboarding
+          ? await this.session.getAndClearPendingSuggestions(recruiterId)
+          : null;
+
         const welcomeMessage: BillyMessage = {
           role: 'assistant',
           content: isOnboarding
-            ? `Hi${recruiter?.name ? ` ${recruiter.name}` : ''}! I'm Billy. Before we start finding athletes, I'd love to learn a bit about your program so I can make the best recommendations — and introduce athletes to you properly.\n\nFirst up: what university or institution do you represent?`
-            : "Hi! I'm Billy, your recruiting intelligence agent. Tell me what kind of athlete you're looking for and I'll help you find the best matches. What sport and position are you recruiting for?",
+            ? `Hi${recruiter?.name ? ` ${recruiter.name}` : ''}.\n\nBefore we get started, I'd like to learn a little about your recruiting responsibilities so I can better assist you.\n\nWhat sport are you recruiting for?\nYou can choose from: Football, Baseball, Basketball, Soccer, Volleyball, or Other.`
+            : pendingSuggestions && pendingSuggestions.length > 0
+              ? `Now that I know more about your program, here are a few searches to get you started.`
+              : `Hi${recruiter?.name ? ` ${recruiter.name}` : ''}! I'm Billy. Tell me what kind of athlete fits your program and I'll help you find the best matches.`,
           timestamp: new Date(),
         };
-        await this.session.appendMessage(conversationId, recruiterId, welcomeMessage);
+        await this.session.appendMessage(
+          conversationId,
+          recruiterId,
+          welcomeMessage,
+        );
         client.emit('message', welcomeMessage);
         if (isOnboarding) {
           client.emit('onboarding_started', {});
         }
+        if (pendingSuggestions && pendingSuggestions.length > 0) {
+          client.emit('onboarding_complete', {
+            suggestedSearches: pendingSuggestions,
+          });
+        }
       }
     } catch (err) {
       this.logger.error(`Connection error for socket ${client.id}`, err);
-      client.emit('error', { code: 'CONNECTION_ERROR', message: 'Connection error' });
+      client.emit('error', {
+        code: 'CONNECTION_ERROR',
+        message: 'Connection error',
+      });
       client.disconnect();
     }
   }
@@ -124,7 +151,10 @@ export class BillyGateway implements OnGatewayConnection, OnGatewayDisconnect {
   ) {
     const ctx = this.clients.get(client.id);
     if (!ctx) {
-      client.emit('error', { code: 'UNAUTHENTICATED', message: 'Not authenticated' });
+      client.emit('error', {
+        code: 'UNAUTHENTICATED',
+        message: 'Not authenticated',
+      });
       return;
     }
 
@@ -136,19 +166,33 @@ export class BillyGateway implements OnGatewayConnection, OnGatewayDisconnect {
         content: dto.content,
         timestamp: new Date(),
       };
-      await this.session.appendMessage(conversationId, recruiterId, userMessage);
+      await this.session.appendMessage(
+        conversationId,
+        recruiterId,
+        userMessage,
+      );
 
       client.emit('status', { status: 'typing' });
 
-      const job: BillyMessageJob = { conversationId, recruiterId, message: dto.content };
+      const job: BillyMessageJob = {
+        conversationId,
+        recruiterId,
+        message: dto.content,
+      };
       await this.billyQueue.add('process.message', job, {
         attempts: 1,
         removeOnComplete: true,
         removeOnFail: true,
       });
     } catch (err) {
-      this.logger.error(`Error handling message for conversation ${conversationId}`, err);
-      client.emit('error', { code: 'MESSAGE_ERROR', message: 'Error processing message' });
+      this.logger.error(
+        `Error handling message for conversation ${conversationId}`,
+        err,
+      );
+      client.emit('error', {
+        code: 'MESSAGE_ERROR',
+        message: 'Error processing message',
+      });
     }
   }
 
@@ -158,6 +202,7 @@ export class BillyGateway implements OnGatewayConnection, OnGatewayDisconnect {
     message: string;
     searchCriteria?: Record<string, unknown>;
     searchResults?: unknown[];
+    isFallbackRecommendation?: boolean;
   }) {
     this.server.to(`conversation:${payload.conversationId}`).emit('message', {
       role: 'assistant',
@@ -165,6 +210,7 @@ export class BillyGateway implements OnGatewayConnection, OnGatewayDisconnect {
       timestamp: new Date(),
       searchCriteria: payload.searchCriteria,
       searchResults: payload.searchResults,
+      isFallbackRecommendation: payload.isFallbackRecommendation,
     });
 
     if (payload.searchCriteria) {
@@ -178,6 +224,19 @@ export class BillyGateway implements OnGatewayConnection, OnGatewayDisconnect {
         .to(`conversation:${payload.conversationId}`)
         .emit('search_results', { results: payload.searchResults });
     }
+  }
+
+  @OnEvent('billy.onboarding_complete')
+  handleOnboardingComplete(payload: {
+    recruiterId: string;
+    conversationId: string;
+    newConversationId: string;
+  }) {
+    this.server
+      .to(`conversation:${payload.conversationId}`)
+      .emit('onboarding_complete', {
+        newConversationId: payload.newConversationId,
+      });
   }
 
   @OnEvent('billy.error')
@@ -197,11 +256,25 @@ export class BillyGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
     try {
       client.emit('status', { status: 'typing' });
-      const { athleteName, pitch } = await this.jerryPitch.getPitchForRecruiter(dto.athleteId);
-      client.emit('jerry_pitch', { athleteName, pitch, athleteId: dto.athleteId });
+      const { athleteName, pitch } = await this.jerryPitch.getPitchForRecruiter(
+        dto.athleteId,
+      );
+      client.emit('jerry_pitch', {
+        athleteName,
+        pitch,
+        athleteId: dto.athleteId,
+      });
 
-      const msg: BillyMessage = { role: 'assistant', content: pitch, timestamp: new Date() };
-      await this.session.appendMessage(ctx.conversationId, ctx.recruiterId, msg);
+      const msg: BillyMessage = {
+        role: 'assistant',
+        content: pitch,
+        timestamp: new Date(),
+      };
+      await this.session.appendMessage(
+        ctx.conversationId,
+        ctx.recruiterId,
+        msg,
+      );
     } catch (error) {
       this.logger.error('Error getting Jerry pitch', error);
       client.emit('message', {
@@ -249,7 +322,9 @@ export class BillyGateway implements OnGatewayConnection, OnGatewayDisconnect {
       const recruiterName = conversation.recruiter?.name ?? 'A recruiter';
       const organizationName = conversation.recruiter?.organization?.name;
 
-      const recruiterProfile = await this.recruiterService.findById(ctx.recruiterId);
+      const recruiterProfile = await this.recruiterService.findById(
+        ctx.recruiterId,
+      );
       const pitch = recruiterProfile?.pitch ?? undefined;
 
       // Tell Jerry so he can inform the athlete
@@ -269,7 +344,11 @@ export class BillyGateway implements OnGatewayConnection, OnGatewayDisconnect {
         timestamp: new Date(),
       };
 
-      await this.session.appendMessage(ctx.conversationId, ctx.recruiterId, msg);
+      await this.session.appendMessage(
+        ctx.conversationId,
+        ctx.recruiterId,
+        msg,
+      );
       client.emit('message', msg);
       client.emit('contact_initiated', {
         conversationId: conversation.id,

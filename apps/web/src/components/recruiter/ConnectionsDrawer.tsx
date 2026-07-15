@@ -7,65 +7,6 @@ import {
   fetchRecruiterConversations,
 } from "@/hooks/useDirectChat";
 
-// Mock fallback while backend is not seeded
-const MOCK_CONVERSATIONS: DirectConversation[] = [
-  {
-    id: "conv-1",
-    recruiterId: "e0b6c0c8-2b27-4521-9b26-46ace16b4983",
-    athleteId: "ath-1",
-    athlete: { id: "ath-1", name: "Cameron Davis", sport: "Football", position: "QB" },
-    messages: [
-      {
-        id: "m1",
-        conversationId: "conv-1",
-        senderId: "ath-1",
-        senderRole: "athlete",
-        content: "Thanks Coach, I'd love to learn more about your offensive philosophy.",
-        readAt: null,
-        createdAt: new Date(Date.now() - 2 * 60 * 1000).toISOString(),
-      },
-    ],
-    status: "accepted" as const,
-    createdAt: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString(),
-    updatedAt: new Date(Date.now() - 2 * 60 * 1000).toISOString(),
-  },
-  {
-    id: "conv-2",
-    recruiterId: "e0b6c0c8-2b27-4521-9b26-46ace16b4983",
-    athleteId: "ath-2",
-    athlete: { id: "ath-2", name: "Jordan Williams", sport: "Football", position: "LB" },
-    messages: [
-      {
-        id: "m2",
-        conversationId: "conv-2",
-        senderId: "ath-2",
-        senderRole: "athlete",
-        content: "Coach, I just uploaded new spring camp footage focused on coverage work.",
-        readAt: null,
-        createdAt: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString(),
-      },
-    ],
-    status: "accepted" as const,
-    createdAt: new Date(Date.now() - 4 * 24 * 60 * 60 * 1000).toISOString(),
-    updatedAt: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString(),
-  },
-];
-
-const MOCK_SCHOOL: Record<string, string> = {
-  "ath-1": "Lincoln HS",
-  "ath-2": "Northside HS",
-};
-
-const MOCK_YEAR: Record<string, number> = {
-  "ath-1": 2026,
-  "ath-2": 2027,
-};
-
-const MOCK_ONLINE: Record<string, boolean> = {
-  "ath-1": true,
-  "ath-2": false,
-};
-
 function timeAgo(date: string): string {
   const diff = Date.now() - new Date(date).getTime();
   const mins = Math.floor(diff / 60000);
@@ -78,16 +19,16 @@ function timeAgo(date: string): string {
 }
 
 function TimeAgo({ date }: { date: Date | string }) {
-  const [label, setLabel] = useState('');
+  const [label, setLabel] = useState(() => {
+    const d = typeof date === 'string' ? date : date.toISOString();
+    return timeAgo(d);
+  });
 
   useEffect(() => {
     const d = typeof date === 'string' ? date : date.toISOString();
-    setLabel(timeAgo(d));
     const interval = setInterval(() => setLabel(timeAgo(d)), 60000);
     return () => clearInterval(interval);
   }, [date]);
-
-  if (!label) return null;
 
   return (
     <span className="flex-shrink-0 text-xs text-[#ADA8A5]">
@@ -109,13 +50,16 @@ export function ConnectionsDrawer({
   recruiterId,
   onSelectConversation,
 }: ConnectionsDrawerProps) {
-  const [conversations, setConversations] = useState<DirectConversation[]>(MOCK_CONVERSATIONS);
+  const [conversations, setConversations] = useState<DirectConversation[]>([]);
+  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     if (!isOpen) return;
-    fetchRecruiterConversations(recruiterId).then((data) => {
-      setConversations(data.length > 0 ? data : MOCK_CONVERSATIONS);
-    });
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- loading flag for an in-flight fetch triggered by the drawer opening
+    setLoading(true);
+    fetchRecruiterConversations(recruiterId)
+      .then((data) => setConversations(data))
+      .finally(() => setLoading(false));
   }, [isOpen, recruiterId]);
 
   return (
@@ -139,9 +83,11 @@ export function ConnectionsDrawer({
           <div>
             <div className="flex items-baseline gap-3">
               <h2 className="text-2xl font-bold text-[#1A1A1A]">Connections</h2>
-              <span className="text-sm text-[#ADA8A5]">
-                {conversations.length} active
-              </span>
+              {!loading && (
+                <span className="text-sm text-[#ADA8A5]">
+                  {conversations.length} active
+                </span>
+              )}
             </div>
             <p className="mt-0.5 text-sm text-[#ADA8A5]">
               Active recruiting conversations
@@ -157,52 +103,88 @@ export function ConnectionsDrawer({
 
         {/* Conversation list */}
         <div className="flex-1 overflow-y-auto divide-y divide-[#E8E3DD]">
-          {conversations.map((conv) => {
-            const athlete = conv.athlete;
-            const lastMsg = conv.messages?.[0];
-            const isOnline = MOCK_ONLINE[conv.athleteId] ?? false;
-            const school = MOCK_SCHOOL[conv.athleteId] ?? "";
-            const year = MOCK_YEAR[conv.athleteId] ?? "";
+          {loading ? (
+            <div className="flex items-center justify-center py-16">
+              <p className="text-sm text-[#ADA8A5]">Loading…</p>
+            </div>
+          ) : conversations.length === 0 ? (
+            <div className="flex flex-col items-center justify-center px-7 py-16 text-center">
+              <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-[#EDEAE5]">
+                <Users size={20} className="text-[#ADA8A5]" />
+              </div>
+              <p className="font-semibold text-[#1A1A1A]">No active connections yet</p>
+              <p className="mt-1 text-sm text-[#ADA8A5]">
+                Accepted conversations with athletes will appear here.
+              </p>
+            </div>
+          ) : (
+            conversations.map((conv) => {
+              const athlete = conv.athlete;
+              const lastMsg = conv.messages?.[0];
+              const unread = lastMsg?.senderRole === "athlete" && lastMsg.readAt === null;
 
-            return (
-              <button
-                key={conv.id}
-                onClick={() => onSelectConversation(conv)}
-                className="flex w-full items-start gap-4 px-7 py-5 text-left transition-colors hover:bg-[#F0EDE9]"
-              >
-                {/* Avatar */}
-                <div className="relative flex-shrink-0">
-                  <div className="flex h-14 w-14 items-center justify-center rounded-full bg-[#EDEAE5] text-base font-bold text-[#6B6561]">
+              return (
+                <button
+                  key={conv.id}
+                  onClick={() => {
+                    // Optimistically clear the unread state — the panel we're
+                    // about to open marks the messages read server-side too.
+                    if (unread) {
+                      setConversations((prev) =>
+                        prev.map((c) =>
+                          c.id === conv.id
+                            ? {
+                                ...c,
+                                messages: c.messages?.map((m, i) =>
+                                  i === 0 ? { ...m, readAt: new Date().toISOString() } : m,
+                                ),
+                              }
+                            : c,
+                        ),
+                      );
+                    }
+                    onSelectConversation(conv);
+                  }}
+                  className="flex w-full items-start gap-4 px-7 py-5 text-left transition-colors hover:bg-[#F0EDE9]"
+                >
+                  {/* Avatar */}
+                  <div className="flex h-14 w-14 flex-shrink-0 items-center justify-center rounded-full bg-[#EDEAE5] text-base font-bold text-[#6B6561]">
                     {athlete?.name
                       .split(" ")
                       .map((n) => n[0])
                       .join("")
                       .slice(0, 2) ?? "?"}
                   </div>
-                  {isOnline && (
-                    <span className="absolute bottom-0.5 right-0.5 h-3 w-3 rounded-full border-2 border-[#FAFAF9] bg-[#3B6FE8]" />
-                  )}
-                </div>
 
-                <div className="min-w-0 flex-1">
-                  <div className="flex items-center justify-between">
-                    <p className="font-semibold text-[#1A1A1A]">{athlete?.name}</p>
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center justify-between">
+                      <p className={`text-[#1A1A1A] ${unread ? "font-bold" : "font-semibold"}`}>
+                        {athlete?.name}
+                      </p>
+                      <div className="flex flex-shrink-0 items-center gap-2">
+                        {lastMsg && <TimeAgo date={lastMsg.createdAt} />}
+                        {unread && (
+                          <span className="h-2.5 w-2.5 rounded-full bg-[#3B6FE8]" />
+                        )}
+                      </div>
+                    </div>
+                    <p className="text-sm text-[#ADA8A5]">
+                      {[athlete?.position, athlete?.sport].filter(Boolean).join(" · ")}
+                    </p>
                     {lastMsg && (
-                      <TimeAgo date={lastMsg.createdAt} />
+                      <p
+                        className={`mt-1 line-clamp-2 text-sm ${
+                          unread ? "font-medium text-[#1A1A1A]" : "text-[#4B4745]"
+                        }`}
+                      >
+                        {lastMsg.content}
+                      </p>
                     )}
                   </div>
-                  <p className="text-sm text-[#ADA8A5]">
-                    {[athlete?.position, year, school].filter(Boolean).join(" · ")}
-                  </p>
-                  {lastMsg && (
-                    <p className="mt-1 line-clamp-2 text-sm text-[#4B4745]">
-                      {lastMsg.content}
-                    </p>
-                  )}
-                </div>
-              </button>
-            );
-          })}
+                </button>
+              );
+            })
+          )}
         </div>
 
         {/* Info card */}

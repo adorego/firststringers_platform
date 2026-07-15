@@ -35,7 +35,7 @@ import { JerryPitchService } from './jerry-pitch.service';
     RepresentationService,
     ManualExtractorService,
     OwnersManualService,
-    JerryPitchService
+    JerryPitchService,
   ],
   exports: [JerryPitchService],
 })

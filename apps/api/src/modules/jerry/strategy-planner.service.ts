@@ -164,9 +164,7 @@ export class StrategyPlannerService {
     };
   }
 
-  private detectSectionTransition(
-    nextField: string | undefined,
-  ): boolean {
+  private detectSectionTransition(nextField: string | undefined): boolean {
     if (!nextField) return false;
     return SECTION_FIRST_FIELDS.has(nextField);
   }

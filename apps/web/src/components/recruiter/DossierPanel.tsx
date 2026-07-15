@@ -1,32 +1,9 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useSession } from "next-auth/react";
-import { X, MapPin, TrendingUp, ArrowLeft, CheckCircle } from "lucide-react";
+import { X, MapPin, ArrowLeft, CheckCircle } from "lucide-react";
 import { AthleteResult } from "@/hooks/useBilly";
-
-interface ProfileUpdate {
-  title: string;
-  detail: string;
-}
-
-// Mock profile updates — will come from backend when dossier history is implemented
-const MOCK_UPDATES: Record<string, ProfileUpdate[]> = {};
-
-function getMockUpdates(athleteId: string): ProfileUpdate[] {
-  if (MOCK_UPDATES[athleteId]) return MOCK_UPDATES[athleteId];
-  // Generic fallback updates
-  return [
-    {
-      title: "Updated measurements",
-      detail: "Height: 6'1\" → 6'2.5\" · Weight: 185 → 192 lbs",
-    },
-    {
-      title: "New footage added",
-      detail: "2025 Spring Camp highlights (3:45) uploaded 4 days ago",
-    },
-  ];
-}
 
 function getProspectTag(score: number): { label: string; color: string; bg: string } | null {
   if (score >= 0.85) return { label: "Hot Prospect", color: "#C0392B", bg: "#FDECEA" };
@@ -39,11 +16,12 @@ interface DossierPanelProps {
   athlete: AthleteResult | null;
   onClose: () => void;
   onAddToPipeline?: (athlete: AthleteResult) => void;
-  onRequestIntro?: (athlete: AthleteResult) => void;
+  onRequestIntro?: (athlete: AthleteResult) => Promise<boolean> | void;
   openToIntro?: boolean;
+  isInPipeline?: boolean;
 }
 
-type IntroState = "idle" | "confirming" | "sent";
+type IntroState = "idle" | "confirming" | "sending" | "sent" | "error";
 
 export function DossierPanel({
   athlete,
@@ -51,6 +29,7 @@ export function DossierPanel({
   onAddToPipeline,
   onRequestIntro,
   openToIntro = false,
+  isInPipeline = false,
 }: DossierPanelProps) {
   const [introState, setIntroState] = useState<IntroState>("idle");
   const { data: session } = useSession();
@@ -64,26 +43,15 @@ export function DossierPanel({
   } | null>(null);
 
   useEffect(() => {
-    console.log("Fetching recruiter profile with token:", session?.user);
-    console.log(session?.accessToken)
     const token = session?.accessToken as string | undefined;
     if (!token) return;
     fetch(`${process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3001"}/recruiter/profile`, {
       headers: { Authorization: `Bearer ${token}` },
     })
       .then((r) => (r.ok ? r.json() : null))
-      .then((data) => { 
-        console.log("Recruiter profile data:", data);
-        if (data) setRecruiterProfile(data); })
+      .then((data) => { if (data) setRecruiterProfile(data); })
       .catch(() => {});
   }, [session]);
-
-  useEffect(() => {
-    console.log("session or openToIntro changed", { session, openToIntro });
-    if (openToIntro) {
-      setIntroState("confirming");
-    }
-  }, [openToIntro, session]);
 
   const recruiterName = session?.user?.name ?? session?.user?.email ?? "Recruiter";
   const recruiterInitials = recruiterName
@@ -105,9 +73,14 @@ export function DossierPanel({
     return `${recruiterProfile.university}${parts.length ? " — " + parts.join(", ") + "." : "."}`;
   })();
 
-  useEffect(() => {
+  // Sync introState when the athlete changes — done during render (not in an
+  // effect) to avoid react-hooks/set-state-in-effect. React re-renders once
+  // when setState is called this way; the ref prevents infinite loops.
+  const prevAthleteIdRef = useRef(athlete?.id);
+  if (prevAthleteIdRef.current !== athlete?.id) {
+    prevAthleteIdRef.current = athlete?.id;
     setIntroState(openToIntro ? "confirming" : "idle");
-  }, [athlete?.id]);
+  }
   const isOpen = athlete !== null;
 
   // Reset intro flow whenever the panel opens a new athlete or closes
@@ -129,7 +102,6 @@ export function DossierPanel({
     .slice(0, 2);
 
   const tag = getProspectTag(athlete.completenessScore);
-  const updates = getMockUpdates(athlete.id);
 
   const metaLine = [
     athlete.position,
@@ -198,15 +170,38 @@ export function DossierPanel({
                 Cancel
               </button>
               <button
-                onClick={() => {
-                  onRequestIntro?.(athlete);
-                  setIntroState("sent");
+                onClick={async () => {
+                  if (!onRequestIntro) { setIntroState("error"); return; }
+                  setIntroState("sending");
+                  try {
+                    const result = await onRequestIntro(athlete);
+                    setIntroState(result === false ? "error" : "sent");
+                  } catch {
+                    setIntroState("error");
+                  }
                 }}
                 className="flex-1 rounded-xl bg-[#1A1A1A] py-2.5 text-sm font-semibold text-white transition-colors hover:bg-[#3B6FE8]"
               >
                 Confirm &amp; Send
               </button>
             </div>
+          </div>
+        </div>
+      </>
+    );
+  }
+
+  if (introState === "sending") {
+    return (
+      <>
+        <div className={backdropClass} onClick={handleClose} />
+        <div className={panelClass}>
+          <div className="flex h-full flex-col items-center justify-center gap-4 px-8 text-center">
+            <svg className="h-8 w-8 animate-spin text-[#ADA8A5]" viewBox="0 0 24 24" fill="none">
+              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+            </svg>
+            <p className="text-sm text-[#6B6561]">Sending request…</p>
           </div>
         </div>
       </>
@@ -232,6 +227,39 @@ export function DossierPanel({
             >
               Close
             </button>
+          </div>
+        </div>
+      </>
+    );
+  }
+
+  if (introState === "error") {
+    return (
+      <>
+        <div className={backdropClass} onClick={handleClose} />
+        <div className={panelClass}>
+          <div className="flex h-full flex-col items-center justify-center gap-4 px-8 text-center">
+            <div className="flex h-12 w-12 items-center justify-center rounded-full bg-red-100">
+              <X size={24} className="text-red-500" />
+            </div>
+            <p className="text-lg font-semibold text-[#1A1A1A]">Request failed</p>
+            <p className="max-w-[280px] text-sm leading-relaxed text-[#6B6561]">
+              There was a problem sending the request. Make sure your account is verified and try again.
+            </p>
+            <div className="mt-2 flex gap-3">
+              <button
+                onClick={() => setIntroState("confirming")}
+                className="rounded-xl bg-[#1A1A1A] px-8 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-[#3B6FE8]"
+              >
+                Try again
+              </button>
+              <button
+                onClick={handleClose}
+                className="rounded-xl border border-[#E8E3DD] px-8 py-2.5 text-sm font-medium text-[#6B6561] transition-colors hover:bg-[#EDEAE5]"
+              >
+                Close
+              </button>
+            </div>
           </div>
         </div>
       </>
@@ -287,9 +315,10 @@ export function DossierPanel({
           <div className="flex items-center gap-4 border-y border-[#E8E3DD] py-4">
             <button
               onClick={() => onAddToPipeline?.(athlete)}
-              className="flex-1 rounded-xl border border-[#E8E3DD] py-2.5 text-sm font-medium text-[#6B6561] transition-colors hover:bg-[#EDEAE5] hover:text-[#1A1A1A]"
+              disabled={isInPipeline}
+              className="flex-1 rounded-xl border border-[#E8E3DD] py-2.5 text-sm font-medium text-[#6B6561] transition-colors hover:bg-[#EDEAE5] hover:text-[#1A1A1A] disabled:border-[#C8E6C9] disabled:text-[#2E7D32] disabled:hover:bg-transparent"
             >
-              Add to Pipeline
+              {isInPipeline ? "Added to Pipeline ✓" : "Add to Pipeline"}
             </button>
             <button
               onClick={() => setIntroState("confirming")}
@@ -297,23 +326,6 @@ export function DossierPanel({
             >
               Request Introduction
             </button>
-          </div>
-
-          <div className="rounded-xl bg-[#F0EDE9] px-5 py-4">
-            <div className="mb-3 flex items-center gap-2">
-              <TrendingUp size={13} className="text-[#ADA8A5]" />
-              <span className="text-[11px] font-semibold uppercase tracking-wide text-[#ADA8A5]">
-                Profile Updates
-              </span>
-            </div>
-            <div className="flex flex-col gap-3">
-              {updates.map((u, i) => (
-                <div key={i}>
-                  <p className="text-sm font-semibold text-[#1A1A1A]">{u.title}</p>
-                  <p className="text-sm text-[#ADA8A5]">{u.detail}</p>
-                </div>
-              ))}
-            </div>
           </div>
 
           {athlete.dossier?.summary && (

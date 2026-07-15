@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import { useSession, signOut } from "next-auth/react";
-import { Send, Video, Radar, TrendingUp, Shield, Check, X } from "lucide-react";
+import { Send, Radar, TrendingUp, Shield, Check, X } from "lucide-react";
 import { useChatStore } from "@/stores/chat-store";
 import { useDossierStore } from "@/stores/dossier-store";
 import type { ConnectionRequest } from "@/stores/chat-store";
@@ -171,7 +171,7 @@ export default function ChatPage() {
     const token = session?.accessToken as string | undefined;
     if (!token) return;
 
-    const { connect, reconnect, disconnect } = useChatStore.getState();
+    const { connect, disconnect } = useChatStore.getState();
     connect(token);
     subscribe();
 

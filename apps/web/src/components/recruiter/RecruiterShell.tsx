@@ -11,6 +11,7 @@ import { DirectConversation } from "@/hooks/useDirectChat";
 import { IntroductionsDrawer } from "@/components/recruiter/IntroductionsDrawer";
 import { DossierPanel } from "@/components/recruiter/DossierPanel";
 import { AthleteResult } from "@/hooks/useBilly";
+import { api } from "@/lib/api";
 
 export function RecruiterShell({ children }: { children: React.ReactNode }) {
   const { data: session } = useSession();
@@ -20,8 +21,36 @@ export function RecruiterShell({ children }: { children: React.ReactNode }) {
   const [connectionsOpen, setConnectionsOpen] = useState(false);
   const [introductionsOpen, setIntroductionsOpen] = useState(false);
   const [dossierAthlete, setDossierAthlete] = useState<AthleteResult | null>(null);
+  const [dossierOpenToIntro, setDossierOpenToIntro] = useState(false);
+  const [pipelineIds, setPipelineIds] = useState<Set<string>>(new Set());
+  const [introSentIds, setIntroSentIds] = useState<Set<string>>(new Set());
   const [activeConversation, setActiveConversation] =
     useState<DirectConversation | null>(null);
+
+  const handleAddToPipeline = async (athlete: AthleteResult) => {
+    if (pipelineIds.has(athlete.id)) return;
+    setPipelineIds((prev) => new Set(prev).add(athlete.id));
+    try {
+      await api.addToPipeline(athlete.id);
+    } catch {
+      setPipelineIds((prev) => {
+        const next = new Set(prev);
+        next.delete(athlete.id);
+        return next;
+      });
+    }
+  };
+
+  const handleRequestIntro = async (athlete: AthleteResult): Promise<boolean> => {
+    try {
+      await api.requestIntroduction(athlete.id);
+      setIntroSentIds((prev) => new Set(prev).add(athlete.id));
+      api.removeFromPipeline(athlete.id).catch(() => {});
+      return true;
+    } catch {
+      return false;
+    }
+  };
 
   const handleSelectConversation = (conv: DirectConversation) => {
     setActiveConversation(conv);
@@ -52,6 +81,7 @@ export function RecruiterShell({ children }: { children: React.ReactNode }) {
         recruiterId={recruiterId}
         isOpen={sidebarOpen}
         onClose={closeSidebar}
+        refreshCountsKey={`${connectionsOpen}:${activeConversation?.id ?? ""}`}
         onPipelineClick={() => {
           setConnectionsOpen(false);
           setIntroductionsOpen(false);
@@ -88,6 +118,17 @@ export function RecruiterShell({ children }: { children: React.ReactNode }) {
       <PipelineDrawer
         isOpen={pipelineOpen}
         onClose={() => setPipelineOpen(false)}
+        hiddenAthleteIds={introSentIds}
+        onViewDossier={(athlete) => {
+          setPipelineIds((prev) => new Set(prev).add(athlete.id));
+          setDossierOpenToIntro(false);
+          setDossierAthlete(athlete);
+        }}
+        onRequestIntro={(athlete) => {
+          setPipelineIds((prev) => new Set(prev).add(athlete.id));
+          setDossierOpenToIntro(true);
+          setDossierAthlete(athlete);
+        }}
       />
 
       <ConnectionsDrawer
@@ -100,12 +141,22 @@ export function RecruiterShell({ children }: { children: React.ReactNode }) {
       <IntroductionsDrawer
         isOpen={introductionsOpen}
         onClose={() => setIntroductionsOpen(false)}
-        onViewDossier={(athlete) => setDossierAthlete(athlete)}
+        onViewDossier={(athlete) => {
+          setDossierOpenToIntro(false);
+          setDossierAthlete(athlete);
+        }}
       />
 
       <DossierPanel
         athlete={dossierAthlete}
-        onClose={() => setDossierAthlete(null)}
+        openToIntro={dossierOpenToIntro}
+        onClose={() => {
+          setDossierAthlete(null);
+          setDossierOpenToIntro(false);
+        }}
+        onAddToPipeline={handleAddToPipeline}
+        onRequestIntro={handleRequestIntro}
+        isInPipeline={dossierAthlete ? pipelineIds.has(dossierAthlete.id) : false}
       />
 
       {activeConversation && (
@@ -117,6 +168,7 @@ export function RecruiterShell({ children }: { children: React.ReactNode }) {
           />
           <DirectChatPanel
             conversation={activeConversation}
+            recruiterId={recruiterId}
             onBack={handleBackToConnections}
           />
         </>

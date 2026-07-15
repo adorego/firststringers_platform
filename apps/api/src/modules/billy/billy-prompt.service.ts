@@ -1,5 +1,8 @@
 import { Injectable } from '@nestjs/common';
-import { BillySessionState, SearchCriteria } from '../../shared/types/billy.types';
+import {
+  BillySessionState,
+  SearchCriteria,
+} from '../../shared/types/billy.types';
 
 @Injectable()
 export class BillyPromptService {
@@ -56,7 +59,7 @@ Only include fields you're confident about. Omit uncertain ones entirely.`;
     if (!match) return null;
 
     try {
-      const raw = JSON.parse(match[1].trim());
+      const raw = JSON.parse(match[1].trim()) as Record<string, unknown>;
       // Remove null/undefined/empty values
       return Object.fromEntries(
         Object.entries(raw).filter(
@@ -87,7 +90,9 @@ Only include fields you're confident about. Omit uncertain ones entirely.`;
       'graduationYear',
     ];
     const hasRequired = required.every((f) => criteria[f]);
-    const optionalCount = optional.filter((f) => criteria[f] !== undefined).length;
+    const optionalCount = optional.filter(
+      (f) => criteria[f] !== undefined,
+    ).length;
     return hasRequired && optionalCount >= 1;
   }
 

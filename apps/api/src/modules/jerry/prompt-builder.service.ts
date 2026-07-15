@@ -186,5 +186,4 @@ ${this.buildManualContext(manual)}
       - If the athlete asks how you work, answer openly and in plain language: you are their AI representative; everything they share helps you represent them better
     `;
   }
-
 }

@@ -1,3 +1,4 @@
+import type { Server } from 'http';
 import { Test, TestingModule } from '@nestjs/testing';
 import { INestApplication, ValidationPipe } from '@nestjs/common';
 import { AppModule } from '../../src/app.module';
@@ -21,9 +22,7 @@ export async function createTestApp(): Promise<INestApplication> {
 
   app = moduleFixture.createNestApplication();
 
-  app.useGlobalPipes(
-    new ValidationPipe({ whitelist: true, transform: true }),
-  );
+  app.useGlobalPipes(new ValidationPipe({ whitelist: true, transform: true }));
 
   await app.init();
 
@@ -34,6 +33,13 @@ export async function createTestApp(): Promise<INestApplication> {
 
 export function getApp(): INestApplication {
   return app;
+}
+
+// supertest's request() expects a Node http.Server (or equivalent), not the
+// `any` that Nest's getHttpServer() returns — type it once here instead of
+// casting at every call site.
+export function getHttpServer(): Server {
+  return app.getHttpServer() as Server;
 }
 
 export function getPrisma(): PrismaService {

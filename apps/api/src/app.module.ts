@@ -17,6 +17,8 @@ import { HealthModule } from './modules/health/health.module';
 import { BillyModule } from './modules/billy/billy.module';
 import { ConversationsModule } from './modules/conversations/conversations.module';
 import { RecruiterModule } from './modules/recruiter/recruiter.module';
+import { PipelineModule } from './modules/pipeline/pipeline.module';
+import { MailModule } from './modules/mail/mail.module';
 
 @Module({
   imports: [
@@ -31,6 +33,7 @@ import { RecruiterModule } from './modules/recruiter/recruiter.module';
     PrismaModule,
     RedisModule,
     LLMModule,
+    MailModule,
     AuthModule,
     AthleteModule,
     JerryModule,
@@ -40,6 +43,7 @@ import { RecruiterModule } from './modules/recruiter/recruiter.module';
     BillyModule,
     ConversationsModule,
     RecruiterModule,
+    PipelineModule,
   ],
   providers: [
     { provide: APP_GUARD, useClass: JwtAuthGuard },

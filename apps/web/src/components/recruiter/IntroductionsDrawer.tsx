@@ -17,64 +17,6 @@ interface IntroAthlete {
   surfacedAt: string;
 }
 
-const MOCK_INTROS: IntroAthlete[] = [
-  {
-    id: "intro-1",
-    name: "Marcus Chen",
-    position: "CB",
-    classYear: 2027,
-    location: "Austin, TX",
-    fortyTime: "4.45",
-    height: "6'0\"",
-    gpa: 3.6,
-    school: "Westlake HS",
-    jerryPitch:
-      "Jerry believes Marcus may strongly align with your preference for developmental defensive backs with elite recovery speed and academic consistency.",
-    surfacedAt: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(),
-  },
-  {
-    id: "intro-2",
-    name: "Isaiah Thompson",
-    position: "TE",
-    classYear: 2026,
-    location: "Concord, CA",
-    fortyTime: "4.72",
-    height: "6'4\"",
-    gpa: 3.8,
-    school: "De La Salle HS",
-    jerryPitch:
-      "Jerry surfaced Isaiah based on your recent focus on athletic tight ends with high-point catching ability and long-term developmental fit.",
-    surfacedAt: new Date(Date.now() - 5 * 60 * 60 * 1000).toISOString(),
-  },
-  {
-    id: "intro-3",
-    name: "Devon Reyes",
-    position: "WR",
-    classYear: 2026,
-    location: "Miami, FL",
-    fortyTime: "4.38",
-    height: "5'11\"",
-    gpa: 3.2,
-    school: "Miami Northwestern",
-    jerryPitch:
-      "Devon's route-running precision and separation speed closely match the profile you searched for last week. His 4.38 forty places him in the top 5% of WR prospects nationally.",
-    surfacedAt: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString(),
-  },
-  {
-    id: "intro-4",
-    name: "Caleb Morrison",
-    position: "OT",
-    classYear: 2027,
-    location: "Houston, TX",
-    height: "6'6\"",
-    gpa: 3.0,
-    school: "Katy HS",
-    jerryPitch:
-      "Jerry flagged Caleb as an emerging developmental lineman with exceptional length and footwork for his class. Fits your stated interest in early-cycle OL prospects.",
-    surfacedAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
-  },
-];
-
 function timeAgo(dateStr: string): string {
   const diff = Date.now() - new Date(dateStr).getTime();
   const mins = Math.floor(diff / 60000);
@@ -105,7 +47,8 @@ function toAthleteResult(a: IntroAthlete): AthleteResult {
 }
 
 export function IntroductionsDrawer({ isOpen, onClose, onViewDossier }: IntroductionsDrawerProps) {
-  const athletes = MOCK_INTROS;
+  // No backend endpoint surfaces Jerry-suggested introductions yet.
+  const athletes: IntroAthlete[] = [];
 
   return (
     <>
@@ -144,7 +87,18 @@ export function IntroductionsDrawer({ isOpen, onClose, onViewDossier }: Introduc
 
         {/* List */}
         <div className="flex-1 overflow-y-auto divide-y divide-[#E8E3DD] px-7">
-          {athletes.map((athlete) => {
+          {athletes.length === 0 ? (
+            <div className="flex flex-col items-center justify-center px-7 py-16 text-center">
+              <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-[#EDEAE5]">
+                <Zap size={20} className="text-[#ADA8A5]" />
+              </div>
+              <p className="font-semibold text-[#1A1A1A]">No introductions yet</p>
+              <p className="mt-1 text-sm text-[#ADA8A5]">
+                Jerry will surface athletes here as they match your recruiting preferences.
+              </p>
+            </div>
+          ) : (
+            athletes.map((athlete) => {
             const initials = athlete.name
               .split(" ")
               .map((n) => n[0])
@@ -215,7 +169,8 @@ export function IntroductionsDrawer({ isOpen, onClose, onViewDossier }: Introduc
                 </p>
               </div>
             );
-          })}
+          })
+          )}
         </div>
 
         {/* Footer info */}
