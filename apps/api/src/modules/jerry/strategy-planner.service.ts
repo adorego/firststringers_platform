@@ -6,50 +6,42 @@ import {
   StrategyContext,
 } from '../../shared/types';
 
-// Ordered to match the product onboarding flow (Athlete Onboarding Process.docx)
 const FIELD_PRIORITY = [
-  // Section 2: Athlete Identity (Q1-7)
-  'sport',
-  'position',
   'graduation year',
   'location',
+  'sport',
+  'position',
   'school',
   'competitive level',
-  // Section 3: Athletic Snapshot (Q8-12)
   'physical profile',
   'dominant side',
   'stats',
-  'league level',
   'strengths',
   'physical status',
-  // Section 4: Recruiting Direction (Q13-19)
-  'competitive level goal',
   'goals',
+  'competitive level goal',
   'timeline',
   'preferred regions',
   'relocation openness',
-  'GPA',
   'intended major',
   'non-negotiables',
-  // Section 5: Visibility & Assets (Q20-24)
   'highlights',
   'clips',
   'social media',
   'references',
   'self-representation',
-  // Section 6: Competitive Identity (Q25-27)
   'growth areas',
   'mentality',
   'motivation',
+  'league level',
+  'GPA',
 ];
 
-// The first field of each section — when the next field to ask is one of these,
-// and extracted data was just received, trigger a section_transition
 const SECTION_FIRST_FIELDS = new Set([
-  'physical profile', // Section 3: Athletic Snapshot
-  'competitive level goal', // Section 4: Recruiting Direction
-  'highlights', // Section 5: Visibility & Assets
-  'growth areas', // Section 6: Competitive Identity
+  'physical profile',
+  'goals',
+  'highlights',
+  'growth areas',
 ]);
 
 const FRUSTRATION_KEYWORDS = ["don't know", 'not sure', 'stop', 'quit'];
@@ -82,9 +74,12 @@ export class StrategyPlannerService {
     const alreadyRepresentable = representableMissing.length === 0;
 
     if (session.messages.length <= 1) {
-      // A representable athlete returning after the session expired gets a
-      // proactive check-in, not the onboarding welcome
-      return alreadyRepresentable ? { type: 'continuous' } : { type: 'welcome' };
+      return alreadyRepresentable
+        ? { type: 'continuous' }
+        : {
+            type: 'welcome',
+            targetField: this.pickNextField(missingFields, session.messages),
+          };
     }
 
     if (this.detectFrustration(session.messages)) {

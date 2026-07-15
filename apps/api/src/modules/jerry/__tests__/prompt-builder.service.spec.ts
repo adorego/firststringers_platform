@@ -73,11 +73,21 @@ describe('PromptBuilderService', () => {
   });
 
   describe('strategy: welcome', () => {
-    it('includes introduction instruction and Jerry identity', () => {
+    it('includes the v2 introduction script and Jerry identity', () => {
       const result = service.build({ type: 'welcome' });
       expect(result).toContain('Introduce yourself');
+      expect(result).toContain('Your AI agent inside First Stringers');
+      expect(result).toContain('personal recruiting representative');
       expect(result).toContain('sport');
-      expect(result).toContain('representation agent');
+    });
+
+    it('opens with the first pending question when targetField is present', () => {
+      const result = service.build({
+        type: 'welcome',
+        targetField: 'graduation year',
+      });
+      expect(result).toContain('What year do you graduate?');
+      expect(result).toContain('never ask for it again');
     });
   });
 
@@ -186,7 +196,8 @@ describe('PromptBuilderService', () => {
     it('marks the representable threshold and the start of the continuous relationship', () => {
       const result = service.build({ type: 'activation' });
       expect(result).toContain('REPRESENTABLE threshold');
-      expect(result).toContain('enough to start representing you');
+      expect(result).toContain('begin representing you inside First Stringers');
+      expect(result).toContain("We're just getting started");
       expect(result).toContain('check-in question');
     });
   });

@@ -26,6 +26,19 @@ welcome, confirm_and_probe, answer_and_redirect,
 clarify, strategic_ask, section_transition,
 continuous, activation, reset
 
+## Onboarding v2 (Jerry Athlete Representation System v2, Abel 2026-07)
+Fuente: ENGINEERING/cerebros-abel/Athlete Onboarding Process v2.docx.
+- FIELD_PRIORITY sigue el orden v2: graduation year → location → sport →
+  position → school → competitive level → snapshot → direction → assets →
+  identity. GPA y league level van AL FINAL: ya no son parte del flujo de
+  activacion, solo orientacion en modo continuous.
+- El full name (Q1 del doc) NO se pregunta: viene del registro. welcome
+  lleva targetField con la primera pregunta pendiente.
+- Guiones v2 en getFieldContext (wording exacto de Abel por campo),
+  welcome script v2, mensaje de FINAL ACTIVATION v2, y regla de
+  reassurance cuando el atleta no tiene algo aun (metrics/footage).
+- SECTION_FIRST_FIELDS: physical profile, goals, highlights, growth areas.
+
 ## Representable > Completo (vision de Abel)
 El onboarding "termina" cuando Jerry tiene los REPRESENTABLE_FIELDS
 (identidad + snapshot atletico + objetivos), NO el 100% de los campos.
