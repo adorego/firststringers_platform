@@ -11,13 +11,16 @@ No es un chatbot — es un agente con estado, memoria y estrategia.
 1. getSession() → contexto desde Redis
 2. classify() → intent del mensaje
 3. extract() → datos estructurados si aplica
-4. getMissingFields() → que falta en el dossier
-5. strategyPlanner.decide() → que hacer en este turno
-6. promptBuilder.build() → system prompt dinamico
-7. llm.chat() → llamada a GPT-4o
-8. appendMessage() → guardar en sesion
-9. emit dossier.update → si hay datos nuevos
-10. emit jerry.response → respuesta al WebSocket
+4. manualExtractor.extract() → señales de comprension (Owner's Manual)
+5. getMissingFields() → que falta en el dossier
+6. strategyPlanner.decide() → que hacer en este turno
+7. representation transitions → activation / represented (FS-CS-005)
+8. ownersManual.merge() + get() → persistir insights y cargar el manual
+9. promptBuilder.build(strategy, manual) → system prompt dinamico
+10. llm.chat() → llamada a GPT-4o
+11. appendMessage() → guardar en sesion
+12. emit dossier.update → si hay datos nuevos
+13. emit jerry.response → respuesta al WebSocket
 ## Estrategias de conversacion
 welcome, confirm_and_probe, answer_and_redirect,
 clarify, strategic_ask, section_transition,
@@ -45,6 +48,18 @@ ConversationWorker: cualquier estrategia de onboarding → activation;
 estrategia activation o continuous → represented (idempotente).
 Scout solo devuelve atletas represented/verified — un atleta por debajo
 del umbral NO es visible para recruiters ni para Billy.
+
+## Owner's Manual (FS-CS-002/005)
+Tabla OwnersManual (data Json): la comprension INTERNA de Jerry sobre el
+atleta — motivaciones, valores, aspiraciones, estilos de comunicacion/
+aprendizaje, toma de decisiones, ambientes, sistema de apoyo. NO es el
+dossier: el dossier es la capa compartible, el manual es solo de Jerry.
+ManualExtractorService extrae señales en intents personal/character/
+recruiting/availability/other; OwnersManualService hace merge (arrays =
+union sin duplicados, textos = ultima comprension) y el manual entra al
+system prompt para que Jerry adapte tono y consejo.
+REGLA DE PRIVACIDAD: el manual JAMAS se expone a recruiters, Billy,
+Scout ni endpoints — ningun controller/gateway debe incluirlo.
 ## Cuando agregar una nueva estrategia
 Agregar en strategy-planner.service.ts, luego en
 prompt-builder.service.ts, luego el test correspondiente.

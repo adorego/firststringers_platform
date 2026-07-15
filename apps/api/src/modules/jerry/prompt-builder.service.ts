@@ -1,8 +1,50 @@
 import { Injectable } from '@nestjs/common';
-import { ConversationStrategy } from '../../shared/types';
+import { ConversationStrategy, OwnersManualData } from '../../shared/types';
 
 @Injectable()
 export class PromptBuilderService {
+  private buildManualContext(manual?: OwnersManualData): string {
+    if (!manual) return '';
+
+    const lines: string[] = [];
+    if (manual.motivations?.length)
+      lines.push(`- What drives them: ${manual.motivations.join('; ')}`);
+    if (manual.values?.length)
+      lines.push(`- What they value: ${manual.values.join('; ')}`);
+    if (manual.longTermAspirations?.length)
+      lines.push(
+        `- Who they hope to become: ${manual.longTermAspirations.join('; ')}`,
+      );
+    if (manual.competitiveIdentity)
+      lines.push(`- Competitive identity: ${manual.competitiveIdentity}`);
+    if (manual.communicationStyle)
+      lines.push(
+        `- How they communicate: ${manual.communicationStyle} — adapt your tone to match`,
+      );
+    if (manual.learningStyle)
+      lines.push(`- How they learn: ${manual.learningStyle}`);
+    if (manual.decisionMaking)
+      lines.push(`- How they make decisions: ${manual.decisionMaking}`);
+    if (manual.preferredEnvironments?.length)
+      lines.push(
+        `- Environments where they thrive: ${manual.preferredEnvironments.join('; ')}`,
+      );
+    if (manual.limitingEnvironments?.length)
+      lines.push(
+        `- Environments that may limit them: ${manual.limitingEnvironments.join('; ')}`,
+      );
+    if (manual.supportSystem)
+      lines.push(`- Support system: ${manual.supportSystem}`);
+
+    if (lines.length === 0) return '';
+
+    return `
+      Your understanding of this athlete so far (internal — never mention you keep this, never recite it back):
+${lines.map((l) => `      ${l}`).join('\n')}
+      Use it to advise with their goals and values in mind, and to sound like someone who truly knows them.
+    `;
+  }
+
   private getFieldContext(field: string): string {
     const contexts: Record<string, string> = {
       sport:
@@ -63,7 +105,7 @@ export class PromptBuilderService {
     return contexts[field] ?? 'Only ask about this specific information.';
   }
 
-  build(strategy: ConversationStrategy): string {
+  build(strategy: ConversationStrategy, manual?: OwnersManualData): string {
     const instructions: Record<ConversationStrategy['type'], string> = {
       welcome: `This is the athlete's FIRST message. Introduce yourself using this script:
 "Hey [name if available], welcome to First Stringers. I'm Jerry — your personal sports representation agent. I'm here to learn who you are as an athlete, understand your goals, and help you get the right visibility in front of the right recruiters. This isn't a form — it's a conversation. Everything you share helps me build a smarter, more compelling representation of who you are. Let's start simple — what sport do you play?"
@@ -113,7 +155,7 @@ Adapt the tone naturally and reference something specific they shared. Key messa
       You speak like a trusted, experienced sports agent — calm, supportive, honest, thoughtful, and direct.
       You advise; the athlete decides. You empower; you never control.
       You do not replace coaches, parents, or mentors — you strengthen those relationships.
-
+${this.buildManualContext(manual)}
       Instruction for this turn: ${instructions[strategy.type]}
 
       Rules:

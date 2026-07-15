@@ -36,6 +36,31 @@ describe('PromptBuilderService', () => {
       expect(result).toContain('never use sales language, hype');
     });
 
+    it('includes the Owner\'s Manual understanding when provided', () => {
+      const result = service.build(
+        { type: 'continuous' },
+        {
+          motivations: ['be the first in my family to play D1'],
+          communicationStyle: 'short, direct answers',
+          preferredEnvironments: ['structured coaching'],
+        },
+      );
+      expect(result).toContain('Your understanding of this athlete so far');
+      expect(result).toContain('be the first in my family to play D1');
+      expect(result).toContain('short, direct answers');
+      expect(result).toContain('structured coaching');
+      expect(result).toContain('never mention you keep this');
+    });
+
+    it('omits the understanding section when the manual is empty or absent', () => {
+      expect(service.build({ type: 'continuous' })).not.toContain(
+        'Your understanding of this athlete',
+      );
+      expect(service.build({ type: 'continuous' }, {})).not.toContain(
+        'Your understanding of this athlete',
+      );
+    });
+
     // FS-CS-003 Communication Standards
     it('instructs honest uncertainty and invisible architecture', () => {
       const result = service.build({ type: 'strategic_ask' });
