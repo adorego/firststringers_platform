@@ -8,6 +8,9 @@ import { DataExtractorService } from './data-extractor.service';
 import { ValidatorService } from './validator.service';
 import { StrategyPlannerService } from './strategy-planner.service';
 import { PromptBuilderService } from './prompt-builder.service';
+import { RepresentationService } from './representation.service';
+import { ManualExtractorService } from './manual-extractor.service';
+import { OwnersManualService } from './owners-manual.service';
 import { LLMService } from '../../shared/llm/llm.service';
 import { MessageJob, JerryMessage } from '../../shared/types';
 
@@ -22,6 +25,9 @@ export class ConversationWorker {
     private readonly validator: ValidatorService,
     private readonly strategyPlanner: StrategyPlannerService,
     private readonly promptBuilder: PromptBuilderService,
+    private readonly representation: RepresentationService,
+    private readonly manualExtractor: ManualExtractorService,
+    private readonly ownersManual: OwnersManualService,
     private readonly llm: LLMService,
     private readonly eventEmitter: EventEmitter2,
   ) {}
@@ -34,6 +40,10 @@ export class ConversationWorker {
       const sessionState = await this.session.getSession(athleteId);
       const intent = await this.intentClassifier.classify(message);
       const extractedData = await this.dataExtractor.extract(message, intent);
+      const manualInsights = await this.manualExtractor.extract(
+        message,
+        intent,
+      );
       const missingFields = await this.validator.getMissingFields(athleteId);
 
       const strategy = this.strategyPlanner.decide({
@@ -43,8 +53,20 @@ export class ConversationWorker {
         session: sessionState,
       });
 
+      if (strategy.type === 'activation' || strategy.type === 'continuous') {
+        await this.representation.markRepresented(athleteId);
+      } else {
+        await this.representation.ensureActivation(athleteId);
+      }
+
+      if (manualInsights) {
+        await this.ownersManual.merge(athleteId, manualInsights);
+      }
+
+      const manual = await this.ownersManual.get(athleteId);
+
       const response = await this.llm.chat({
-        systemPrompt: this.promptBuilder.build(strategy),
+        systemPrompt: this.promptBuilder.build(strategy, manual),
         messages: sessionState.messages,
         extractedData,
       });

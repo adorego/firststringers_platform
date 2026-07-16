@@ -262,13 +262,17 @@ async function main() {
     // Crear atleta
     const athlete = await prisma.athlete.upsert({
       where: { email },
-      update: {},
+      update: {
+        representationStatus: 'represented',
+      },
       create: {
         organizationId: org.id,
         email,
         name,
         sport,
         position,
+        representationStatus: 'represented',
+        representedAt: new Date(),
       },
     });
 

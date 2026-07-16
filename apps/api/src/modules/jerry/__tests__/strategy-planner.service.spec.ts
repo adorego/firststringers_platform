@@ -126,6 +126,45 @@ describe('StrategyPlannerService', () => {
       expect(result.targetField).toBe('sport');
     });
 
+    it('follows the v2 onboarding order: graduation year first, goals before target level', () => {
+      const first = service.decide(
+        makeCtx({
+          missingFields: ['sport', 'graduation year', 'location'],
+          intent: 'other',
+        }),
+      );
+      expect(first.targetField).toBe('graduation year');
+
+      const direction = service.decide(
+        makeCtx({
+          missingFields: ['competitive level goal', 'goals'],
+          intent: 'other',
+        }),
+      );
+      expect(direction.targetField).toBe('goals');
+    });
+
+    it('defers GPA and league level to the end of the flow', () => {
+      const result = service.decide(
+        makeCtx({
+          missingFields: ['GPA', 'league level', 'motivation'],
+          intent: 'other',
+        }),
+      );
+      expect(result.targetField).toBe('motivation');
+    });
+
+    it('welcome carries the first pending field as targetField', () => {
+      const result = service.decide(
+        makeCtx({
+          session: makeSession([]),
+          missingFields: ['sport', 'graduation year'],
+        }),
+      );
+      expect(result.type).toBe('welcome');
+      expect(result.targetField).toBe('graduation year');
+    });
+
     it('does not repeat the field Jerry asked in its last message', () => {
       const session = makeSession([
         makeMessage('user', 'Hello'),

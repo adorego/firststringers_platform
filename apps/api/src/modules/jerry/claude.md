@@ -11,17 +11,33 @@ No es un chatbot — es un agente con estado, memoria y estrategia.
 1. getSession() → contexto desde Redis
 2. classify() → intent del mensaje
 3. extract() → datos estructurados si aplica
-4. getMissingFields() → que falta en el dossier
-5. strategyPlanner.decide() → que hacer en este turno
-6. promptBuilder.build() → system prompt dinamico
-7. llm.chat() → llamada a GPT-4o
-8. appendMessage() → guardar en sesion
-9. emit dossier.update → si hay datos nuevos
-10. emit jerry.response → respuesta al WebSocket
+4. manualExtractor.extract() → señales de comprension (Owner's Manual)
+5. getMissingFields() → que falta en el dossier
+6. strategyPlanner.decide() → que hacer en este turno
+7. representation transitions → activation / represented (FS-CS-005)
+8. ownersManual.merge() + get() → persistir insights y cargar el manual
+9. promptBuilder.build(strategy, manual) → system prompt dinamico
+10. llm.chat() → llamada a GPT-4o
+11. appendMessage() → guardar en sesion
+12. emit dossier.update → si hay datos nuevos
+13. emit jerry.response → respuesta al WebSocket
 ## Estrategias de conversacion
 welcome, confirm_and_probe, answer_and_redirect,
 clarify, strategic_ask, section_transition,
 continuous, activation, reset
+
+## Onboarding v2 (Jerry Athlete Representation System v2, Abel 2026-07)
+Fuente: ENGINEERING/cerebros-abel/Athlete Onboarding Process v2.docx.
+- FIELD_PRIORITY sigue el orden v2: graduation year → location → sport →
+  position → school → competitive level → snapshot → direction → assets →
+  identity. GPA y league level van AL FINAL: ya no son parte del flujo de
+  activacion, solo orientacion en modo continuous.
+- El full name (Q1 del doc) NO se pregunta: viene del registro. welcome
+  lleva targetField con la primera pregunta pendiente.
+- Guiones v2 en getFieldContext (wording exacto de Abel por campo),
+  welcome script v2, mensaje de FINAL ACTIVATION v2, y regla de
+  reassurance cuando el atleta no tiene algo aun (metrics/footage).
+- SECTION_FIRST_FIELDS: physical profile, goals, highlights, growth areas.
 
 ## Representable > Completo (vision de Abel)
 El onboarding "termina" cuando Jerry tiene los REPRESENTABLE_FIELDS
@@ -30,6 +46,33 @@ activation se dispara UNA vez (el turno que cruza el umbral) y despues
 todo corre en modo continuous: Jerry proactivo, orientacion conversacional,
 nunca lenguaje de formulario. La completitud es interna (pitch, Billy),
 jamas visible para el atleta.
+
+## Intelligence Core (brains/)
+El system prompt de Jerry se deriva de las Cognitive Specs en brains/
+(FS-CS-002 Jerry Operating Brain, FS-CS-003 Communication, FS-CS-004
+Identity). Cambios de razonamiento se documentan primero ahi (proceso de
+gobernanza en brains/README.md) y se reflejan en prompt-builder en el
+mismo PR.
+
+## Representation lifecycle (FS-CS-005)
+Athlete.representationStatus: registered → activation → represented →
+verified. RepresentationService persiste las transiciones desde el
+ConversationWorker: cualquier estrategia de onboarding → activation;
+estrategia activation o continuous → represented (idempotente).
+Scout solo devuelve atletas represented/verified — un atleta por debajo
+del umbral NO es visible para recruiters ni para Billy.
+
+## Owner's Manual (FS-CS-002/005)
+Tabla OwnersManual (data Json): la comprension INTERNA de Jerry sobre el
+atleta — motivaciones, valores, aspiraciones, estilos de comunicacion/
+aprendizaje, toma de decisiones, ambientes, sistema de apoyo. NO es el
+dossier: el dossier es la capa compartible, el manual es solo de Jerry.
+ManualExtractorService extrae señales en intents personal/character/
+recruiting/availability/other; OwnersManualService hace merge (arrays =
+union sin duplicados, textos = ultima comprension) y el manual entra al
+system prompt para que Jerry adapte tono y consejo.
+REGLA DE PRIVACIDAD: el manual JAMAS se expone a recruiters, Billy,
+Scout ni endpoints — ningun controller/gateway debe incluirlo.
 ## Cuando agregar una nueva estrategia
 Agregar en strategy-planner.service.ts, luego en
 prompt-builder.service.ts, luego el test correspondiente.

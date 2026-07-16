@@ -131,7 +131,9 @@ export class ScoutService {
       ? (sportMap?.[filters.position.toLowerCase()] ?? filters.position)
       : undefined;
 
-    const where: Prisma.AthleteWhereInput = {};
+    const where: Prisma.AthleteWhereInput = {
+      representationStatus: { in: ['represented', 'verified'] },
+    };
     if (filters.sport)
       where.sport = { equals: filters.sport, mode: 'insensitive' };
     if (normalizedPosition)

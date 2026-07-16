@@ -10,6 +10,9 @@ import { DataExtractorService } from './data-extractor.service';
 import { ValidatorService } from './validator.service';
 import { StrategyPlannerService } from './strategy-planner.service';
 import { PromptBuilderService } from './prompt-builder.service';
+import { RepresentationService } from './representation.service';
+import { ManualExtractorService } from './manual-extractor.service';
+import { OwnersManualService } from './owners-manual.service';
 import { JerryPitchService } from './jerry-pitch.service';
 
 @Module({
@@ -29,6 +32,9 @@ import { JerryPitchService } from './jerry-pitch.service';
     ValidatorService,
     StrategyPlannerService,
     PromptBuilderService,
+    RepresentationService,
+    ManualExtractorService,
+    OwnersManualService,
     JerryPitchService,
   ],
   exports: [JerryPitchService],

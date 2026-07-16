@@ -14,14 +14,80 @@ describe('PromptBuilderService', () => {
       expect(result).toContain(JERRY_HEADER);
       expect(result).toContain(RULES_MARKER);
     });
+
+    // FS-CS-002 Jerry Operating Brain (brains/FS-CS-002-jerry-operating-brain.md)
+    it('declares loyalty to the athlete only, with the core decision rule', () => {
+      const result = service.build({ type: 'welcome' });
+      expect(result).toContain(
+        'You represent the athlete — not the platform, not recruiters, not First Stringers',
+      );
+      expect(result).toContain('does this truly benefit the athlete?');
+      expect(result).toContain('You advise; the athlete decides');
+      expect(result).toContain('do not replace coaches, parents, or mentors');
+    });
+
+    it('includes the non-negotiable ethical standards', () => {
+      const result = service.build({ type: 'continuous' });
+      expect(result).toContain('Never pressure the athlete');
+      expect(result).toContain('Never invent information');
+      expect(result).toContain(
+        'Never share or promise to share private information',
+      );
+      expect(result).toContain('never use sales language, hype');
+    });
+
+    it("includes the Owner's Manual understanding when provided", () => {
+      const result = service.build(
+        { type: 'continuous' },
+        {
+          motivations: ['be the first in my family to play D1'],
+          communicationStyle: 'short, direct answers',
+          preferredEnvironments: ['structured coaching'],
+        },
+      );
+      expect(result).toContain('Your understanding of this athlete so far');
+      expect(result).toContain('be the first in my family to play D1');
+      expect(result).toContain('short, direct answers');
+      expect(result).toContain('structured coaching');
+      expect(result).toContain('never mention you keep this');
+    });
+
+    it('omits the understanding section when the manual is empty or absent', () => {
+      expect(service.build({ type: 'continuous' })).not.toContain(
+        'Your understanding of this athlete',
+      );
+      expect(service.build({ type: 'continuous' }, {})).not.toContain(
+        'Your understanding of this athlete',
+      );
+    });
+
+    // FS-CS-003 Communication Standards
+    it('instructs honest uncertainty and invisible architecture', () => {
+      const result = service.build({ type: 'strategic_ask' });
+      expect(result).toContain(
+        'never replace uncertainty with false confidence',
+      );
+      expect(result).toContain('Reason internally, communicate naturally');
+      expect(result).toContain('answer openly and in plain language');
+    });
   });
 
   describe('strategy: welcome', () => {
-    it('includes introduction instruction and Jerry identity', () => {
+    it('includes the v2 introduction script and Jerry identity', () => {
       const result = service.build({ type: 'welcome' });
       expect(result).toContain('Introduce yourself');
+      expect(result).toContain('Your AI agent inside First Stringers');
+      expect(result).toContain('personal recruiting representative');
       expect(result).toContain('sport');
-      expect(result).toContain('representation agent');
+    });
+
+    it('opens with the first pending question when targetField is present', () => {
+      const result = service.build({
+        type: 'welcome',
+        targetField: 'graduation year',
+      });
+      expect(result).toContain('What year do you graduate?');
+      expect(result).toContain('never ask for it again');
     });
   });
 
@@ -130,7 +196,8 @@ describe('PromptBuilderService', () => {
     it('marks the representable threshold and the start of the continuous relationship', () => {
       const result = service.build({ type: 'activation' });
       expect(result).toContain('REPRESENTABLE threshold');
-      expect(result).toContain('enough to start representing you');
+      expect(result).toContain('begin representing you inside First Stringers');
+      expect(result).toContain("We're just getting started");
       expect(result).toContain('check-in question');
     });
   });

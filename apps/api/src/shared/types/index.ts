@@ -1,5 +1,24 @@
 export type UserRole = 'ATHLETE' | 'RECRUITER' | 'COACH' | 'ADMIN';
 
+export type RepresentationStatus =
+  | 'registered'
+  | 'activation'
+  | 'represented'
+  | 'verified';
+
+export interface OwnersManualData {
+  motivations?: string[];
+  values?: string[];
+  longTermAspirations?: string[];
+  communicationStyle?: string;
+  learningStyle?: string;
+  decisionMaking?: string;
+  competitiveIdentity?: string;
+  preferredEnvironments?: string[];
+  limitingEnvironments?: string[];
+  supportSystem?: string;
+}
+
 export type MessageRole = 'user' | 'assistant';
 
 export type JerryIntent =
