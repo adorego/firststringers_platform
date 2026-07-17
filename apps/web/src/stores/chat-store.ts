@@ -59,17 +59,11 @@ export const useChatStore = create<ChatState>((set, get) => ({
       .off("disconnect")
       .off("connection_request");
 
-    socket.on("connected", (payload: { message: string }) => {
+    socket.on("connected", (payload: { initiating?: boolean }) => {
       set({
         isConnected: true,
-        messages: [
-          {
-            id: crypto.randomUUID(),
-            sender: "jerry",
-            content: payload.message,
-            timestamp: new Date().toISOString(),
-          },
-        ],
+        isTyping: payload.initiating === true,
+        messages: [],
       });
     });
 

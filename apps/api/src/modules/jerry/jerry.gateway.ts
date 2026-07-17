@@ -92,10 +92,19 @@ export class JerryGateway implements OnGatewayConnection, OnGatewayDisconnect {
           messages: session.messages,
         });
       } else {
-        client.emit('connected', {
-          message:
-            "Hi! I'm Jerry, your sports representation agent. Ready to get started?",
-        });
+        client.emit('connected', { initiating: true });
+        client.emit('status', { status: 'typing' });
+        await this.jerryQueue.add(
+          'process.initiate',
+          { athleteId },
+          {
+            jobId: `initiate:${athleteId}`,
+            attempts: 3,
+            backoff: { type: 'fixed', delay: 2000 },
+            removeOnComplete: true,
+            removeOnFail: true,
+          },
+        );
       }
     } catch (err) {
       this.logger.error(`Error during connection for socket ${client.id}`, err);
