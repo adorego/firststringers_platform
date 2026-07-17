@@ -180,17 +180,20 @@ describe('JerryGateway', () => {
       expect(client.disconnect).toHaveBeenCalled();
     });
 
-    it('debe emitir connected con mensaje de Jerry si es sesión nueva (0 mensajes)', async () => {
+    it('debe emitir connected y encolar la iniciativa de Jerry si es sesión nueva (0 mensajes)', async () => {
       const client = makeSocket(VALID_TOKEN);
       mockSession.getSession.mockResolvedValue(makeSession(0));
 
       await gateway.handleConnection(client);
 
-      expect(client.emit).toHaveBeenCalledWith(
-        'connected',
-        expect.objectContaining({
-          message: expect.stringContaining('Jerry') as unknown,
-        }),
+      expect(client.emit).toHaveBeenCalledWith('connected', {
+        initiating: true,
+      });
+      expect(client.emit).toHaveBeenCalledWith('status', { status: 'typing' });
+      expect(mockJerryQueue.add).toHaveBeenCalledWith(
+        'process.initiate',
+        { athleteId: 'athlete-uuid-123' },
+        expect.objectContaining({ jobId: 'initiate:athlete-uuid-123' }),
       );
       const emittedEvents = (client.emit as jest.Mock).mock.calls.map(
         ([event]: [string, ...unknown[]]) => event,

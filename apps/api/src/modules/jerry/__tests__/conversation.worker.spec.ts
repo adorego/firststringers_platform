@@ -350,6 +350,86 @@ describe('ConversationWorker', () => {
       manual,
     );
   });
+
+  describe('initiate — Jerry speaks first', () => {
+    function makeInitiateJob(): Job<{ athleteId: string }> {
+      return { data: { athleteId: 'athlete-123' } } as Job<{
+        athleteId: string;
+      }>;
+    }
+
+    it('sends the welcome without any athlete message and persists it', async () => {
+      mockStrategyPlanner.decide.mockReturnValue({
+        type: 'welcome',
+        targetField: 'graduation year',
+      });
+      mockLlm.chat.mockResolvedValue('Hey — I am Jerry.');
+
+      await worker.initiate(makeInitiateJob());
+
+      expect(mockStrategyPlanner.decide).toHaveBeenCalledWith(
+        expect.objectContaining({ intent: 'other', extractedData: null }),
+      );
+      expect(mockPromptBuilder.build).toHaveBeenCalledWith(
+        expect.objectContaining({ type: 'welcome' }),
+        {},
+      );
+      expect(mockRepresentation.ensureActivation).toHaveBeenCalledWith(
+        'athlete-123',
+      );
+      expect(mockSession.appendMessage).toHaveBeenCalledWith(
+        'athlete-123',
+        expect.objectContaining({
+          role: 'assistant',
+          content: 'Hey — I am Jerry.',
+        }),
+      );
+      expect(mockEventEmitter.emit).toHaveBeenCalledWith('jerry.response', {
+        athleteId: 'athlete-123',
+        message: 'Hey — I am Jerry.',
+      });
+    });
+
+    it('does nothing when the session already has messages', async () => {
+      mockSession.getSession.mockResolvedValue(
+        makeSession({
+          messages: [{ role: 'user', content: 'Hello', timestamp: new Date() }],
+        }),
+      );
+
+      await worker.initiate(makeInitiateJob());
+
+      expect(mockStrategyPlanner.decide).not.toHaveBeenCalled();
+      expect(mockLlm.chat).not.toHaveBeenCalled();
+      expect(mockSession.appendMessage).not.toHaveBeenCalled();
+    });
+
+    it('greets a returning representable athlete in continuous mode', async () => {
+      mockStrategyPlanner.decide.mockReturnValue({ type: 'continuous' });
+
+      await worker.initiate(makeInitiateJob());
+
+      expect(mockRepresentation.markRepresented).toHaveBeenCalledWith(
+        'athlete-123',
+      );
+      expect(mockPromptBuilder.build).toHaveBeenCalledWith(
+        expect.objectContaining({ type: 'continuous' }),
+        {},
+      );
+    });
+
+    it('emits jerry.error and rethrows when initiation fails', async () => {
+      mockSession.getSession.mockRejectedValue(new Error('Redis down'));
+
+      await expect(worker.initiate(makeInitiateJob())).rejects.toThrow(
+        'Redis down',
+      );
+      expect(mockEventEmitter.emit).toHaveBeenCalledWith(
+        'jerry.error',
+        expect.objectContaining({ athleteId: 'athlete-123' }),
+      );
+    });
+  });
 });
 
 // ─── Gateway ─────────────────────────────────────────────────────────────────
@@ -408,11 +488,71 @@ describe('JerryGateway — appendMessage precedes queue enqueue', () => {
       sessionId: 'session-1',
     });
 
-    expect(callOrder).toEqual(['appendMessage', 'queue.add']);
+    // Empty session on connect → Jerry initiates (first queue.add),
+    // then the athlete message is saved before its own enqueue
+    expect(callOrder).toEqual(['queue.add', 'appendMessage', 'queue.add']);
+    expect(mockJerryQueue.add).toHaveBeenNthCalledWith(
+      1,
+      'process.initiate',
+      { athleteId: 'athlete-123' },
+      expect.objectContaining({ jobId: 'initiate:athlete-123' }),
+    );
+    expect(mockJerryQueue.add).toHaveBeenNthCalledWith(
+      2,
+      'process.message',
+      expect.objectContaining({ athleteId: 'athlete-123' }),
+      expect.any(Object),
+    );
     // Also verifies that the saved message has role "user"
     expect(mockSessionGateway.appendMessage).toHaveBeenCalledWith(
       'athlete-123',
       expect.objectContaining({ role: 'user', content: 'Hello Jerry' }),
+    );
+    expect(mockClient.emit).toHaveBeenCalledWith('connected', {
+      initiating: true,
+    });
+  });
+
+  it('does not initiate when the session already has messages', async () => {
+    const mockJerryQueue: jest.Mocked<Pick<Queue, 'add'>> = {
+      add: jest.fn().mockResolvedValue(undefined as never),
+    };
+    const mockSessionGateway = {
+      getSession: jest.fn().mockResolvedValue({
+        messages: [
+          { role: 'assistant', content: 'Hey', timestamp: new Date() },
+        ],
+      }),
+      appendMessage: jest.fn(),
+    };
+    const mockJwtService = {
+      verify: jest
+        .fn()
+        .mockReturnValue({ sub: 'user-uuid-1', athleteId: 'athlete-123' }),
+    };
+
+    const gateway = new JerryGateway(
+      mockJerryQueue as unknown as Queue,
+      mockJwtService as unknown as JwtService,
+      {} as unknown as PrismaService,
+      mockSessionGateway as unknown as SessionService,
+      { emit: jest.fn() } as unknown as EventEmitter2,
+    );
+
+    const mockClient = {
+      id: 'socket-2',
+      emit: jest.fn(),
+      join: jest.fn(),
+      disconnect: jest.fn(),
+      handshake: { auth: { token: 'valid-token' } },
+    };
+
+    await gateway.handleConnection(mockClient as unknown as Socket);
+
+    expect(mockJerryQueue.add).not.toHaveBeenCalled();
+    expect(mockClient.emit).toHaveBeenCalledWith(
+      'session_resumed',
+      expect.objectContaining({ messages: expect.any(Array) as unknown[] }),
     );
   });
 });

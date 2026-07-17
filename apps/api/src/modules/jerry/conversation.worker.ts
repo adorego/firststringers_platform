@@ -12,7 +12,7 @@ import { RepresentationService } from './representation.service';
 import { ManualExtractorService } from './manual-extractor.service';
 import { OwnersManualService } from './owners-manual.service';
 import { LLMService } from '../../shared/llm/llm.service';
-import { MessageJob, JerryMessage } from '../../shared/types';
+import { MessageJob, InitiateJob, JerryMessage } from '../../shared/types';
 
 @Processor('jerry')
 export class ConversationWorker {
@@ -31,6 +31,63 @@ export class ConversationWorker {
     private readonly llm: LLMService,
     private readonly eventEmitter: EventEmitter2,
   ) {}
+
+  @Process('process.initiate')
+  async initiate(job: Job<InitiateJob>) {
+    const { athleteId } = job.data;
+
+    try {
+      const sessionState = await this.session.getSession(athleteId);
+      if (sessionState.messages.length > 0) {
+        return;
+      }
+
+      const missingFields = await this.validator.getMissingFields(athleteId);
+      const strategy = this.strategyPlanner.decide({
+        intent: 'other',
+        missingFields,
+        extractedData: null,
+        session: sessionState,
+      });
+
+      if (strategy.type === 'continuous') {
+        await this.representation.markRepresented(athleteId);
+      } else {
+        await this.representation.ensureActivation(athleteId);
+      }
+
+      const manual = await this.ownersManual.get(athleteId);
+
+      const response = await this.llm.chat({
+        systemPrompt: this.promptBuilder.build(strategy, manual),
+        messages: sessionState.messages,
+        extractedData: null,
+      });
+
+      const assistantMessage: JerryMessage = {
+        role: 'assistant',
+        content: response,
+        timestamp: new Date(),
+      };
+      await this.session.appendMessage(athleteId, assistantMessage);
+
+      this.eventEmitter.emit('jerry.response', {
+        athleteId,
+        message: response,
+      });
+    } catch (error) {
+      this.logger.error(
+        `Error initiating conversation for athlete ${athleteId}`,
+        error,
+      );
+      this.eventEmitter.emit('jerry.error', {
+        athleteId,
+        error:
+          'Hubo un problema iniciando la conversación. Escríbeme y seguimos desde ahí.',
+      });
+      throw error;
+    }
+  }
 
   @Process('process.message')
   async handle(job: Job<MessageJob>) {

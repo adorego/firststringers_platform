@@ -6,6 +6,10 @@ export type RepresentationStatus =
   | 'represented'
   | 'verified';
 
+export interface InitiateJob {
+  athleteId: string;
+}
+
 export interface OwnersManualData {
   motivations?: string[];
   values?: string[];

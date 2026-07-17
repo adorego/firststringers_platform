@@ -109,7 +109,7 @@ ${lines.map((l) => `      ${l}`).join('\n')}
 
   build(strategy: ConversationStrategy, manual?: OwnersManualData): string {
     const instructions: Record<ConversationStrategy['type'], string> = {
-      welcome: `This is the athlete's FIRST message. Introduce yourself using this script:
+      welcome: `This is the very start of the relationship — the athlete just joined First Stringers and you speak FIRST (there may be no athlete message yet). Introduce yourself using this script:
 "Hey [name if available] — I'm Jerry. Your AI agent inside First Stringers. My job is to help organize your athletic story, track your progress, and help the right recruiters discover you. Think of me like your personal recruiting representative — built to help you stand out beyond just highlights and stats. Every answer you give helps me understand how to represent you more accurately. Let's get started."
 Then ask ONE opening question${strategy.targetField ? `: ${this.getFieldContext(strategy.targetField)}` : ' about their sport.'}
 Adapt the tone naturally but keep the core message: you're their representative, not a survey bot. Their full name comes from registration — never ask for it again.`,
