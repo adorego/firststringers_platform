@@ -4,7 +4,6 @@ import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { useSession } from "next-auth/react";
 import { ChevronRight, Zap } from "lucide-react";
-import ProgressBar from "@/components/ui/ProgressBar";
 import { useDossierStore } from "@/stores/dossier-store";
 
 type DossierData = NonNullable<ReturnType<typeof useDossierStore.getState>["data"]>;
@@ -199,17 +198,6 @@ function buildTimeline(sections: DossierSection[]): TimelineItem[] {
   });
 }
 
-function timeAgo(iso: string): string {
-  const diffMs = Date.now() - new Date(iso).getTime();
-  const minutes = Math.floor(diffMs / 60_000);
-  if (minutes < 1) return "just now";
-  if (minutes < 60) return `${minutes}m ago`;
-  const hours = Math.floor(minutes / 60);
-  if (hours < 24) return `${hours}h ago`;
-  const days = Math.floor(hours / 24);
-  return `${days}d ago`;
-}
-
 function initialsFromName(name: string): string {
   return name
     .split(/\s+/)
@@ -218,13 +206,6 @@ function initialsFromName(name: string): string {
     .join("")
     .slice(0, 2)
     .toUpperCase();
-}
-
-function completionLabel(completeness: number): string {
-  if (completeness >= 90) return "Representation ready";
-  if (completeness >= 60) return "Strong foundation";
-  if (completeness > 0) return "Activation in progress";
-  return "Waiting for activation";
 }
 
 function DossierSkeleton() {
@@ -382,32 +363,6 @@ export default function DossierPage() {
   return (
     <div className="min-h-full bg-[#FAF8F5] text-[#27251E]">
       <div className="mx-auto flex w-full max-w-5xl flex-col px-5 pt-6 pb-28 sm:px-8 lg:px-10">
-        <header className="mb-8 flex flex-col gap-5 border-b border-[#27251E]/5 pb-6 sm:flex-row sm:items-end sm:justify-between">
-          <div>
-            <p className="mb-3 text-[11px] font-medium uppercase tracking-[0.2em] text-[#27251E]/45">
-              Athlete Intelligence Dossier
-            </p>
-            <h1 className="max-w-2xl text-3xl font-semibold tracking-[-0.04em] text-[#27251E] sm:text-5xl">
-              A living representation briefing for {displayName}.
-            </h1>
-          </div>
-          <div className="min-w-[220px] rounded-2xl bg-[#F3F0EC]/70 p-4">
-            <div className="mb-3 flex items-center justify-between gap-4">
-              <span className="text-[10px] font-medium uppercase tracking-[0.18em] text-[#27251E]/45">
-                Dossier completion
-              </span>
-              <span className="text-sm font-medium text-[#27251E]">
-                {clampedCompleteness}%
-              </span>
-            </div>
-            <ProgressBar value={clampedCompleteness} size="sm" className="bg-[#EBE8E4]" />
-            <p className="mt-3 text-xs leading-5 text-[#27251E]/55">
-              {completionLabel(clampedCompleteness)}
-              {lastUpdated ? <> · Updated {timeAgo(lastUpdated)}</> : null}
-            </p>
-          </div>
-        </header>
-
         {loading && !data ? (
           <DossierSkeleton />
         ) : (
