@@ -7,44 +7,45 @@ import {
 } from '../../shared/types';
 
 const FIELD_PRIORITY = [
-  'graduation year',
-  'location',
   'sport',
   'position',
+  'graduation year',
+  'location',
   'school',
   'competitive level',
   'physical profile',
   'dominant side',
   'stats',
-  'strengths',
-  'physical status',
-  'goals',
   'competitive level goal',
-  'timeline',
+  'goals',
   'preferred regions',
   'relocation openness',
+  'GPA',
   'intended major',
   'non-negotiables',
-  'highlights',
-  'clips',
-  'social media',
-  'references',
   'self-representation',
   'growth areas',
   'mentality',
   'motivation',
+  'highlights',
+  'clips',
+  'references',
+  'social media',
+  'strengths',
+  'physical status',
+  'timeline',
   'league level',
-  'GPA',
 ];
 
 const SECTION_FIRST_FIELDS = new Set([
-  'physical profile',
-  'goals',
+  'school',
+  'competitive level goal',
+  'GPA',
+  'self-representation',
   'highlights',
-  'growth areas',
 ]);
 
-const FRUSTRATION_KEYWORDS = ["don't know", 'not sure', 'stop', 'quit'];
+const FRUSTRATION_KEYWORDS = ['stop', 'quit'];
 const FRUSTRATION_WINDOW = 4;
 
 // "Representable > Completo": Jerry can start representing the athlete once
@@ -56,10 +57,12 @@ const REPRESENTABLE_FIELDS = new Set([
   'graduation year',
   'location',
   'school',
-  'stats',
-  'strengths',
+  'competitive level',
   'competitive level goal',
   'goals',
+  'GPA',
+  'self-representation',
+  'growth areas',
 ]);
 
 @Injectable()
@@ -102,6 +105,13 @@ export class StrategyPlannerService {
 
     if (crossedThreshold) {
       return { type: 'activation', confirmedData: extractedData ?? undefined };
+    }
+
+    if (intent === 'question' && this.isSummaryRequest(session.messages)) {
+      return {
+        type: 'summarize_dossier',
+        targetField: this.pickNextField(effectiveMissing, session.messages),
+      };
     }
 
     if (intent === 'question') {
@@ -178,6 +188,22 @@ export class StrategyPlannerService {
           (msg.content ?? '').toLowerCase().includes(kw),
         ),
     );
+  }
+
+  private isSummaryRequest(messages: JerryMessage[]): boolean {
+    const lastUser = [...messages].reverse().find((m) => m.role === 'user');
+    const content = lastUser?.content.toLowerCase() ?? '';
+    return [
+      'summary',
+      'summarize',
+      'recap',
+      'what do you know',
+      'what you know',
+      'resumen',
+      'resumir',
+      'qué sabes',
+      'que sabes',
+    ].some((phrase) => content.includes(phrase));
   }
 
   private pickNextField(
