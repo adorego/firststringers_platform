@@ -4,7 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { useEffect, useState } from "react";
-import { MessageCircle, User, NotebookTabs } from "lucide-react";
+import { MessageCircle, User } from "lucide-react";
 
 interface NavItem {
   href: string;
@@ -25,6 +25,61 @@ const jerryIconActive = (
     <div className="h-1.5 w-1.5 rounded-full bg-[#F5F5F0]" />
   </div>
 );
+
+function DossierIcon({ active = false }: { active?: boolean }) {
+  const detailColor = active ? "#F5F5F0" : "currentColor";
+
+  return (
+    <svg
+      aria-hidden="true"
+      className="h-6 w-6"
+      fill="none"
+      viewBox="0 0 24 24"
+      xmlns="http://www.w3.org/2000/svg"
+    >
+      <rect
+        x="5"
+        y="3.75"
+        width="14"
+        height="16.5"
+        rx="3"
+        fill={active ? "currentColor" : "none"}
+        stroke="currentColor"
+        strokeWidth="1.7"
+      />
+      <rect
+        x="8"
+        y="7"
+        width="3.9"
+        height="3.9"
+        rx="1"
+        fill={detailColor}
+        opacity={active ? 0.95 : 0.72}
+      />
+      <path
+        d="M13.6 7.65H16.45M13.6 10.25H16"
+        stroke={detailColor}
+        strokeLinecap="round"
+        strokeWidth="1.45"
+        opacity={active ? 0.9 : 0.58}
+      />
+      <path
+        d="M8 14.15H16M8 17H14"
+        stroke={detailColor}
+        strokeLinecap="round"
+        strokeWidth="1.5"
+        opacity={active ? 0.9 : 0.54}
+      />
+      <circle
+        cx="18.25"
+        cy="5.75"
+        r="1.45"
+        fill={detailColor}
+        opacity={active ? 0.9 : 0.55}
+      />
+    </svg>
+  );
+}
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001";
 
@@ -62,8 +117,8 @@ export function BottomNav() {
     },
     {
       href: "/dossier",
-      icon: <NotebookTabs size={22} />,
-      activeIcon: <NotebookTabs size={22} />,
+      icon: <DossierIcon />,
+      activeIcon: <DossierIcon active />,
       label: "Dossier",
     },
     {
