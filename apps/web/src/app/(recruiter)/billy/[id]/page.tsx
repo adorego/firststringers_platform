@@ -77,7 +77,7 @@ function AthleteCard({
           <div className="flex h-12 w-12 items-center justify-center rounded-full bg-[#EDEAE5] text-sm font-bold text-[#6B6561]">
             {initials}
           </div>
-          <span className="absolute bottom-0.5 left-0.5 h-2.5 w-2.5 rounded-full border-2 border-[#F5F0EB] bg-[#E07B5D]" />
+          <span className="absolute bottom-0.5 left-0.5 h-2.5 w-2.5 rounded-full border-2 border-[#F5F5F0] bg-[#E07B5D]" />
         </div>
 
         <div className="flex-1 min-w-0">
@@ -243,7 +243,7 @@ function BillyChatPageContent() {
 
   return (
     <>
-      <div className="flex h-full flex-col bg-[#F5F0EB]">
+      <div className="flex h-full flex-col bg-[#F5F5F0]">
         {/* Messages */}
         <div className="flex-1 overflow-y-auto px-6 py-6">
           <div className="mx-auto flex max-w-2xl flex-col gap-4">

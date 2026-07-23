@@ -68,7 +68,7 @@ export function RecruiterShell({ children }: { children: React.ReactNode }) {
   const closeSidebar = () => setSidebarOpen(false);
 
   return (
-    <div className="flex h-screen overflow-hidden bg-[#F5F0EB]">
+    <div className="flex h-screen overflow-hidden bg-[#F5F5F0]">
       {/* Mobile backdrop */}
       {sidebarOpen && (
         <div
@@ -106,7 +106,7 @@ export function RecruiterShell({ children }: { children: React.ReactNode }) {
         {/* Hamburger — mobile only, shown when sidebar is closed */}
         <button
           onClick={() => setSidebarOpen(true)}
-          className="fixed left-3 top-3 z-30 flex h-10 w-10 items-center justify-center rounded-xl bg-[#F5F0EB] shadow-md transition-colors hover:bg-[#EDE8E3] sm:hidden"
+          className="fixed left-3 top-3 z-30 flex h-10 w-10 items-center justify-center rounded-xl bg-[#F5F5F0] shadow-md transition-colors hover:bg-[#EDE8E3] sm:hidden"
           style={{ top: "max(0.75rem, env(safe-area-inset-top))" }}
           aria-label="Open menu"
         >

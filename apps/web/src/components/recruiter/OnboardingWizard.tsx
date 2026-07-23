@@ -160,7 +160,7 @@ export function OnboardingWizard({ recruiterName, onComplete }: Props) {
 
   if (done) {
     return (
-      <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#F5F0EB] px-6">
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#F5F5F0] px-6">
         <div className="w-full max-w-sm">
           <div className="flex items-start gap-3">
             <div className="mt-0.5 flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-[#1A1A1A]">
@@ -180,7 +180,7 @@ export function OnboardingWizard({ recruiterName, onComplete }: Props) {
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex flex-col items-center bg-[#F5F0EB]">
+    <div className="fixed inset-0 z-50 flex flex-col items-center bg-[#F5F5F0]">
       {/* Centered column — all sections share the same max-width */}
       <div className="flex w-full max-w-sm flex-1 flex-col overflow-hidden">
 

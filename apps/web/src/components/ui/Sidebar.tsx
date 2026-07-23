@@ -183,7 +183,7 @@ export function RecruiterSidebar({
     <>
     <aside
       className={`
-        fixed inset-y-0 left-0 z-50 flex h-full w-[272px] flex-col bg-[#F5F0EB]
+        fixed inset-y-0 left-0 z-50 flex h-full w-[272px] flex-col bg-[#F5F5F0]
         transition-transform duration-300 ease-in-out
         ${isOpen ? "translate-x-0" : "-translate-x-full"}
         sm:relative sm:z-auto sm:h-screen sm:flex-shrink-0 sm:translate-x-0
@@ -353,7 +353,7 @@ export function RecruiterSidebar({
                 <button
                   key={label}
                   onClick={action}
-                  className="flex w-full items-center gap-3 px-4 py-2.5 text-sm text-[#4B4745] transition-colors hover:bg-[#F5F0EB] hover:text-[#1A1A1A]"
+                  className="flex w-full items-center gap-3 px-4 py-2.5 text-sm text-[#4B4745] transition-colors hover:bg-[#F5F5F0] hover:text-[#1A1A1A]"
                 >
                   <span className="text-[#ADA8A5]">{icon}</span>
                   {label}
@@ -364,7 +364,7 @@ export function RecruiterSidebar({
             <div className="border-t border-[#E4DDD7] py-1">
               <button
                 onClick={() => signOut({ callbackUrl: "/welcome/returning" })}
-                className="flex w-full items-center gap-3 px-4 py-2.5 text-sm text-[#4B4745] transition-colors hover:bg-[#F5F0EB] hover:text-[#1A1A1A]"
+                className="flex w-full items-center gap-3 px-4 py-2.5 text-sm text-[#4B4745] transition-colors hover:bg-[#F5F5F0] hover:text-[#1A1A1A]"
               >
                 <span className="text-[#ADA8A5]"><LogOut size={15} /></span>
                 Log Out

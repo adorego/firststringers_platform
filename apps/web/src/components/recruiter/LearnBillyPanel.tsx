@@ -92,7 +92,7 @@ export function LearnBillyPanel({ isOpen, onClose }: LearnBillyPanelProps) {
                 </div>
                 <p className="text-sm leading-relaxed text-[#4B4745]">{section.body}</p>
                 {section.example && (
-                  <div className="mt-2.5 rounded-lg bg-[#F5F0EB] px-3.5 py-2.5">
+                  <div className="mt-2.5 rounded-lg bg-[#F5F5F0] px-3.5 py-2.5">
                     <p className="font-mono text-xs italic text-[#6B6561]">{section.example}</p>
                   </div>
                 )}
