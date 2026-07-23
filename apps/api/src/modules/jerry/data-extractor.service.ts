@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { LLMService } from '../../shared/llm/llm.service';
 import { DossierData, JerryIntent } from '../../shared/types';
+import { enhanceJerryExtraction } from './extraction-heuristics';
 
 @Injectable()
 export class DataExtractorService {
@@ -14,6 +15,7 @@ export class DataExtractorService {
       return null;
     }
 
-    return this.llm.extract(text, intent);
+    const extractedData = await this.llm.extract(text, intent);
+    return enhanceJerryExtraction(text, extractedData);
   }
 }

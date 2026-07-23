@@ -1,6 +1,10 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../../shared/prisma/prisma.service';
 import type { DossierData } from '../../shared/types';
+import {
+  calculateDossierCompleteness,
+  normalizeDossierData,
+} from './dossier-normalizer';
 
 export interface DossierField {
   key: string;
@@ -32,7 +36,7 @@ export class DossierService {
       throw new NotFoundException(`Athlete ${athleteId} not found`);
     }
 
-    const data = (athlete.dossier?.data as DossierData) || {};
+    const data = normalizeDossierData(athlete.dossier?.data);
     return this.buildSections(athlete.name, data);
   }
 
@@ -43,9 +47,11 @@ export class DossierService {
       where: { athleteId },
     });
 
+    const data = normalizeDossierData(dossier?.data);
+
     return {
-      data: (dossier?.data as DossierData) || {},
-      completeness: dossier?.completeness ?? 0,
+      data,
+      completeness: calculateDossierCompleteness(data),
     };
   }
 
