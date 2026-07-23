@@ -26,22 +26,26 @@ welcome, confirm_and_probe, answer_and_redirect,
 clarify, strategic_ask, section_transition,
 continuous, activation, reset
 
-## Onboarding v2 (Jerry Athlete Representation System v2, Abel 2026-07)
-Fuente: ENGINEERING/cerebros-abel/Athlete Onboarding Process v2.docx.
-- FIELD_PRIORITY sigue el orden v2: graduation year → location → sport →
-  position → school → competitive level → snapshot → direction → assets →
-  identity. GPA y league level van AL FINAL: ya no son parte del flujo de
-  activacion, solo orientacion en modo continuous.
-- El full name (Q1 del doc) NO se pregunta: viene del registro. welcome
-  lleva targetField con la primera pregunta pendiente.
-- Guiones v2 en getFieldContext (wording exacto de Abel por campo),
-  welcome script v2, mensaje de FINAL ACTIVATION v2, y regla de
-  reassurance cuando el atleta no tiene algo aun (metrics/footage).
-- SECTION_FIRST_FIELDS: physical profile, goals, highlights, growth areas.
+## Athlete Representation Activation Conversation (FS-CS-005A, Abel 2026-07)
+Fuente: brains/FS-CS-005A-athlete-representation-activation-conversation.md.
+- FIELD_PRIORITY sigue la conversacion FS-CS-005A: Athlete Identity →
+  Athletic Foundation → Recruiting Direction → Academic & Personal
+  Direction → Owner's Manual Initialization → Representation Assets.
+- El full name NO se pregunta: viene del registro. welcome lleva
+  targetField con la primera pregunta pendiente.
+- Jerry no esta completando un perfil; esta activando representacion.
+  Cada turno debe seguir el ritmo Question → Listen → Acknowledge →
+  Reflect → Transition.
+- Si el atleta no tiene metrics, footage, references o social accounts,
+  Jerry tranquiliza, lo marca como prioridad futura y sigue. Eso no bloquea
+  la representacion.
+- SECTION_FIRST_FIELDS: school, competitive level goal, GPA,
+  self-representation, highlights.
 
 ## Representable > Completo (vision de Abel)
 El onboarding "termina" cuando Jerry tiene los REPRESENTABLE_FIELDS
-(identidad + snapshot atletico + objetivos), NO el 100% de los campos.
+(identidad + base atletica + direccion + academia + Owner's Manual inicial),
+NO el 100% de los campos.
 activation se dispara UNA vez (el turno que cruza el umbral) y despues
 todo corre en modo continuous: Jerry proactivo, orientacion conversacional,
 nunca lenguaje de formulario. La completitud es interna (pitch, Billy),

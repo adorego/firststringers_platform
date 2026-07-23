@@ -7,44 +7,45 @@ import {
 } from '../../shared/types';
 
 const FIELD_PRIORITY = [
-  'graduation year',
-  'location',
   'sport',
   'position',
+  'graduation year',
+  'location',
   'school',
   'competitive level',
   'physical profile',
   'dominant side',
   'stats',
-  'strengths',
-  'physical status',
-  'goals',
   'competitive level goal',
-  'timeline',
+  'goals',
   'preferred regions',
   'relocation openness',
+  'GPA',
   'intended major',
   'non-negotiables',
-  'highlights',
-  'clips',
-  'social media',
-  'references',
   'self-representation',
   'growth areas',
   'mentality',
   'motivation',
+  'highlights',
+  'clips',
+  'references',
+  'social media',
+  'strengths',
+  'physical status',
+  'timeline',
   'league level',
-  'GPA',
 ];
 
 const SECTION_FIRST_FIELDS = new Set([
-  'physical profile',
-  'goals',
+  'school',
+  'competitive level goal',
+  'GPA',
+  'self-representation',
   'highlights',
-  'growth areas',
 ]);
 
-const FRUSTRATION_KEYWORDS = ["don't know", 'not sure', 'stop', 'quit'];
+const FRUSTRATION_KEYWORDS = ['stop', 'quit'];
 const FRUSTRATION_WINDOW = 4;
 
 // "Representable > Completo": Jerry can start representing the athlete once
@@ -56,10 +57,12 @@ const REPRESENTABLE_FIELDS = new Set([
   'graduation year',
   'location',
   'school',
-  'stats',
-  'strengths',
+  'competitive level',
   'competitive level goal',
   'goals',
+  'GPA',
+  'self-representation',
+  'growth areas',
 ]);
 
 @Injectable()

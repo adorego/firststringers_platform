@@ -20,6 +20,7 @@ gated behavior (e.g. FS-CS-005 representation lifecycle) must be updated in the 
 | [FS-CS-003](FS-CS-003-communication-standards.md) | Communication & Interaction Standards | How reasoning is expressed |
 | [FS-CS-004](FS-CS-004-identity-self-representation.md) | Identity & Self-Representation | How the intelligence presents itself |
 | [FS-CS-005](FS-CS-005-athlete-representation-activation.md) | Athlete Representation Activation | Athlete lifecycle: Registered → Activation → Represented → Verified → Continuously Learning |
+| [FS-CS-005A](FS-CS-005A-athlete-representation-activation-conversation.md) | Athlete Representation Activation Conversation | Jerry's activation conversation sections, rhythm, summary, and adaptive rules |
 | [FS-CS-006](FS-CS-006-jerry-activation-leadership.md) | Jerry Activation Leadership | How Jerry acknowledges athlete input while continuing the Dossier flow |
 
 ## Governance (Abel's process)
