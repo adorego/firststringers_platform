@@ -154,6 +154,7 @@ export type ConversationStrategyType =
   | 'clarify'
   | 'strategic_ask'
   | 'section_transition'
+  | 'summarize_dossier'
   | 'continuous'
   | 'activation'
   | 'reset';

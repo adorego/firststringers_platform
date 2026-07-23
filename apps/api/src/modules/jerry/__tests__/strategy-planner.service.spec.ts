@@ -261,6 +261,23 @@ describe('StrategyPlannerService', () => {
       expect(result.type).toBe('answer_and_redirect');
     });
 
+    it('detects summary requests and keeps the next Dossier field attached', () => {
+      const session = makeSession([
+        makeMessage('user', 'Hi'),
+        makeMessage('assistant', 'What year do you graduate?'),
+        makeMessage('user', 'Can you summarize what you know about me so far?'),
+      ]);
+      const result = service.decide(
+        makeCtx({
+          intent: 'question',
+          session,
+          missingFields: ['physical profile', 'timeline'],
+        }),
+      );
+      expect(result.type).toBe('summarize_dossier');
+      expect(result.targetField).toBe('physical profile');
+    });
+
     it('returns "confirm_and_probe" when intent === "stats" and data was extracted', () => {
       const result = service.decide(
         makeCtx({

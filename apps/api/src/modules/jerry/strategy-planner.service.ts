@@ -104,6 +104,13 @@ export class StrategyPlannerService {
       return { type: 'activation', confirmedData: extractedData ?? undefined };
     }
 
+    if (intent === 'question' && this.isSummaryRequest(session.messages)) {
+      return {
+        type: 'summarize_dossier',
+        targetField: this.pickNextField(effectiveMissing, session.messages),
+      };
+    }
+
     if (intent === 'question') {
       return {
         type: 'answer_and_redirect',
@@ -178,6 +185,22 @@ export class StrategyPlannerService {
           (msg.content ?? '').toLowerCase().includes(kw),
         ),
     );
+  }
+
+  private isSummaryRequest(messages: JerryMessage[]): boolean {
+    const lastUser = [...messages].reverse().find((m) => m.role === 'user');
+    const content = lastUser?.content.toLowerCase() ?? '';
+    return [
+      'summary',
+      'summarize',
+      'recap',
+      'what do you know',
+      'what you know',
+      'resumen',
+      'resumir',
+      'qué sabes',
+      'que sabes',
+    ].some((phrase) => content.includes(phrase));
   }
 
   private pickNextField(
