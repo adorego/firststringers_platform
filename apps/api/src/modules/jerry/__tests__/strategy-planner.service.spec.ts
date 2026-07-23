@@ -79,14 +79,14 @@ describe('StrategyPlannerService', () => {
   // ── Frustration detection scenarios ─────────────────────────────────────
 
   describe('reset on frustration', () => {
-    it('returns "reset" when the athlete says "don\'t know" in the last 4 messages', () => {
+    it('does NOT reset when the athlete is simply unsure', () => {
       const session = makeSession([
         makeMessage('user', 'Hello'),
         makeMessage('assistant', 'What is your sport?'),
         makeMessage('user', "I don't know what to answer honestly"),
       ]);
       const result = service.decide(makeCtx({ session }));
-      expect(result.type).toBe('reset');
+      expect(result.type).not.toBe('reset');
     });
 
     it('returns "reset" when the athlete says "stop"', () => {
@@ -126,14 +126,14 @@ describe('StrategyPlannerService', () => {
       expect(result.targetField).toBe('sport');
     });
 
-    it('follows the v2 onboarding order: graduation year first, goals before target level', () => {
+    it('follows FS-CS-005A onboarding order: sport first, target level before goals', () => {
       const first = service.decide(
         makeCtx({
           missingFields: ['sport', 'graduation year', 'location'],
           intent: 'other',
         }),
       );
-      expect(first.targetField).toBe('graduation year');
+      expect(first.targetField).toBe('sport');
 
       const direction = service.decide(
         makeCtx({
@@ -141,17 +141,51 @@ describe('StrategyPlannerService', () => {
           intent: 'other',
         }),
       );
-      expect(direction.targetField).toBe('goals');
+      expect(direction.targetField).toBe('competitive level goal');
     });
 
-    it('defers GPA and league level to the end of the flow', () => {
-      const result = service.decide(
+    it('follows FS-CS-005A activation order: identity before athletic foundation', () => {
+      const firstIdentity = service.decide(
         makeCtx({
-          missingFields: ['GPA', 'league level', 'motivation'],
+          missingFields: ['graduation year', 'location', 'sport', 'position'],
           intent: 'other',
         }),
       );
-      expect(result.targetField).toBe('motivation');
+      expect(firstIdentity.targetField).toBe('sport');
+
+      const afterSport = service.decide(
+        makeCtx({
+          missingFields: ['graduation year', 'location', 'position'],
+          intent: 'other',
+        }),
+      );
+      expect(afterSport.targetField).toBe('position');
+
+      const afterPosition = service.decide(
+        makeCtx({
+          missingFields: ['graduation year', 'location'],
+          intent: 'other',
+        }),
+      );
+      expect(afterPosition.targetField).toBe('graduation year');
+
+      const athleticFoundation = service.decide(
+        makeCtx({
+          missingFields: ['school', 'competitive level', 'physical profile'],
+          intent: 'other',
+        }),
+      );
+      expect(athleticFoundation.targetField).toBe('school');
+    });
+
+    it('places Academic & Personal Direction before Owner Manual and assets', () => {
+      const result = service.decide(
+        makeCtx({
+          missingFields: ['GPA', 'self-representation', 'highlights'],
+          intent: 'other',
+        }),
+      );
+      expect(result.targetField).toBe('GPA');
     });
 
     it('welcome carries the first pending field as targetField', () => {
@@ -162,7 +196,7 @@ describe('StrategyPlannerService', () => {
         }),
       );
       expect(result.type).toBe('welcome');
-      expect(result.targetField).toBe('graduation year');
+      expect(result.targetField).toBe('sport');
     });
 
     it('does not repeat the field Jerry asked in its last message', () => {
@@ -183,7 +217,7 @@ describe('StrategyPlannerService', () => {
 
     it('returns "continuous" when the athlete is already representable', () => {
       // No representable fields missing → onboarding is over
-      const result = service.decide(makeCtx({ missingFields: ['GPA'] }));
+      const result = service.decide(makeCtx({ missingFields: ['highlights'] }));
       expect(result.type).toBe('continuous');
     });
   });
@@ -194,9 +228,9 @@ describe('StrategyPlannerService', () => {
     it('fires exactly when the extraction covers the last representable field', () => {
       const result = service.decide(
         makeCtx({
-          intent: 'recruiting',
-          missingFields: ['goals', 'GPA'],
-          extractedData: { availability: { goals: ['Play D1'] } },
+          intent: 'character',
+          missingFields: ['growth areas', 'highlights'],
+          extractedData: { character: { growthAreas: ['finishing'] } },
         }),
       );
       expect(result.type).toBe('activation');
@@ -205,9 +239,9 @@ describe('StrategyPlannerService', () => {
     it('does NOT fire again once the athlete is already representable', () => {
       const result = service.decide(
         makeCtx({
-          intent: 'academic',
-          missingFields: ['GPA'],
-          extractedData: { academic: { gpa: 3.8 } },
+          intent: 'media',
+          missingFields: ['highlights'],
+          extractedData: { media: { highlightUrls: ['https://hudl.com/1'] } },
         }),
       );
       expect(result.type).toBe('continuous');
@@ -225,6 +259,44 @@ describe('StrategyPlannerService', () => {
     });
   });
 
+  describe('FS-CS-005A section transitions', () => {
+    it('transitions into Athletic Foundation when identity is complete', () => {
+      const result = service.decide(
+        makeCtx({
+          intent: 'personal',
+          missingFields: ['sport', 'school', 'competitive level'],
+          extractedData: { identity: { sport: 'Soccer' } },
+        }),
+      );
+      expect(result.type).toBe('section_transition');
+      expect(result.targetField).toBe('school');
+    });
+
+    it('transitions into Academic & Personal Direction before GPA', () => {
+      const result = service.decide(
+        makeCtx({
+          intent: 'recruiting',
+          missingFields: ['goals', 'GPA', 'intended major'],
+          extractedData: { availability: { goals: ['Find the right fit'] } },
+        }),
+      );
+      expect(result.type).toBe('section_transition');
+      expect(result.targetField).toBe('GPA');
+    });
+
+    it("transitions into Owner's Manual initialization before self-representation", () => {
+      const result = service.decide(
+        makeCtx({
+          intent: 'academic',
+          missingFields: ['GPA', 'self-representation', 'growth areas'],
+          extractedData: { academic: { gpa: 3.7 } },
+        }),
+      );
+      expect(result.type).toBe('section_transition');
+      expect(result.targetField).toBe('self-representation');
+    });
+  });
+
   // ── Continuous mode ──────────────────────────────────────────────────────
 
   describe('continuous mode', () => {
@@ -232,7 +304,7 @@ describe('StrategyPlannerService', () => {
       const result = service.decide(
         makeCtx({
           intent: 'academic',
-          missingFields: ['GPA', 'intended major'],
+          missingFields: ['clips', 'intended major'],
           extractedData: { academic: { intendedMajor: 'Business' } },
         }),
       );
@@ -278,34 +350,35 @@ describe('StrategyPlannerService', () => {
       expect(result.targetField).toBe('physical profile');
     });
 
-    it('returns "confirm_and_probe" when intent === "stats" and data was extracted', () => {
+    it('returns "confirm_and_probe" when an onboarding field was extracted but representation is not active yet', () => {
       const result = service.decide(
         makeCtx({
-          intent: 'stats',
-          missingFields: ['strengths', 'physical status'],
-          extractedData: { performance: { leagueLevel: 'NCAA D1' } },
+          intent: 'recruiting',
+          missingFields: ['competitive level goal', 'goals'],
+          extractedData: {
+            availability: { competitiveLevelGoal: 'NCAA D1' },
+          },
         }),
       );
       expect(result.type).toBe('confirm_and_probe');
       // targetField is the NEXT missing field, not the extracted section
-      expect(result.targetField).toBe('strengths');
+      expect(result.targetField).toBe('goals');
     });
 
     it('does not re-ask a field that was just covered by the extraction', () => {
       const result = service.decide(
         makeCtx({
-          intent: 'stats',
-          missingFields: ['strengths', 'physical status'],
+          intent: 'personal',
+          missingFields: ['school', 'competitive level'],
           extractedData: {
-            performance: {
-              strengths: ['finishing'],
-              physicalStatus: 'healthy',
+            identity: {
+              school: 'First Stringers Academy',
             },
           },
         }),
       );
-      // 'strengths' was the last representable field missing → activation
-      expect(result.type).toBe('activation');
+      expect(result.type).toBe('confirm_and_probe');
+      expect(result.targetField).toBe('competitive level');
     });
 
     it('returns "strategic_ask" when intent === "other" and no data was extracted', () => {

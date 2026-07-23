@@ -83,7 +83,9 @@ describe('PromptBuilderService', () => {
     it('includes the v2 introduction script and Jerry identity', () => {
       const result = service.build({ type: 'welcome' });
       expect(result).toContain('Introduce yourself');
-      expect(result).toContain('Your AI agent inside First Stringers');
+      expect(result).toContain("my job isn't to build a profile");
+      expect(result).toContain('My job is to represent you');
+      expect(result).toContain("Today we're activating your representation");
       expect(result).toContain('personal recruiting representative');
       expect(result).toContain('sport');
     });
@@ -215,6 +217,7 @@ describe('PromptBuilderService', () => {
       const result = service.build(strategy);
       expect(result).toContain('summarize');
       expect(result).toContain('transition');
+      expect(result).toContain('Question → Listen → Acknowledge');
     });
 
     it('uses generic instruction when there is no targetField', () => {
@@ -229,9 +232,12 @@ describe('PromptBuilderService', () => {
     it('marks the representable threshold and the start of the continuous relationship', () => {
       const result = service.build({ type: 'activation' });
       expect(result).toContain('REPRESENTABLE threshold');
-      expect(result).toContain('begin representing you inside First Stringers');
-      expect(result).toContain("We're just getting started");
-      expect(result).toContain('check-in question');
+      expect(result).toContain(
+        'begin representing this athlete inside First Stringers',
+      );
+      expect(result).toContain("Before we finish, I'd like to share");
+      expect(result).toContain("I've initialized your Owner's Manual");
+      expect(result).toContain('Your representation is now active');
     });
   });
 
