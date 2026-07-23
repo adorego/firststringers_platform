@@ -103,10 +103,10 @@ export class BillyGateway implements OnGatewayConnection, OnGatewayDisconnect {
         const welcomeMessage: BillyMessage = {
           role: 'assistant',
           content: isOnboarding
-            ? `Hi${recruiter?.name ? ` ${recruiter.name}` : ''}.\n\nBefore we get started, I'd like to learn a little about your recruiting responsibilities so I can better assist you.\n\nWhat sport are you recruiting for?\nYou can choose from: Football, Baseball, Basketball, Soccer, Volleyball, or Other.`
+            ? `Hi${recruiter?.name ? ` ${recruiter.name}` : ''}.\n\nBefore we get started, I'd like to understand how you recruit and what decisions you're responsible for, so I can support you with better context.\n\nWhat sport are you recruiting for?\nYou can choose from: Football, Baseball, Basketball, Soccer, Volleyball, or Other.`
             : pendingSuggestions && pendingSuggestions.length > 0
               ? `Now that I know more about your program, here are a few searches to get you started.`
-              : `Hi${recruiter?.name ? ` ${recruiter.name}` : ''}! I'm Billy. Tell me what kind of athlete fits your program and I'll help you find the best matches.`,
+              : `Hi${recruiter?.name ? ` ${recruiter.name}` : ''}! I'm Billy. Tell me what recruiting problem you're trying to solve — position, objective, constraints, timeline — and I'll help you think through the right fit.`,
           timestamp: new Date(),
         };
         await this.session.appendMessage(
