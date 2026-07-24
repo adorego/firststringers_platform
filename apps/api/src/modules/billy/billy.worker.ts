@@ -36,6 +36,7 @@ Rules:
 - Every question must materially improve the recruiting decision; do not interrogate or ask filler questions
 - Prioritize recruiting objective, context, verified information, athlete fit, academics, character/readiness, athletic ability, geography, and timeline — highlight media never replaces reasoning
 - After gathering enough info (at least sport + position + a recruiting objective or one meaningful fit criterion), offer to search
+- If the recruiter asks for more athletes, other options, or anyone else (e.g. "show me more", "who else"), treat it as a new search using the same criteria unless they mention new ones — the platform automatically excludes athletes already shown in this conversation, so you will never repeat a previous recommendation
 - When you have enough information, respond with a JSON block at the end of your message in this exact format:
   [SEARCH_READY]{"query": "the full natural language query", "filters": {"sport": "...", "position": "...", "minGpa": 0.0, "graduationYear": 0, "transferPortal": true/false, "ncaaEligible": true/false}}[/SEARCH_READY]
 - If the user says they want to search now, generate the search immediately
@@ -195,6 +196,7 @@ export class BillyWorker {
     let searchResults: unknown[] | undefined;
     let extractedFilters: SearchFilters | undefined;
     let scoutRelaxedPosition: string | undefined;
+    let scoutExpanded = false;
 
     if (updateMatch) {
       try {
@@ -234,11 +236,24 @@ export class BillyWorker {
           recruiterId,
           parsed.filters as never,
         );
-        const scoutResult = await this.runSearch(parsed.query, parsed.filters);
+        const scoutResult = await this.runSearch(
+          parsed.query,
+          parsed.filters,
+          sessionState.shownAthleteIds,
+        );
         searchResults = scoutResult.athletes;
         scoutRelaxedPosition = scoutResult.relaxedPosition;
+        scoutExpanded = !!scoutResult.expanded;
 
         visibleContent = this.buildSearchMessage(rawContent, scoutResult);
+
+        if (scoutResult.athletes.length > 0) {
+          await this.session.recordShownAthletes(
+            conversationId,
+            recruiterId,
+            scoutResult.athletes.map((a) => a.id),
+          );
+        }
       } catch {
         // keep raw content if parse fails
       }
@@ -286,6 +301,7 @@ export class BillyWorker {
       searchCriteria: extractedFilters,
       searchResults,
       isFallbackRecommendation: !!scoutRelaxedPosition,
+      isExpandedSearch: scoutExpanded,
     });
   }
 
@@ -502,12 +518,13 @@ export class BillyWorker {
   private async runSearch(
     query: string,
     filters: SearchFilters,
+    excludeIds: string[] = [],
   ): Promise<ScoutResult> {
     try {
       this.logger.log(
-        `Running search "${query}" with filters: ${JSON.stringify(filters)}`,
+        `Running search "${query}" with filters: ${JSON.stringify(filters)}, excluding ${excludeIds.length} already-shown athlete(s)`,
       );
-      const result = await this.scout.search(query, filters, 5);
+      const result = await this.scout.search(query, filters, 5, excludeIds);
       this.logger.log(`Scout found ${result.athletes.length} athletes`);
       return result;
     } catch (error) {
@@ -524,6 +541,10 @@ export class BillyWorker {
   ): string {
     if (scoutResult.athletes.length === 0) {
       return "Right now I couldn't find an athlete with those descriptions. Try broadening your criteria — a different region, GPA range, or graduating class — and I'll take another look.";
+    }
+
+    if (scoutResult.expanded) {
+      return "You've already seen the closest matches for these criteria, so I broadened the search. These aren't as tight a fit, but they're real options worth a look:";
     }
 
     if (scoutResult.relaxedPosition) {

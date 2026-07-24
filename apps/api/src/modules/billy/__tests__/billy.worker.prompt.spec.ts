@@ -37,6 +37,13 @@ describe('BillyWorker prompts', () => {
       expect(SEARCH_SYSTEM_PROMPT).toContain('Never invent information');
       expect(SEARCH_SYSTEM_PROMPT).toContain('Do not rank athletes');
     });
+
+    it('treats "show me more" as a repeat search rather than asking again', () => {
+      expect(SEARCH_SYSTEM_PROMPT).toContain('show me more');
+      expect(SEARCH_SYSTEM_PROMPT).toContain(
+        'excludes athletes already shown in this conversation',
+      );
+    });
   });
 
   describe('onboarding conversation', () => {

@@ -37,6 +37,8 @@ export class BillySessionService {
         if (isOnboarding !== undefined) {
           cached.isOnboarding = isOnboarding;
         }
+        // Backfill for sessions cached before this field existed.
+        cached.shownAthleteIds ??= [];
         return cached;
       } catch (err) {
         this.logger.warn(
@@ -58,6 +60,7 @@ export class BillySessionService {
       searchCriteria,
       missingFields: ['sport', 'position', 'leagueLevel'],
       isOnboarding: isOnboarding ?? false,
+      shownAthleteIds: [],
       createdAt: new Date(),
       updatedAt: new Date(),
     };
@@ -92,6 +95,23 @@ export class BillySessionService {
   ): Promise<void> {
     const session = await this.getSession(conversationId, recruiterId);
     session.searchCriteria = { ...session.searchCriteria, ...newCriteria };
+    session.updatedAt = new Date();
+    await this.saveSession(conversationId, session);
+  }
+
+  // Tracks which athletes have already been surfaced in this conversation so
+  // a later "show me more" search can exclude them instead of repeating them.
+  async recordShownAthletes(
+    conversationId: string,
+    recruiterId: string,
+    athleteIds: string[],
+  ): Promise<void> {
+    if (athleteIds.length === 0) return;
+
+    const session = await this.getSession(conversationId, recruiterId);
+    const seen = new Set(session.shownAthleteIds);
+    athleteIds.forEach((id) => seen.add(id));
+    session.shownAthleteIds = Array.from(seen);
     session.updatedAt = new Date();
     await this.saveSession(conversationId, session);
   }

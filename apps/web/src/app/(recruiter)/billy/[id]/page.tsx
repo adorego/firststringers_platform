@@ -271,9 +271,11 @@ function BillyChatPageContent() {
                       </p>
                       {msg.searchResults && msg.searchResults.length > 0 && (
                         <p className="mt-3 text-xs text-[#ADA8A5]">
-                          {msg.isFallbackRecommendation
-                            ? `${msg.searchResults.length} related athlete${msg.searchResults.length === 1 ? "" : "s"} you might like`
-                            : `Found ${msg.searchResults.length} athletes matching your recruiting criteria`}
+                          {msg.isExpandedSearch
+                            ? `${msg.searchResults.length} other athlete${msg.searchResults.length === 1 ? "" : "s"} — broader match, not as tight a fit`
+                            : msg.isFallbackRecommendation
+                              ? `${msg.searchResults.length} related athlete${msg.searchResults.length === 1 ? "" : "s"} you might like`
+                              : `Found ${msg.searchResults.length} athletes matching your recruiting criteria`}
                         </p>
                       )}
                     </div>

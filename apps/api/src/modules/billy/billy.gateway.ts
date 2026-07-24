@@ -203,6 +203,7 @@ export class BillyGateway implements OnGatewayConnection, OnGatewayDisconnect {
     searchCriteria?: Record<string, unknown>;
     searchResults?: unknown[];
     isFallbackRecommendation?: boolean;
+    isExpandedSearch?: boolean;
   }) {
     this.server.to(`conversation:${payload.conversationId}`).emit('message', {
       role: 'assistant',
@@ -211,6 +212,7 @@ export class BillyGateway implements OnGatewayConnection, OnGatewayDisconnect {
       searchCriteria: payload.searchCriteria,
       searchResults: payload.searchResults,
       isFallbackRecommendation: payload.isFallbackRecommendation,
+      isExpandedSearch: payload.isExpandedSearch,
     });
 
     if (payload.searchCriteria) {

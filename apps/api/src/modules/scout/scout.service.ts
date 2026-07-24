@@ -23,6 +23,10 @@ export interface ScoutResult {
   // Set when the exact position had no matches and we broadened the search
   // to other positions in the same sport so Billy can still suggest someone.
   relaxedPosition?: string;
+  // Set when this result came from dropping filters to find athletes beyond
+  // the ones already shown this session ("show me more" with nothing left
+  // under the original criteria) — these are real options, just looser fits.
+  expanded?: boolean;
 }
 
 // Keyed by sport because the same short code means different things in
@@ -96,26 +100,68 @@ export class ScoutService {
     query: string,
     filters: SearchFilters,
     limit = 5,
+    // Athletes already shown earlier in this conversation — excluded so a
+    // "show me more" request surfaces someone new instead of repeating them.
+    excludeIds: string[] = [],
   ): Promise<ScoutResult> {
     const start = Date.now();
+    const isShowMore = excludeIds.length > 0;
 
-    const primary = await this.runQuery(query, filters, limit);
-    if (primary.athletes.length > 0 || !filters.position) {
+    const primary = await this.runQuery(query, filters, limit, excludeIds);
+    if (primary.athletes.length > 0) {
+      return { query, filters, latencyMs: Date.now() - start, ...primary };
+    }
+    if (!filters.position && !isShowMore) {
       return { query, filters, latencyMs: Date.now() - start, ...primary };
     }
 
-    // Nobody matched the requested position — broaden to other positions in
-    // the same sport so Billy can still offer a related recommendation.
-    const relaxedFilters: SearchFilters = { ...filters, position: undefined };
-    const relaxed = await this.runQuery(query, relaxedFilters, limit);
+    // Either the exact position had no matches, or (on a "show me more"
+    // request) every athlete matching it has already been shown — broaden to
+    // other positions in the same sport so Billy can still offer someone.
+    if (filters.position) {
+      const relaxedFilters: SearchFilters = {
+        ...filters,
+        position: undefined,
+      };
+      const relaxed = await this.runQuery(
+        query,
+        relaxedFilters,
+        limit,
+        excludeIds,
+      );
+      if (relaxed.athletes.length > 0) {
+        return {
+          query,
+          filters,
+          latencyMs: Date.now() - start,
+          ...relaxed,
+          relaxedPosition: filters.position,
+          expanded: isShowMore,
+        };
+      }
+      if (!isShowMore) {
+        return { query, filters, latencyMs: Date.now() - start, ...relaxed };
+      }
+    }
 
+    if (!isShowMore) {
+      return { query, filters, latencyMs: Date.now() - start, ...primary };
+    }
+
+    // Still nothing new — drop every soft filter and keep only sport, so a
+    // "show me more" request always finds someone else if anyone exists.
+    const broad = await this.runQuery(
+      query,
+      { sport: filters.sport },
+      limit,
+      excludeIds,
+    );
     return {
       query,
       filters,
       latencyMs: Date.now() - start,
-      ...relaxed,
-      relaxedPosition:
-        relaxed.athletes.length > 0 ? filters.position : undefined,
+      ...broad,
+      expanded: broad.athletes.length > 0,
     };
   }
 
@@ -123,6 +169,7 @@ export class ScoutService {
     query: string,
     filters: SearchFilters,
     limit: number,
+    excludeIds: string[] = [],
   ): Promise<{ totalFound: number; athletes: RankedAthlete[] }> {
     const sportMap = filters.sport
       ? POSITION_MAP[filters.sport.toLowerCase()]
@@ -138,6 +185,7 @@ export class ScoutService {
       where.sport = { equals: filters.sport, mode: 'insensitive' };
     if (normalizedPosition)
       where.position = { equals: normalizedPosition, mode: 'insensitive' };
+    if (excludeIds.length > 0) where.id = { notIn: excludeIds };
 
     this.logger.log(`Scout query: ${JSON.stringify(where)}`);
 

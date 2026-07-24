@@ -32,6 +32,9 @@ export interface BillySessionState {
   searchCriteria: Partial<SearchCriteria>;
   missingFields: string[];
   isOnboarding: boolean;
+  // Athletes already surfaced to the recruiter in this conversation — used to
+  // keep "show me more" requests from repeating the same recommendations.
+  shownAthleteIds: string[];
   createdAt: Date;
   updatedAt: Date;
 }
