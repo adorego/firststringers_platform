@@ -259,6 +259,50 @@ describe('StrategyPlannerService', () => {
     });
   });
 
+  describe('activation control', () => {
+    it('keeps leading Activation when the athlete gives a short negative answer and the Dossier is incomplete', () => {
+      const session = makeSession([
+        makeMessage('user', 'Hello'),
+        makeMessage(
+          'assistant',
+          'Is there anything specific you want me to focus on before we keep building your Athlete Dossier?',
+        ),
+        makeMessage('user', 'Nope'),
+      ]);
+
+      const result = service.decide(
+        makeCtx({
+          intent: 'availability',
+          missingFields: ['school', 'GPA'],
+          extractedData: null,
+          session,
+        }),
+      );
+
+      expect(result.type).toBe('strategic_ask');
+      expect(result.targetField).toBe('school');
+    });
+
+    it('keeps the continuous relationship moving when non-required Dossier fields remain', () => {
+      const session = makeSession([
+        makeMessage('user', 'Hello'),
+        makeMessage('assistant', 'Anything else you want me to know today?'),
+        makeMessage('user', "That's all"),
+      ]);
+
+      const result = service.decide(
+        makeCtx({
+          missingFields: ['highlights'],
+          extractedData: null,
+          session,
+        }),
+      );
+
+      expect(result.type).toBe('continuous');
+      expect(result.targetField).toBe('highlights');
+    });
+  });
+
   describe('FS-CS-005A section transitions', () => {
     it('transitions into Athletic Foundation when identity is complete', () => {
       const result = service.decide(

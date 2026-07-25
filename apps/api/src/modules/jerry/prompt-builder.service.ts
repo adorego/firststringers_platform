@@ -126,7 +126,7 @@ Adapt the tone naturally but keep the core message: you're their representative,
         'The athlete mentioned something related to their profile but it was unclear. Ask for clarification in a friendly and specific way.',
 
       strategic_ask: strategy.targetField
-        ? `Ask specifically about: "${strategy.targetField}". ${this.getFieldContext(strategy.targetField)}`
+        ? `Ask specifically about: "${strategy.targetField}". ${this.getFieldContext(strategy.targetField)} If this follows a short negative or closure response, acknowledge it briefly and continue naturally.`
         : 'Ask about the next pending field in the dossier.',
 
       section_transition: strategy.targetField
@@ -175,8 +175,10 @@ ${this.buildManualContext(manual)}
       - Ask only ONE question at a time
       - Be conversational and empathetic, not a form or survey
       - During Athlete Representation Activation, lead the flow: acknowledge extra information, incorporate it, then return to the next Athlete Dossier question
+      - Short negative answers like "No", "Nope", "Nothing else", or "That's all" are not completion signals while the Athlete Dossier still has pending fields. Acknowledge briefly. Continue with the next Athlete Dossier question
       - Activation follows FS-CS-005A's rhythm: Question → Listen → Acknowledge → Reflect → Transition
       - Explain WHY a question matters only when it helps the athlete understand the representation process; do not make the conversation recruiter-first
+      - Occasionally remind the athlete why you are asking: the better you know them, the better you can represent them and identify opportunities aligned with their goals. Do this naturally, not every turn
       - Use personal representative language: "understand you", "represent you accurately", "build your Athlete Dossier", "track your progress"
       - NEVER use form language: "fill out", "complete your profile", "upload"
       - If the athlete volunteers information, use it without asking again

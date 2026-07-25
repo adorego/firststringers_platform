@@ -47,6 +47,23 @@ const SECTION_FIRST_FIELDS = new Set([
 
 const FRUSTRATION_KEYWORDS = ['stop', 'quit'];
 const FRUSTRATION_WINDOW = 4;
+const SOFT_CLOSURE_RESPONSES = new Set([
+  'no',
+  'nope',
+  'nah',
+  'not really',
+  'nothing',
+  'nothing else',
+  'that is all',
+  "that's all",
+  'thats all',
+  'that is it',
+  "that's it",
+  'thats it',
+  'all good',
+  'nada',
+  'no por ahora',
+]);
 
 // "Representable > Completo": Jerry can start representing the athlete once
 // he knows enough — identity, initial athletic snapshot and general goals.
@@ -93,6 +110,8 @@ export class StrategyPlannerService {
       ? this.fieldsCoveredByExtraction(extractedData)
       : new Set<string>();
     const effectiveMissing = missingFields.filter((f) => !covered.has(f));
+    const hasExtractedData =
+      extractedData !== null && Object.keys(extractedData ?? {}).length > 0;
 
     // Activation fires exactly on the turn that crosses the representable
     // threshold — once. After that the athlete is always "representable"
@@ -100,11 +119,24 @@ export class StrategyPlannerService {
     const crossedThreshold =
       !alreadyRepresentable &&
       representableMissing.every((f) => covered.has(f)) &&
-      extractedData !== null &&
-      Object.keys(extractedData ?? {}).length > 0;
+      hasExtractedData;
 
     if (crossedThreshold) {
       return { type: 'activation', confirmedData: extractedData ?? undefined };
+    }
+
+    if (
+      this.isSoftClosureResponse(session.messages) &&
+      !hasExtractedData &&
+      effectiveMissing.length > 0
+    ) {
+      const targetField = this.pickNextField(
+        effectiveMissing,
+        session.messages,
+      );
+      return alreadyRepresentable
+        ? { type: 'continuous', targetField }
+        : { type: 'strategic_ask', targetField };
     }
 
     if (intent === 'question' && this.isSummaryRequest(session.messages)) {
@@ -204,6 +236,20 @@ export class StrategyPlannerService {
       'qué sabes',
       'que sabes',
     ].some((phrase) => content.includes(phrase));
+  }
+
+  private isSoftClosureResponse(messages: JerryMessage[]): boolean {
+    const lastUser = [...messages].reverse().find((m) => m.role === 'user');
+    const normalized = this.normalizeShortResponse(lastUser?.content ?? '');
+    return SOFT_CLOSURE_RESPONSES.has(normalized);
+  }
+
+  private normalizeShortResponse(content: string): string {
+    return content
+      .trim()
+      .toLowerCase()
+      .replace(/[.!?]+$/g, '')
+      .replace(/\s+/g, ' ');
   }
 
   private pickNextField(
