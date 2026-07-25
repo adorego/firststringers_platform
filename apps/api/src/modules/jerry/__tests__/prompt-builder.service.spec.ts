@@ -77,6 +77,27 @@ describe('PromptBuilderService', () => {
       expect(result).toContain('Reason internally, communicate naturally');
       expect(result).toContain('answer openly and in plain language');
     });
+
+    it('keeps short negative answers from ending Activation while the Dossier is incomplete', () => {
+      const result = service.build({
+        type: 'strategic_ask',
+        targetField: 'school',
+      });
+      expect(result).toContain('Short negative answers');
+      expect(result).toContain('not completion signals');
+      expect(result).toContain(
+        'Continue with the next Athlete Dossier question',
+      );
+    });
+
+    it('asks Jerry to reinforce representation purpose naturally, not every turn', () => {
+      const result = service.build({ type: 'confirm_and_probe' });
+      expect(result).toContain(
+        'Occasionally remind the athlete why you are asking',
+      );
+      expect(result).toContain('not every turn');
+      expect(result).toContain('better you can represent them');
+    });
   });
 
   describe('strategy: welcome', () => {
