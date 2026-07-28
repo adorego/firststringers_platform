@@ -122,11 +122,15 @@ export class ConversationWorker {
 
       const manual = await this.ownersManual.get(athleteId);
 
-      const response = await this.llm.chat({
+      const generatedResponse = await this.llm.chat({
         systemPrompt: this.promptBuilder.build(strategy, manual),
         messages: sessionState.messages,
         extractedData,
       });
+      const response = this.promptBuilder.enforceConversationLeadership(
+        generatedResponse,
+        strategy,
+      );
 
       const assistantMessage: JerryMessage = {
         role: 'assistant',

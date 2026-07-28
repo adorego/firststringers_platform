@@ -82,8 +82,11 @@ const mockStrategyPlanner: jest.Mocked<Pick<StrategyPlannerService, 'decide'>> =
     decide: jest.fn(),
   };
 
-const mockPromptBuilder: jest.Mocked<Pick<PromptBuilderService, 'build'>> = {
+const mockPromptBuilder: jest.Mocked<
+  Pick<PromptBuilderService, 'build' | 'enforceConversationLeadership'>
+> = {
   build: jest.fn(),
+  enforceConversationLeadership: jest.fn(),
 };
 
 const mockRepresentation: jest.Mocked<
@@ -151,6 +154,9 @@ describe('ConversationWorker', () => {
       targetField: 'GPA',
     });
     mockPromptBuilder.build.mockReturnValue('generated system prompt');
+    mockPromptBuilder.enforceConversationLeadership.mockImplementation(
+      (response) => response,
+    );
     mockManualExtractor.extract.mockResolvedValue(null);
     mockOwnersManual.get.mockResolvedValue({});
     mockOwnersManual.merge.mockResolvedValue(undefined);
@@ -266,6 +272,36 @@ describe('ConversationWorker', () => {
 
     expect(mockPromptBuilder.build).toHaveBeenCalledWith(strategy, {});
     expect(mockPromptBuilder.build).toHaveBeenCalledTimes(1);
+  });
+
+  it('enforces conversation leadership before saving and emitting Jerry response', async () => {
+    const strategy: ConversationStrategy = {
+      type: 'answer_and_redirect',
+      targetField: 'GPA',
+    };
+    const rawResponse =
+      "Knowing this helps me represent you accurately. If there's anything else you'd like to ask, let me know.";
+    const controlledResponse =
+      'Knowing this helps me represent you accurately. What is your current GPA?';
+    mockStrategyPlanner.decide.mockReturnValue(strategy);
+    mockLlm.chat.mockResolvedValue(rawResponse);
+    mockPromptBuilder.enforceConversationLeadership.mockReturnValue(
+      controlledResponse,
+    );
+
+    await worker.handle(makeJob({ message: 'Why do you need to know that?' }));
+
+    expect(
+      mockPromptBuilder.enforceConversationLeadership,
+    ).toHaveBeenCalledWith(rawResponse, strategy);
+    expect(mockSession.appendMessage).toHaveBeenCalledWith(
+      'athlete-123',
+      expect.objectContaining({ content: controlledResponse }),
+    );
+    expect(mockEventEmitter.emit).toHaveBeenCalledWith('jerry.response', {
+      athleteId: 'athlete-123',
+      message: controlledResponse,
+    });
   });
 
   // ── TEST 6 — branch: empty extractedData ────────────────────────────────

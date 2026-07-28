@@ -306,6 +306,29 @@ describe('StrategyPlannerService', () => {
       expect(result.targetField).toBe('GPA');
     });
 
+    it('acknowledges a temporary topic detour and resumes the active Dossier field', () => {
+      const session = makeSession([
+        makeMessage('user', 'I play soccer'),
+        makeMessage(
+          'assistant',
+          'What school, club, academy, or organization are you currently competing with?',
+        ),
+        makeMessage('user', 'By the way, I watched the championship yesterday'),
+      ]);
+
+      const result = service.decide(
+        makeCtx({
+          intent: 'other',
+          missingFields: ['school', 'GPA'],
+          extractedData: null,
+          session,
+        }),
+      );
+
+      expect(result.type).toBe('answer_and_redirect');
+      expect(result.targetField).toBe('school');
+    });
+
     it('keeps leading Activation when the athlete gives a short negative answer and the Dossier is incomplete', () => {
       const session = makeSession([
         makeMessage('user', 'Hello'),
@@ -433,7 +456,7 @@ describe('StrategyPlannerService', () => {
         makeCtx({
           intent: 'question',
           session,
-          missingFields: ['physical profile', 'timeline'],
+          missingFields: ['physical profile', 'GPA', 'timeline'],
         }),
       );
       expect(result.type).toBe('summarize_dossier');
@@ -494,6 +517,15 @@ describe('StrategyPlannerService', () => {
         makeCtx({ missingFields: [], intent: 'question' }),
       );
       expect(result.type).toBe('answer_and_redirect');
+    });
+
+    it('does not force a pending enrichment field after a question in continuous mode', () => {
+      const result = service.decide(
+        makeCtx({ missingFields: ['highlights'], intent: 'question' }),
+      );
+
+      expect(result.type).toBe('answer_and_redirect');
+      expect(result.targetField).toBeUndefined();
     });
 
     it('returns "continuous" when nothing is missing and data was extracted', () => {

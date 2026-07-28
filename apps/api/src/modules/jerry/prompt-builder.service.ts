@@ -3,6 +3,14 @@ import { ConversationStrategy, OwnersManualData } from '../../shared/types';
 
 @Injectable()
 export class PromptBuilderService {
+  private readonly genericHandoffPhrases = [
+    'anything else',
+    'any other questions',
+    'let me know',
+    'feel free',
+    'ask or share',
+  ];
+
   private buildManualContext(manual?: OwnersManualData): string {
     if (!manual) return '';
 
@@ -107,6 +115,52 @@ ${lines.map((l) => `      ${l}`).join('\n')}
     return contexts[field] ?? 'Only ask about this specific information.';
   }
 
+  private getFieldQuestion(field: string): string | undefined {
+    const match = this.getFieldContext(field).match(/Ask: "(.+)"$/);
+    const question = match?.[1];
+    if (!question) return undefined;
+    return question.endsWith('?') ? question : question.replace(/[.!]+$/, '?');
+  }
+
+  enforceConversationLeadership(
+    response: string,
+    strategy: ConversationStrategy,
+  ): string {
+    if (strategy.type !== 'answer_and_redirect' || !strategy.targetField) {
+      return response;
+    }
+
+    const requiredQuestion = this.getFieldQuestion(strategy.targetField);
+    if (!requiredQuestion) return response;
+
+    const trimmed = response.trim();
+    if (trimmed.toLowerCase().endsWith(requiredQuestion.toLowerCase())) {
+      return trimmed;
+    }
+
+    const withoutHandoff = this.removeGenericHandoff(trimmed);
+    return withoutHandoff
+      ? `${withoutHandoff} ${requiredQuestion}`
+      : requiredQuestion;
+  }
+
+  private removeGenericHandoff(response: string): string {
+    const sentenceBoundaries = [
+      response.lastIndexOf('. '),
+      response.lastIndexOf('? '),
+      response.lastIndexOf('! '),
+    ];
+    const boundary = Math.max(...sentenceBoundaries);
+    const finalSentence = response.slice(boundary + 2).toLowerCase();
+    const isGenericHandoff = this.genericHandoffPhrases.some((phrase) =>
+      finalSentence.includes(phrase),
+    );
+
+    return isGenericHandoff
+      ? response.slice(0, boundary === -1 ? 0 : boundary + 1).trim()
+      : response;
+  }
+
   build(strategy: ConversationStrategy, manual?: OwnersManualData): string {
     const instructions: Record<ConversationStrategy['type'], string> = {
       welcome: `This is the very start of the relationship — the athlete just joined First Stringers and you speak FIRST (there may be no athlete message yet). Introduce yourself using this script:
@@ -119,8 +173,8 @@ Adapt the tone naturally but keep the core message: you're their representative,
         : 'Confirm the information received and ask ONE follow-up question that advances the Athlete Dossier.',
 
       answer_and_redirect: strategy.targetField
-        ? `Answer the athlete's question concisely, then return to the Athlete Dossier. You must end by asking about: "${strategy.targetField}". ${this.getFieldContext(strategy.targetField)}`
-        : "Answer the athlete's question and redirect toward the dossier — the Athlete Dossier.",
+        ? `Answer the athlete's question or acknowledge their temporary detour concisely, then return to the Athlete Dossier field "${strategy.targetField}". Never hand control back with phrases like "let me know" or "if there is anything else." Your final sentence must be this exact question: "${this.getFieldQuestion(strategy.targetField)}" ${this.getFieldContext(strategy.targetField)}`
+        : "Answer the athlete's question naturally. Their representation is already active, so do not force a Dossier question; continue as their representative based on what they asked.",
 
       clarify:
         'The athlete mentioned something related to their profile but it was unclear. Ask for clarification in a friendly and specific way.',
