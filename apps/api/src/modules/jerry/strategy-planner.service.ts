@@ -142,14 +142,20 @@ export class StrategyPlannerService {
     if (intent === 'question' && this.isSummaryRequest(session.messages)) {
       return {
         type: 'summarize_dossier',
-        targetField: this.pickNextField(effectiveMissing, session.messages),
+        targetField: this.pickInterruptedField(
+          effectiveMissing,
+          session.messages,
+        ),
       };
     }
 
     if (intent === 'question') {
       return {
         type: 'answer_and_redirect',
-        targetField: this.pickNextField(effectiveMissing, session.messages),
+        targetField: this.pickInterruptedField(
+          effectiveMissing,
+          session.messages,
+        ),
       };
     }
 
@@ -269,6 +275,14 @@ export class StrategyPlannerService {
     return sorted.find((f) => f !== lastAsked) ?? sorted[0];
   }
 
+  private pickInterruptedField(
+    missingFields: string[],
+    messages: JerryMessage[],
+  ): string | undefined {
+    const interruptedField = this.getLastAskedField(missingFields, messages);
+    return interruptedField ?? this.pickNextField(missingFields, messages);
+  }
+
   // Maps extracted dossier data to the field labels it satisfies,
   // mirroring ValidatorService.calculateMissingFields
   private fieldsCoveredByExtraction(data: Partial<DossierData>): Set<string> {
@@ -320,6 +334,9 @@ export class StrategyPlannerService {
       .reverse()
       .find((m) => m.role === 'assistant');
     if (!lastAssistant) return undefined;
-    return missingFields.find((field) => lastAssistant.content.includes(field));
+    const content = lastAssistant.content.toLowerCase();
+    return missingFields.find((field) =>
+      content.includes(field.toLowerCase()),
+    );
   }
 }

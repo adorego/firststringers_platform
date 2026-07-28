@@ -260,6 +260,52 @@ describe('StrategyPlannerService', () => {
   });
 
   describe('activation control', () => {
+    it('resumes the interrupted Dossier field when the athlete asks why it is needed', () => {
+      const session = makeSession([
+        makeMessage('user', 'I graduate in 2027'),
+        makeMessage(
+          'assistant',
+          'What school, club, academy, or organization are you currently competing with?',
+        ),
+        makeMessage('user', 'Why do you need to know that?'),
+      ]);
+
+      const result = service.decide(
+        makeCtx({
+          intent: 'question',
+          missingFields: ['school', 'GPA'],
+          extractedData: null,
+          session,
+        }),
+      );
+
+      expect(result.type).toBe('answer_and_redirect');
+      expect(result.targetField).toBe('school');
+    });
+
+    it('advances after an interruption when the previously requested field is already known', () => {
+      const session = makeSession([
+        makeMessage('user', 'I compete for Central High School'),
+        makeMessage(
+          'assistant',
+          'Knowing your school helps me understand your competitive context.',
+        ),
+        makeMessage('user', 'Why does that matter?'),
+      ]);
+
+      const result = service.decide(
+        makeCtx({
+          intent: 'question',
+          missingFields: ['GPA', 'intended major'],
+          extractedData: null,
+          session,
+        }),
+      );
+
+      expect(result.type).toBe('answer_and_redirect');
+      expect(result.targetField).toBe('GPA');
+    });
+
     it('keeps leading Activation when the athlete gives a short negative answer and the Dossier is incomplete', () => {
       const session = makeSession([
         makeMessage('user', 'Hello'),
