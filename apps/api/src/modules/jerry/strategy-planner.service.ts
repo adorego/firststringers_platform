@@ -142,14 +142,32 @@ export class StrategyPlannerService {
     if (intent === 'question' && this.isSummaryRequest(session.messages)) {
       return {
         type: 'summarize_dossier',
-        targetField: this.pickNextField(effectiveMissing, session.messages),
+        targetField: alreadyRepresentable
+          ? undefined
+          : this.pickInterruptedField(effectiveMissing, session.messages),
       };
     }
 
     if (intent === 'question') {
       return {
         type: 'answer_and_redirect',
-        targetField: this.pickNextField(effectiveMissing, session.messages),
+        targetField: alreadyRepresentable
+          ? undefined
+          : this.pickInterruptedField(effectiveMissing, session.messages),
+      };
+    }
+
+    if (
+      !alreadyRepresentable &&
+      intent === 'other' &&
+      this.getInterruptedField(effectiveMissing, session.messages)
+    ) {
+      return {
+        type: 'answer_and_redirect',
+        targetField: this.pickInterruptedField(
+          effectiveMissing,
+          session.messages,
+        ),
       };
     }
 
@@ -269,6 +287,35 @@ export class StrategyPlannerService {
     return sorted.find((f) => f !== lastAsked) ?? sorted[0];
   }
 
+  private pickInterruptedField(
+    missingFields: string[],
+    messages: JerryMessage[],
+  ): string | undefined {
+    const interruptedField = this.getInterruptedField(missingFields, messages);
+    return interruptedField ?? this.pickNextField(missingFields, messages);
+  }
+
+  private getInterruptedField(
+    missingFields: string[],
+    messages: JerryMessage[],
+  ): string | undefined {
+    let lastUserIndex = -1;
+    let lastAssistantIndex = -1;
+
+    for (let index = messages.length - 1; index >= 0; index -= 1) {
+      if (lastUserIndex === -1 && messages[index].role === 'user') {
+        lastUserIndex = index;
+      }
+      if (lastAssistantIndex === -1 && messages[index].role === 'assistant') {
+        lastAssistantIndex = index;
+      }
+      if (lastUserIndex !== -1 && lastAssistantIndex !== -1) break;
+    }
+
+    if (lastUserIndex <= lastAssistantIndex) return undefined;
+    return this.getLastAskedField(missingFields, messages);
+  }
+
   // Maps extracted dossier data to the field labels it satisfies,
   // mirroring ValidatorService.calculateMissingFields
   private fieldsCoveredByExtraction(data: Partial<DossierData>): Set<string> {
@@ -320,6 +367,7 @@ export class StrategyPlannerService {
       .reverse()
       .find((m) => m.role === 'assistant');
     if (!lastAssistant) return undefined;
-    return missingFields.find((field) => lastAssistant.content.includes(field));
+    const content = lastAssistant.content.toLowerCase();
+    return missingFields.find((field) => content.includes(field.toLowerCase()));
   }
 }

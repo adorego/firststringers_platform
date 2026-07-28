@@ -160,7 +160,9 @@ describe('PromptBuilderService', () => {
       };
       const result = service.build(strategy);
       expect(result).toContain('"position"');
-      expect(result).toContain("Answer the athlete's question concisely");
+      expect(result).toContain(
+        "Answer the athlete's question or acknowledge their temporary detour concisely",
+      );
     });
 
     it('formats summary requests by Dossier section and forbids inference', () => {
@@ -180,8 +182,37 @@ describe('PromptBuilderService', () => {
     it('uses generic instruction when there is no targetField', () => {
       const strategy: ConversationStrategy = { type: 'answer_and_redirect' };
       const result = service.build(strategy);
-      expect(result).toContain('redirect toward the dossier');
+      expect(result).toContain('representation is already active');
+      expect(result).toContain('do not force a Dossier question');
       expect(result).not.toContain('undefined');
+    });
+
+    it('replaces a chatbot handoff with the required Dossier question', () => {
+      const strategy: ConversationStrategy = {
+        type: 'answer_and_redirect',
+        targetField: 'GPA',
+      };
+
+      const result = service.enforceConversationLeadership(
+        "Knowing your academics helps me represent you accurately. If there's anything else you'd like to ask or share, let me know.",
+        strategy,
+      );
+
+      expect(result).not.toContain("anything else you'd like");
+      expect(result.endsWith('What is your current GPA?')).toBe(true);
+    });
+
+    it('keeps a compliant answer that already ends with the required question', () => {
+      const strategy: ConversationStrategy = {
+        type: 'answer_and_redirect',
+        targetField: 'school',
+      };
+      const response =
+        'Knowing where you compete helps me understand your current context and represent you accurately. What school, club, academy, or organization are you currently competing with?';
+
+      expect(service.enforceConversationLeadership(response, strategy)).toBe(
+        response,
+      );
     });
   });
 

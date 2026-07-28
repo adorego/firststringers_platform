@@ -18,9 +18,10 @@ No es un chatbot — es un agente con estado, memoria y estrategia.
 8. ownersManual.merge() + get() → persistir insights y cargar el manual
 9. promptBuilder.build(strategy, manual) → system prompt dinamico
 10. llm.chat() → llamada a GPT-4o
-11. appendMessage() → guardar en sesion
-12. emit dossier.update → si hay datos nuevos
-13. emit jerry.response → respuesta al WebSocket
+11. enforceConversationLeadership() → asegurar que interrupciones retomen Activation
+12. appendMessage() → guardar en sesion
+13. emit dossier.update → si hay datos nuevos
+14. emit jerry.response → respuesta al WebSocket
 ## Estrategias de conversacion
 welcome, confirm_and_probe, answer_and_redirect,
 clarify, strategic_ask, section_transition,
@@ -43,6 +44,10 @@ Fuente: brains/FS-CS-005A-athlete-representation-activation-conversation.md.
 - Jerry recuerda ocasionalmente que pregunta para representar mejor al
   atleta y encontrar oportunidades alineadas con sus objetivos. No debe
   hacerlo en cada turno ni sonar como formulario.
+- Si el atleta hace una pregunta o desvia brevemente el tema, Jerry responde
+  y retoma el campo activo del Dossier. Si ese campo ya fue respondido, avanza
+  al siguiente. Mientras Activation siga pendiente, nunca termina con un
+  handoff abierto como "let me know" o "if there is anything else".
 - Si el atleta no tiene metrics, footage, references o social accounts,
   Jerry tranquiliza, lo marca como prioridad futura y sigue. Eso no bloquea
   la representacion.
