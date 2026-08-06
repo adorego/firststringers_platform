@@ -1,0 +1,30 @@
+import assert from "node:assert/strict";
+import test from "node:test";
+import path from "node:path";
+import { parseDemoImportArgs, readDemoDataset } from "../import-demo-athletes";
+import { validateDemoAthleteDataset } from "../demo-athlete-importer";
+
+test("uses dry-run mode and the pilot fixture by default", () => {
+  const options = parseDemoImportArgs([]);
+
+  assert.equal(options.apply, false);
+  assert.match(options.file, /demo_athletes_seed\.json$/);
+  assert.equal(options.target, undefined);
+});
+
+test("requires an explicit safe target before applying", () => {
+  assert.throws(() => parseDemoImportArgs(["--apply"]), /requires --target/i);
+  assert.throws(
+    () => parseDemoImportArgs(["--apply", "--target=production"]),
+    /local or development/i,
+  );
+});
+
+test("reads and validates the checked-in pilot fixture", async () => {
+  const fixture = path.resolve(__dirname, "..", "demo_athletes_seed.json");
+  const dataset = await readDemoDataset(fixture);
+  const result = validateDemoAthleteDataset(dataset);
+
+  assert.equal(result.valid, true, result.errors.join("\n"));
+  assert.equal(result.athletes.length, 3);
+});

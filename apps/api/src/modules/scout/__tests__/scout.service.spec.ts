@@ -40,6 +40,22 @@ describe('ScoutService', () => {
     expect(where.sport).toBeUndefined();
   });
 
+  it.each([
+    ['safety', 'S'],
+    ['defensive back', 'S'],
+    ['nickel defensive back', 'S'],
+    ['offensive tackle', 'OL'],
+    ['offensive guard', 'OL'],
+  ])(
+    'maps %s to the canonical demo-athlete position %s',
+    async (input, expected) => {
+      await service.search(input, { sport: 'football', position: input });
+
+      const { where } = findMany.mock.calls[0][0];
+      expect(where.position).toEqual({ equals: expected, mode: 'insensitive' });
+    },
+  );
+
   describe('"show me more" (excludeIds)', () => {
     it('excludes previously shown athletes from the query', async () => {
       await service.search(
@@ -50,7 +66,9 @@ describe('ScoutService', () => {
       );
 
       const { where } = findMany.mock.calls[0][0];
-      expect(where.id).toEqual({ notIn: ['already-shown-1', 'already-shown-2'] });
+      expect(where.id).toEqual({
+        notIn: ['already-shown-1', 'already-shown-2'],
+      });
     });
 
     it('does not filter by id when nothing has been shown yet', async () => {

@@ -1,0 +1,420 @@
+{
+  "schemaVersion": 1,
+  "dataset": "abel-pilot-2026-08",
+  "generatedAt": "2026-08-04",
+  "athletes": [
+    {
+      "fullName": "Marcus Elijah Johnson",
+      "email": "marcus-johnson-2027@demo.firststringers.test",
+      "sport": "football",
+      "position": "QB",
+      "scenario": "proven-prospect",
+      "narrative": "Marcus Johnson is a productive and academically qualified quarterback with verified size, strong leadership qualities, and three years of varsity experience. He combines efficient decision-making with production inside and outside the pocket. His academic profile presents minimal admissions risk, and he is best suited for a Division I multiple or pro-style offense that values quarterback intelligence and long-term development.",
+      "advocacyScore": 0.96,
+      "dossier": {
+        "identity": {
+          "sport": "Football",
+          "position": "Quarterback",
+          "location": "Jacksonville, Florida, United States",
+          "school": "Riverside High School",
+          "competitiveLevel": "Florida Class 5A Varsity",
+          "graduationYear": 2027,
+          "nationality": "United States"
+        },
+        "performance": {
+          "stats": {
+            "gamesPlayed": 12,
+            "gamesStarted": 12,
+            "passingAttempts": 329,
+            "passingCompletions": 224,
+            "completionPercentage": 68.1,
+            "passingYards": 3284,
+            "passingTouchdowns": 34,
+            "interceptions": 6,
+            "quarterbackRating": 119.4,
+            "rushingYards": 612,
+            "rushingTouchdowns": 9
+          },
+          "leagueLevel": "NCAA Division I prospect with strong FCS floor",
+          "physicalProfile": {
+            "height": "6 ft 3 in",
+            "weight": "205 lb",
+            "speed": "4.71 s 40-yard dash",
+            "vertical": "34 in",
+            "dominantSide": "Right"
+          },
+          "strengths": [
+            "Pocket awareness",
+            "Pre-snap recognition",
+            "Intermediate passing accuracy",
+            "Leadership and communication",
+            "Decision-making under pressure",
+            "Red-zone efficiency"
+          ],
+          "physicalStatus": "Fully healthy, unrestricted, and cleared for participation",
+          "archetype": "Productive field general",
+          "highlightUrls": ["https://example.com/marcus-johnson-highlights"]
+        },
+        "academic": {
+          "gpa": 3.82,
+          "satAct": 1240,
+          "intendedMajor": "Business Administration",
+          "ncaaEligibility": true,
+          "academicInterests": [
+            "Entrepreneurship",
+            "Marketing",
+            "Leadership",
+            "Sports Management"
+          ]
+        },
+        "availability": {
+          "transferPortal": false,
+          "preferredRegions": [
+            "Southeast United States",
+            "National opportunities"
+          ],
+          "scholarshipNeed": true,
+          "timeline": "Decision expected after the senior season",
+          "competitiveLevelGoal": "NCAA Division I, with strong FCS programs considered",
+          "goals": [
+            "Become a Division I starting quarterback",
+            "Graduate with a business degree",
+            "Compete for conference championships",
+            "Launch a youth quarterback training program"
+          ],
+          "limitations": [
+            "Not interested in military academies or junior college"
+          ],
+          "relocationOpenness": "Open to opportunities nationwide",
+          "nonNegotiables": [
+            "Strong academic fit",
+            "A development plan with a realistic path to compete"
+          ]
+        },
+        "media": {
+          "highlightUrls": ["https://example.com/marcus-johnson-highlights"],
+          "clipUrls": [
+            "https://example.com/marcus-johnson-game-1",
+            "https://example.com/marcus-johnson-game-2",
+            "https://example.com/marcus-johnson-training"
+          ],
+          "socialMedia": {
+            "instagram": "@MarcusJohnsonQB",
+            "twitter": "@MarcusQB27",
+            "hudl": "https://example.com/marcus-johnson-hudl"
+          },
+          "references": [
+            "Michael Sanders — Head Football Coach — confirmed",
+            "Alex Rivera — Offensive Coordinator and Quarterbacks Coach — confirmed"
+          ]
+        },
+        "character": {
+          "mentality": "Prepared, accountable, composed under pressure, and strongly team oriented",
+          "leadership": "Team captain who organizes player-led film sessions",
+          "coachability": "Accepts direct coaching without becoming defensive",
+          "resilience": "Maintains composure and resets quickly after mistakes",
+          "motivation": "Lead at the Division I level while earning a business degree",
+          "growthAreas": [
+            "Deep-ball consistency outside the numbers",
+            "Lower-body mechanics while throwing on the move",
+            "Patience against disguised coverage",
+            "Functional strength"
+          ],
+          "selfRepresentation": "A prepared and accountable quarterback who leads teammates and makes efficient decisions under pressure"
+        },
+        "fitTags": [
+          "verified-production",
+          "strong-academics",
+          "team-captain",
+          "pro-style-offense",
+          "dual-threat",
+          "recruiting-ready"
+        ],
+        "trajectory": "STABLE",
+        "recruiterPitch": "A verified 2027 Florida quarterback with 3,284 passing yards, a 68.1% completion rate, a 3.82 GPA, and proven varsity leadership. Marcus offers a strong combination of production, preparation, academics, and fit for a multiple or pro-style offense.",
+        "demoMetadata": {
+          "synthetic": true,
+          "dataset": "abel-pilot-2026-08",
+          "source": "First Stringers Demo Athlete Dossiers"
+        }
+      }
+    },
+    {
+      "fullName": "Elijah Nathaniel Brooks",
+      "email": "elijah-brooks-2028@demo.firststringers.test",
+      "sport": "football",
+      "position": "S",
+      "scenario": "underexposed-discovery",
+      "narrative": "Elijah Brooks is an underexposed defensive back with verified speed, strong production, positional versatility, and advanced football instincts. His limited recruiting attention is more closely related to school visibility and digital exposure than athletic ability. He projects as a safety or nickel defender in a multiple system and adds immediate special-teams value.",
+      "advocacyScore": 0.91,
+      "dossier": {
+        "identity": {
+          "sport": "Football",
+          "position": "Safety / Nickel Defensive Back",
+          "location": "Mobile, Alabama, United States",
+          "school": "Gulf Coast Preparatory School",
+          "competitiveLevel": "Alabama Class 3A Varsity",
+          "graduationYear": 2028,
+          "nationality": "United States"
+        },
+        "performance": {
+          "stats": {
+            "gamesPlayed": 11,
+            "gamesStarted": 11,
+            "totalTackles": 96,
+            "soloTackles": 61,
+            "tacklesForLoss": 8,
+            "sacks": 2,
+            "interceptions": 6,
+            "passBreakups": 14,
+            "forcedFumbles": 3,
+            "defensiveTouchdowns": 2,
+            "specialTeamsTackles": 11
+          },
+          "leagueLevel": "Division I projection requiring broader evaluation and exposure",
+          "physicalProfile": {
+            "height": "6 ft 1 in",
+            "weight": "185 lb",
+            "speed": "4.49 s 40-yard dash",
+            "vertical": "38 in",
+            "dominantSide": "Right"
+          },
+          "strengths": [
+            "Closing speed",
+            "Open-field tackling",
+            "Route recognition",
+            "Middle-of-field range",
+            "Ball skills",
+            "Safety and nickel versatility",
+            "Special-teams value"
+          ],
+          "physicalStatus": "Fully healthy, unrestricted, and cleared for participation",
+          "archetype": "Underexposed versatile defensive back",
+          "highlightUrls": ["https://example.com/elijah-brooks-highlights"]
+        },
+        "academic": {
+          "gpa": 3.45,
+          "intendedMajor": "Criminal Justice",
+          "ncaaEligibility": true,
+          "academicInterests": [
+            "Law enforcement",
+            "Sports science",
+            "Kinesiology",
+            "Coaching"
+          ]
+        },
+        "availability": {
+          "transferPortal": false,
+          "preferredRegions": [
+            "Southeast United States",
+            "National opportunities"
+          ],
+          "scholarshipNeed": true,
+          "timeline": "Decision during or after the senior season",
+          "competitiveLevelGoal": "NCAA Division I, with strong Division II development programs considered",
+          "goals": [
+            "Earn a Division I scholarship",
+            "Become a multi-year college starter",
+            "Graduate in criminal justice",
+            "Support athletes from underexposed communities"
+          ],
+          "limitations": [
+            "Needs stronger digital exposure and standardized-test preparation"
+          ],
+          "relocationOpenness": "Open to opportunities nationwide",
+          "nonNegotiables": [
+            "Meaningful scholarship support",
+            "A program that develops versatile defensive backs"
+          ]
+        },
+        "media": {
+          "highlightUrls": ["https://example.com/elijah-brooks-highlights"],
+          "clipUrls": [
+            "https://example.com/elijah-brooks-game-1",
+            "https://example.com/elijah-brooks-game-2",
+            "https://example.com/elijah-brooks-camp"
+          ],
+          "socialMedia": {
+            "instagram": "@ElijahBrooks4",
+            "twitter": "@ElijahBrooksDB",
+            "hudl": "https://example.com/elijah-brooks-hudl"
+          },
+          "references": [
+            "Derrick Coleman — Head Football Coach — confirmed",
+            "Anthony Price — Defensive Coordinator — confirmed"
+          ]
+        },
+        "character": {
+          "mentality": "Quiet, observant, competitive, and consistent even when his team is trailing",
+          "leadership": "Team captain as a sophomore who helps younger defensive backs with adjustments",
+          "coachability": "Responds quickly to corrections and studies opponent formations",
+          "resilience": "Sustains effort through adversity and has recovered fully from a mild 2024 ankle sprain",
+          "motivation": "Earn a scholarship and create opportunities for athletes from underexposed communities",
+          "growthAreas": [
+            "Man-coverage technique against slot receivers",
+            "Eye discipline against play action",
+            "Block disengagement",
+            "Functional weight",
+            "Recruiting exposure"
+          ],
+          "selfRepresentation": "A versatile and instinctive defensive back whose production, speed, and preparation exceed his current recruiting exposure"
+        },
+        "fitTags": [
+          "under-recruited",
+          "verified-speed",
+          "ball-production",
+          "positional-versatility",
+          "special-teams",
+          "southeast",
+          "strong-academics"
+        ],
+        "trajectory": "IMPROVING",
+        "recruiterPitch": "A 2028 Alabama safety and nickel prospect with verified 4.49 speed, 96 tackles, six interceptions, a 3.45 GPA, and leadership experience. Elijah is a credible discovery candidate whose exposure trails his verified traits and production.",
+        "demoMetadata": {
+          "synthetic": true,
+          "dataset": "abel-pilot-2026-08",
+          "source": "First Stringers Demo Athlete Dossiers"
+        }
+      }
+    },
+    {
+      "fullName": "Caleb Antonio Ramirez",
+      "email": "caleb-ramirez-2029@demo.firststringers.test",
+      "sport": "football",
+      "position": "OL",
+      "scenario": "developmental-upside",
+      "narrative": "Caleb Ramirez is a high-upside offensive-line prospect with verified height, length, movement skills, and an exceptional academic profile. He is still developing physically and technically, but his frame and pass-protection foundation suggest significant long-term potential. He is best suited for a program willing to invest in development rather than expect immediate college readiness.",
+      "advocacyScore": 0.89,
+      "dossier": {
+        "identity": {
+          "sport": "Football",
+          "position": "Offensive Tackle / Offensive Guard",
+          "location": "Plano, Texas, United States",
+          "school": "Plano Horizon High School",
+          "competitiveLevel": "Texas Class 6A Varsity",
+          "graduationYear": 2029,
+          "nationality": "United States"
+        },
+        "performance": {
+          "stats": {
+            "gamesPlayed": 10,
+            "gamesStarted": 8,
+            "offensiveSnaps": 498,
+            "sacksAllowed": 2,
+            "pressuresAllowed": 8,
+            "pancakeBlocks": 31,
+            "runBlockWinRate": 78,
+            "passBlockWinRate": 84
+          },
+          "leagueLevel": "Developmental Division I upside with high-academic Division II floor",
+          "physicalProfile": {
+            "height": "6 ft 6 in",
+            "weight": "275 lb",
+            "speed": "5.18 s 40-yard dash",
+            "vertical": "27 in",
+            "dominantSide": "Right"
+          },
+          "strengths": [
+            "Exceptional frame and length",
+            "Pass-protection footwork",
+            "Hand placement",
+            "Lateral movement relative to size",
+            "Academic discipline",
+            "Coachability",
+            "Long-term physical upside"
+          ],
+          "physicalStatus": "Fully healthy, unrestricted, and cleared for participation",
+          "archetype": "High-upside developmental offensive lineman",
+          "highlightUrls": ["https://example.com/caleb-ramirez-highlights"]
+        },
+        "academic": {
+          "gpa": 4.02,
+          "intendedMajor": "Mechanical Engineering",
+          "ncaaEligibility": true,
+          "academicInterests": [
+            "Engineering",
+            "Robotics",
+            "Technology",
+            "Computer Science"
+          ]
+        },
+        "availability": {
+          "transferPortal": false,
+          "preferredRegions": [
+            "Texas",
+            "Southeast United States",
+            "Midwest",
+            "National opportunities"
+          ],
+          "scholarshipNeed": false,
+          "timeline": "Decision expected during junior or senior year",
+          "competitiveLevelGoal": "Highest appropriate college level with strong academics and patient development",
+          "goals": [
+            "Earn a scholarship to a strong academic university",
+            "Develop into a multi-year college starter",
+            "Graduate with an engineering degree",
+            "Work in engineering or sports technology"
+          ],
+          "limitations": [
+            "Needs additional healthy mass, lower-body strength, and technical development"
+          ],
+          "relocationOpenness": "Open to opportunities nationwide",
+          "nonNegotiables": [
+            "Strong engineering or technology academics",
+            "A patient offensive-line development plan"
+          ]
+        },
+        "media": {
+          "highlightUrls": ["https://example.com/caleb-ramirez-highlights"],
+          "clipUrls": [
+            "https://example.com/caleb-ramirez-game-1",
+            "https://example.com/caleb-ramirez-game-2",
+            "https://example.com/caleb-ramirez-camp",
+            "https://example.com/caleb-ramirez-training"
+          ],
+          "socialMedia": {
+            "instagram": "@CalebRamirezOL",
+            "twitter": "@CalebRamirez72",
+            "hudl": "https://example.com/caleb-ramirez-hudl"
+          },
+          "references": [
+            "Robert Bennett — Head Football Coach — confirmed",
+            "Samuel Ortiz — Offensive Line Coach — confirmed"
+          ]
+        },
+        "character": {
+          "mentality": "Highly structured, academically motivated, disciplined, and consistent",
+          "leadership": "Leads through preparation and consistency while developing a more assertive voice",
+          "coachability": "Tracks training goals and actively asks coaches for specific feedback",
+          "resilience": "Recovers well after initial contact and responds constructively to correction",
+          "motivation": "Develop patiently at a strong academic program and build a future in engineering or sports technology",
+          "growthAreas": [
+            "Functional lower-body strength",
+            "Pad level in the running game",
+            "Finishing blocks consistently",
+            "Recognizing defensive-line movement",
+            "Healthy mass",
+            "Assertiveness"
+          ],
+          "selfRepresentation": "A disciplined, high-academic offensive lineman with rare length, movement skills, and the patience to maximize long-term development"
+        },
+        "fitTags": [
+          "developmental-upside",
+          "offensive-line-length",
+          "engineering",
+          "elite-academics",
+          "coachability",
+          "patient-development",
+          "nationally-open"
+        ],
+        "trajectory": "EMERGING",
+        "recruiterPitch": "A 2029 Texas offensive lineman with verified 6-foot-6 length, a 4.02 GPA, strong pass-protection foundations, and clear long-term upside. Caleb is an excellent fit for a high-academic program that can invest in physical and technical development.",
+        "demoMetadata": {
+          "synthetic": true,
+          "dataset": "abel-pilot-2026-08",
+          "source": "First Stringers Demo Athlete Dossiers"
+        }
+      }
+    }
+  ]
+}
