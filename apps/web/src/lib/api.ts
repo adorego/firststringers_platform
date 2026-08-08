@@ -115,6 +115,7 @@ export const api = {
     graduatingClasses: string | null;
     evaluationPriority: string | null;
     filterCriteria: string | null;
+    programNotes: string | null;
     onboardingCompleted: boolean;
     pitch: string | null;
   }> {
@@ -136,6 +137,18 @@ export const api = {
       "/recruiter/onboarding/complete",
       answers,
     );
+    return data;
+  },
+
+  // Short mini-form onboarding (organization, role, region, optional notes) —
+  // replaces the old chat-driven onboarding intro.
+  async submitOnboarding(answers: {
+    organizationType: string;
+    recruiterRole: string;
+    location: string;
+    programNotes?: string;
+  }): Promise<{ ok: true }> {
+    const { data } = await http.post<{ ok: true }>("/recruiter/onboarding/complete", answers);
     return data;
   },
 

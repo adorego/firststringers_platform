@@ -32,6 +32,29 @@ export class RecruiterController {
     return this.recruiterService.submitVerification(user.recruiterId, dto);
   }
 
+  // Short mini-form onboarding — replaces the chat-based onboarding intro so
+  // recruiters land straight in a normal Billy conversation.
+  @Post('onboarding/complete')
+  async completeOnboarding(
+    @CurrentUser() user: { recruiterId: string | null },
+    @Body()
+    dto: {
+      organizationType?: string;
+      recruiterRole?: string;
+      location?: string;
+      programNotes?: string;
+    },
+  ) {
+    if (!user.recruiterId) {
+      throw new ForbiddenException('Not a recruiter');
+    }
+    await this.recruiterService.updateProfile(user.recruiterId, {
+      ...dto,
+      onboardingCompleted: true,
+    });
+    return { ok: true };
+  }
+
   // ── Admin endpoints ──
 
   @Get('admin/pending-verifications')

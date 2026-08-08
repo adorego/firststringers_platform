@@ -20,6 +20,7 @@ export interface RecruiterProfile {
   graduatingClasses: string | null;
   evaluationPriority: string | null;
   filterCriteria: string | null;
+  programNotes: string | null;
   onboardingCompleted: boolean;
   pitch: string | null;
   verificationStatus: string;
@@ -43,6 +44,7 @@ export interface UpdateRecruiterProfileDto {
   graduatingClasses?: string;
   evaluationPriority?: string;
   filterCriteria?: string;
+  programNotes?: string;
   onboardingCompleted?: boolean;
   pitch?: string;
 }

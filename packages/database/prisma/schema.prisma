@@ -105,6 +105,7 @@ model Recruiter {
   graduatingClasses   String?              // classes actively recruiting (e.g. "2027, 2028")
   evaluationPriority  String?              // what matters most when evaluating (recruiting philosophy)
   filterCriteria      String?              // filters/limitations used (e.g. "Minimum GPA, Location")
+  programNotes        String?              // free-text notes from the short onboarding form
   onboardingCompleted Boolean              @default(false)
   pitch               String?
   // Verification: pending → under_review → verified | rejected

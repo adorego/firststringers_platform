@@ -100,28 +100,35 @@ export class BillyGateway implements OnGatewayConnection, OnGatewayDisconnect {
           ? await this.session.getAndClearPendingSuggestions(recruiterId)
           : null;
 
-        const welcomeMessage: BillyMessage = {
-          role: 'assistant',
-          content: isOnboarding
-            ? `Hi${recruiter?.name ? ` ${recruiter.name}` : ''}.\n\nBefore we get started, I'd like to understand how you recruit and what decisions you're responsible for, so I can support you with better context.\n\nWhat sport are you recruiting for?\nYou can choose from: Football, Baseball, Basketball, Soccer, Volleyball, or Other.`
-            : pendingSuggestions && pendingSuggestions.length > 0
-              ? `Now that I know more about your program, here are a few searches to get you started.`
-              : `Hi${recruiter?.name ? ` ${recruiter.name}` : ''}! I'm Billy. Tell me what recruiting problem you're trying to solve — position, objective, constraints, timeline — and I'll help you think through the right fit.`,
-          timestamp: new Date(),
-        };
-        await this.session.appendMessage(
-          conversationId,
-          recruiterId,
-          welcomeMessage,
-        );
-        client.emit('message', welcomeMessage);
-        if (isOnboarding) {
-          client.emit('onboarding_started', {});
-        }
-        if (pendingSuggestions && pendingSuggestions.length > 0) {
-          client.emit('onboarding_complete', {
-            suggestedSearches: pendingSuggestions,
-          });
+        // Billy only introduces itself during onboarding (or when handing off
+        // onboarding-derived suggestions). A plain new chat stays empty — the
+        // centered placeholder already explains what to do, so no message is
+        // needed here.
+        if (
+          isOnboarding ||
+          (pendingSuggestions && pendingSuggestions.length > 0)
+        ) {
+          const welcomeMessage: BillyMessage = {
+            role: 'assistant',
+            content: isOnboarding
+              ? `Hi${recruiter?.name ? ` ${recruiter.name}` : ''}.\n\nBefore we get started, I'd like to understand how you recruit and what decisions you're responsible for, so I can support you with better context.\n\nWhat sport are you recruiting for?\nYou can choose from: Football, Baseball, Basketball, Soccer, Volleyball, or Other.`
+              : `Now that I know more about your program, here are a few searches to get you started.`,
+            timestamp: new Date(),
+          };
+          await this.session.appendMessage(
+            conversationId,
+            recruiterId,
+            welcomeMessage,
+          );
+          client.emit('message', welcomeMessage);
+          if (isOnboarding) {
+            client.emit('onboarding_started', {});
+          }
+          if (pendingSuggestions && pendingSuggestions.length > 0) {
+            client.emit('onboarding_complete', {
+              suggestedSearches: pendingSuggestions,
+            });
+          }
         }
       }
     } catch (err) {

@@ -1,10 +1,10 @@
 "use client";
 
 import { Suspense, useState, useRef, useEffect } from "react";
-import { ArrowUp } from "lucide-react";
+import { ArrowUp, ChevronRight } from "lucide-react";
 import { useParams, useSearchParams, useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
-import { useBilly, AthleteResult } from "@/hooks/useBilly";
+import { useBilly, AthleteResult, BILLY_SUGGESTIONS } from "@/hooks/useBilly";
 import { DossierPanel } from "@/components/recruiter/DossierPanel";
 import { api } from "@/lib/api";
 
@@ -132,6 +132,7 @@ function InputBar({
   onSend,
   disabled,
   inputRef,
+  placeholder = "Coach, tell me what kind of athlete fits your program…",
 }: {
   value: string;
   onChange: (v: string) => void;
@@ -139,6 +140,7 @@ function InputBar({
   onSend: () => void;
   disabled: boolean;
   inputRef?: React.RefObject<HTMLTextAreaElement | null>;
+  placeholder?: string;
 }) {
   return (
     <div className="overflow-hidden rounded-2xl bg-[#EDEAE5]">
@@ -147,7 +149,7 @@ function InputBar({
         value={value}
         onChange={(e) => onChange(e.target.value)}
         onKeyDown={onKeyDown}
-        placeholder="Ask Billy anything about your search…"
+        placeholder={placeholder}
         rows={3}
         className="w-full resize-none bg-transparent px-5 pt-5 pb-2 text-sm text-[#1A1A1A] placeholder:text-[#ADA8A5] focus:outline-none"
       />
@@ -241,12 +243,26 @@ function BillyChatPageContent() {
     }
   };
 
+  // Empty conversations (fresh from "New Search", or mid-redirect from the
+  // landing page) start with the input centered, Claude-style; it animates
+  // down to the bottom the moment the first message lands.
+  const isActive = messages.length > 0 || isTyping || Boolean(initialQuery);
+
   return (
     <>
       <div className="flex h-full flex-col bg-[#F5F5F0]">
+        {/* Top spacer — collapses as the input drops toward the bottom */}
+        <div
+          className="transition-[flex-grow] duration-500 ease-out"
+          style={{ flexGrow: isActive ? 0 : 1 }}
+        />
+
         {/* Messages */}
-        <div className="flex-1 overflow-y-auto px-6 py-6">
-          <div className="mx-auto flex max-w-2xl flex-col gap-4">
+        <div
+          className="overflow-y-auto px-6 transition-[flex-grow] duration-500 ease-out"
+          style={{ flexGrow: isActive ? 1 : 0 }}
+        >
+          <div className="mx-auto flex max-w-2xl flex-col gap-4 py-6">
             {messages.map((msg) => (
               <div key={msg.id}>
                 {msg.role === "user" && (
@@ -351,7 +367,7 @@ function BillyChatPageContent() {
 
         {/* Input */}
         <div className="px-6 pb-6">
-          <div className="mx-auto max-w-2xl">
+          <div className="mx-auto max-w-2xl space-y-5">
             <InputBar
               value={input}
               onChange={setInput}
@@ -359,9 +375,35 @@ function BillyChatPageContent() {
               onSend={handleSend}
               disabled={status !== "connected"}
               inputRef={textareaRef}
+              placeholder={`${session?.user?.name || "Coach"}, tell me what kind of athlete fits your program…`}
             />
+
+            {!isActive && (
+              <div>
+                <p className="mb-2 text-xs text-[#ADA8A5]">Start a new search</p>
+                <div className="divide-y divide-[#E4DDD7]">
+                  {BILLY_SUGGESTIONS.map((s, i) => (
+                    <button
+                      key={i}
+                      onClick={() => sendMessage(s)}
+                      disabled={status !== "connected"}
+                      className="flex w-full items-center gap-3 py-3 text-left text-sm text-[#4B4745] transition-colors hover:text-[#1A1A1A] disabled:opacity-50"
+                    >
+                      <ChevronRight size={14} className="flex-shrink-0 text-[#ADA8A5]" />
+                      {s}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
         </div>
+
+        {/* Bottom spacer — collapses as the input drops toward the bottom */}
+        <div
+          className="transition-[flex-grow] duration-500 ease-out"
+          style={{ flexGrow: isActive ? 0 : 1 }}
+        />
       </div>
 
       <DossierPanel

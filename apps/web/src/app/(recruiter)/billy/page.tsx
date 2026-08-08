@@ -4,15 +4,9 @@ import { useState, useEffect, useRef } from "react";
 import { ChevronRight, ArrowUp } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
-import { createBillyConversation } from "@/hooks/useBilly";
+import { createBillyConversation, BILLY_SUGGESTIONS } from "@/hooks/useBilly";
+import { RecruiterOnboardingForm } from "@/components/recruiter/RecruiterOnboardingForm";
 import { api } from "@/lib/api";
-
-const SUGGESTIONS = [
-  "Find developmental OL prospects in Florida",
-  "Show me dual-threat QBs with strong academics",
-  "Transfer portal WRs with 4.4 speed or faster",
-  "D1 safeties from the Southeast, class of 2026",
-];
 
 export default function BillyLandingPage() {
   const router = useRouter();
@@ -21,15 +15,29 @@ export default function BillyLandingPage() {
 
   const [input, setInput] = useState("");
   const [isCreating, setIsCreating] = useState(false);
+  // Flips true the instant the user sends their first message, so the input
+  // starts animating down to the bottom right away — no waiting on the network
+  // round-trip before the "Claude-style" transition begins.
+  const [activating, setActivating] = useState(false);
+  const [pendingMessage, setPendingMessage] = useState<string | null>(null);
   const [ready, setReady] = useState(false);
+  const [onboardingIncomplete, setOnboardingIncomplete] = useState(false);
   const redirectedRef = useRef(false);
 
   const startConversation = async (initialMessage?: string) => {
     if (isCreating || redirectedRef.current) return;
     setIsCreating(true);
+    if (initialMessage) {
+      setPendingMessage(initialMessage);
+      setActivating(true);
+    }
     try {
       const conv = await createBillyConversation(recruiterId);
-      if (!conv) return;
+      if (!conv) {
+        setActivating(false);
+        setPendingMessage(null);
+        return;
+      }
       router.push(
         `/billy/${conv.id}${initialMessage ? `?q=${encodeURIComponent(initialMessage)}` : ""}`,
       );
@@ -38,25 +46,41 @@ export default function BillyLandingPage() {
     }
   };
 
-  // Onboarding starts automatically as soon as the recruiter account is created —
-  // jump straight into a Billy conversation so the chat-based onboarding kicks in.
+  // ─── Previous chat-based onboarding (kept for easy revert) ───────────────
+  // Onboarding used to start automatically as soon as the recruiter account was
+  // created — jumping straight into a Billy conversation so the chat-based
+  // onboarding could kick in. Replaced by the short mini-form below; uncomment
+  // this (and remove the effect after it) to go back to the chat flow.
+  // useEffect(() => {
+  //   if (!session) return;
+  //   api
+  //     .getRecruiterProfile()
+  //     .then(async (profile) => {
+  //       if (!profile.onboardingCompleted && !redirectedRef.current) {
+  //         redirectedRef.current = true;
+  //         const conv = await createBillyConversation(recruiterId);
+  //         if (conv) {
+  //           router.replace(`/billy/${conv.id}`);
+  //           return;
+  //         }
+  //       }
+  //       setReady(true);
+  //     })
+  //     .catch(() => setReady(true));
+  //   // eslint-disable-next-line react-hooks/exhaustive-deps
+  // }, [session]);
+
+  // Recruiter account just created — check whether the short onboarding form
+  // still needs to be filled out before showing the normal Billy landing page.
   useEffect(() => {
     if (!session) return;
     api
       .getRecruiterProfile()
-      .then(async (profile) => {
-        if (!profile.onboardingCompleted && !redirectedRef.current) {
-          redirectedRef.current = true;
-          const conv = await createBillyConversation(recruiterId);
-          if (conv) {
-            router.replace(`/billy/${conv.id}`);
-            return;
-          }
-        }
+      .then((profile) => {
+        setOnboardingIncomplete(!profile.onboardingCompleted);
         setReady(true);
       })
       .catch(() => setReady(true));
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [session]);
 
   const handleSend = () => {
@@ -83,18 +107,49 @@ export default function BillyLandingPage() {
     );
   }
 
+  if (onboardingIncomplete) {
+    return (
+      <RecruiterOnboardingForm
+        recruiterName={session?.user?.name || "Coach"}
+        onComplete={() => setOnboardingIncomplete(false)}
+      />
+    );
+  }
+
   return (
-    <div className="flex h-full flex-col items-center justify-center bg-[#F5F5F0] px-8 pb-16">
-      <div className="w-full max-w-2xl space-y-5">
+    <div className="flex h-full flex-col bg-[#F5F5F0] px-8">
+      {/* Top spacer — collapses as the input drops toward the bottom */}
+      <div
+        className="transition-[flex-grow] duration-500 ease-out"
+        style={{ flexGrow: activating ? 0 : 1 }}
+      />
+
+      {/* The just-sent message, previewed here so there's no visual jump when
+          we hand off to /billy/[id], which renders the same bubble via useBilly. */}
+      <div
+        className="overflow-hidden transition-[flex-grow] duration-500 ease-out"
+        style={{ flexGrow: activating ? 1 : 0 }}
+      >
+        {pendingMessage && (
+          <div className="mx-auto flex max-w-2xl justify-end py-6">
+            <div className="max-w-lg rounded-2xl bg-[#1A1A1A] px-4 py-3 text-white">
+              <p className="whitespace-pre-wrap text-sm leading-relaxed">{pendingMessage}</p>
+            </div>
+          </div>
+        )}
+      </div>
+
+      <div className="mx-auto w-full max-w-2xl space-y-5 pb-6">
         {/* Input */}
         <div className="overflow-hidden rounded-2xl bg-[#EDEAE5]">
           <textarea
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={handleKeyDown}
-            placeholder={`${session?.user?.name || "Recruiter"}, tell me what kind of athlete fits your program.`}
+            placeholder={`${session?.user?.name || "Coach"}, tell me what kind of athlete fits your program…`}
             rows={3}
-            className="w-full resize-none bg-transparent px-5 pt-5 pb-2 text-sm text-[#1A1A1A] placeholder:text-[#ADA8A5] focus:outline-none"
+            disabled={activating}
+            className="w-full resize-none bg-transparent px-5 pt-5 pb-2 text-sm text-[#1A1A1A] placeholder:text-[#ADA8A5] focus:outline-none disabled:opacity-60"
           />
           <div className="flex items-center justify-between px-5 pb-4">
             <div className="flex items-center gap-2 text-xs text-[#ADA8A5]">
@@ -114,23 +169,31 @@ export default function BillyLandingPage() {
         </div>
 
         {/* Suggestions */}
-        <div>
-          <p className="mb-2 text-xs text-[#ADA8A5]">Start a new search</p>
-          <div className="divide-y divide-[#E4DDD7]">
-            {SUGGESTIONS.map((s, i) => (
-              <button
-                key={i}
-                onClick={() => startConversation(s)}
-                disabled={isCreating}
-                className="flex w-full items-center gap-3 py-3 text-left text-sm text-[#4B4745] transition-colors hover:text-[#1A1A1A] disabled:opacity-50"
-              >
-                <ChevronRight size={14} className="flex-shrink-0 text-[#ADA8A5]" />
-                {s}
-              </button>
-            ))}
+        {!activating && (
+          <div>
+            <p className="mb-2 text-xs text-[#ADA8A5]">Start a new search</p>
+            <div className="divide-y divide-[#E4DDD7]">
+              {BILLY_SUGGESTIONS.map((s, i) => (
+                <button
+                  key={i}
+                  onClick={() => startConversation(s)}
+                  disabled={isCreating}
+                  className="flex w-full items-center gap-3 py-3 text-left text-sm text-[#4B4745] transition-colors hover:text-[#1A1A1A] disabled:opacity-50"
+                >
+                  <ChevronRight size={14} className="flex-shrink-0 text-[#ADA8A5]" />
+                  {s}
+                </button>
+              ))}
+            </div>
           </div>
-        </div>
+        )}
       </div>
+
+      {/* Bottom spacer — collapses as the input drops toward the bottom */}
+      <div
+        className="transition-[flex-grow] duration-500 ease-out"
+        style={{ flexGrow: activating ? 0 : 1 }}
+      />
     </div>
   );
 }

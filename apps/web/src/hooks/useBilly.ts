@@ -60,6 +60,13 @@ type ConnectionStatus = "connecting" | "connected" | "disconnected" | "error";
 // also falls back to the default, preventing relative-URL fetches.
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001";
 
+export const BILLY_SUGGESTIONS = [
+  "Find developmental OL prospects in Florida",
+  "Show me dual-threat QBs with strong academics",
+  "Transfer portal WRs with 4.4 speed or faster",
+  "D1 safeties from the Southeast, class of 2026",
+];
+
 // ── REST helpers ──────────────────────────────────────────────────────────────
 
 export async function listBillyConversations(
