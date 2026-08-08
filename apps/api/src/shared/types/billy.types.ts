@@ -10,6 +10,12 @@ export interface BillyMessage {
   role: BillyMessageRole;
   content: string;
   timestamp: Date;
+  // Athlete recommendations attached to this message, if Billy ran a search
+  // to produce it. Persisted alongside the message so they survive a
+  // conversation reload instead of only existing on the live socket event.
+  searchResults?: unknown[];
+  isFallbackRecommendation?: boolean;
+  isExpandedSearch?: boolean;
 }
 
 export interface SearchCriteria {

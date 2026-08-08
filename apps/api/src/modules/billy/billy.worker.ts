@@ -264,6 +264,9 @@ export class BillyWorker {
       role: 'assistant',
       content: visibleContent,
       timestamp: new Date(),
+      searchResults,
+      isFallbackRecommendation: !!scoutRelaxedPosition,
+      isExpandedSearch: scoutExpanded,
     };
     await this.session.appendMessage(
       conversationId,
