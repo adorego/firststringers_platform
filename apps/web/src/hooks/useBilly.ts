@@ -67,13 +67,27 @@ export const BILLY_SUGGESTIONS = [
   "D1 safeties from the Southeast, class of 2026",
 ];
 
+function getToken(): string | null {
+  if (typeof window === "undefined") return null;
+  return localStorage.getItem("fs_token");
+}
+
+function authHeaders(): Record<string, string> {
+  const token = getToken();
+  return token ? { Authorization: `Bearer ${token}` } : {};
+}
+
 // ── REST helpers ──────────────────────────────────────────────────────────────
 
+// recruiterId now comes from the JWT server-side; the parameter is kept so
+// existing call sites don't change.
 export async function listBillyConversations(
-  recruiterId: string,
+  _recruiterId: string,
 ): Promise<BillyConversationSummary[]> {
   try {
-    const res = await fetch(`${API_URL}/billy/conversations?recruiterId=${recruiterId}`);
+    const res = await fetch(`${API_URL}/billy/conversations`, {
+      headers: authHeaders(),
+    });
     if (!res.ok) return [];
     return await res.json();
   } catch {
@@ -87,7 +101,7 @@ export async function createBillyConversation(
   try {
     const res = await fetch(`${API_URL}/billy/conversations`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: { "Content-Type": "application/json", ...authHeaders() },
       body: JSON.stringify({ recruiterId }),
     });
     if (!res.ok) return null;
@@ -104,7 +118,7 @@ export async function renameBillyConversation(
   try {
     const res = await fetch(`${API_URL}/billy/conversations/${conversationId}`, {
       method: "PATCH",
-      headers: { "Content-Type": "application/json" },
+      headers: { "Content-Type": "application/json", ...authHeaders() },
       body: JSON.stringify({ title }),
     });
     return res.ok;
@@ -119,6 +133,7 @@ export async function deleteBillyConversation(
   try {
     const res = await fetch(`${API_URL}/billy/conversations/${conversationId}`, {
       method: "DELETE",
+      headers: authHeaders(),
     });
     return res.ok || res.status === 204;
   } catch {
@@ -142,7 +157,8 @@ export function useBilly(recruiterId: string, conversationId: string) {
     if (!recruiterId || !conversationId) return;
 
     const socket = io(`${API_URL}/billy`, {
-      query: { recruiterId, conversationId },
+      auth: { token: getToken() },
+      query: { conversationId },
       withCredentials: true,
       transports: ["websocket"],
     });

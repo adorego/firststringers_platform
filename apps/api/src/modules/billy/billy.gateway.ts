@@ -8,13 +8,14 @@ import {
   OnGatewayDisconnect,
 } from '@nestjs/websockets';
 import { Logger } from '@nestjs/common';
-import { Public } from '../auth/public.decorator';
+import { JwtService } from '@nestjs/jwt';
 import { Server, Socket } from 'socket.io';
 import { OnEvent } from '@nestjs/event-emitter';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { InjectQueue } from '@nestjs/bull';
 import type { Queue } from 'bull';
 import { BillySessionService } from './billy-session.service';
+import { BillyConversationService } from './billy-conversation.service';
 import { BillyMessage, BillyMessageJob } from '../../shared/types/billy.types';
 import { JerryPitchService } from '../jerry/jerry-pitch.service';
 import { ConversationsService } from '../conversations/conversations.service';
@@ -25,7 +26,6 @@ interface ClientContext {
   conversationId: string;
 }
 
-@Public()
 @WebSocketGateway({
   cors: {
     origin: process.env.FRONTEND_URL || 'http://localhost:3000',
@@ -47,14 +47,63 @@ export class BillyGateway implements OnGatewayConnection, OnGatewayDisconnect {
     private readonly jerryPitch: JerryPitchService,
     private readonly conversations: ConversationsService,
     private readonly recruiterService: RecruiterService,
+    private readonly billyConversations: BillyConversationService,
+    private readonly jwt: JwtService,
   ) {}
 
   async handleConnection(client: Socket) {
     try {
-      const recruiterId = client.handshake.query.recruiterId as string;
+      // Global APP_GUARDs do not run for gateways, so the token is verified
+      // manually here — same pattern as JerryGateway.
+      const token = client.handshake.auth.token as string | undefined;
+      if (!token) {
+        client.emit('error', {
+          code: 'UNAUTHENTICATED',
+          message: 'Token required',
+        });
+        client.disconnect();
+        return;
+      }
+
+      let payload: { sub: string; recruiterId?: string | null };
+      try {
+        payload = this.jwt.verify<{ sub: string; recruiterId?: string | null }>(
+          token,
+        );
+      } catch {
+        client.emit('error', {
+          code: 'UNAUTHENTICATED',
+          message: 'Invalid token',
+        });
+        client.disconnect();
+        return;
+      }
+
+      if (!payload.recruiterId) {
+        client.emit('error', {
+          code: 'UNAUTHENTICATED',
+          message: 'Not a recruiter',
+        });
+        client.disconnect();
+        return;
+      }
+
+      const recruiterId = payload.recruiterId;
       const conversationId = client.handshake.query.conversationId as string;
 
-      if (!recruiterId || !conversationId) {
+      if (!conversationId) {
+        client.disconnect();
+        return;
+      }
+
+      // The conversation must belong to the authenticated recruiter.
+      const conversation =
+        await this.billyConversations.findById(conversationId);
+      if (!conversation || conversation.recruiterId !== recruiterId) {
+        client.emit('error', {
+          code: 'FORBIDDEN',
+          message: 'Conversation not found',
+        });
         client.disconnect();
         return;
       }

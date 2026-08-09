@@ -8,6 +8,7 @@ import { BillyConversationController } from './billy-conversation.controller';
 import { ScoutModule } from '../scout/scout.module';
 import { JerryModule } from '../jerry/jerry.module';
 import { ConversationsModule } from '../conversations/conversations.module';
+import { AuthModule } from '../auth/auth.module';
 
 @Module({
   imports: [
@@ -15,6 +16,7 @@ import { ConversationsModule } from '../conversations/conversations.module';
     ScoutModule,
     JerryModule,
     ConversationsModule,
+    AuthModule,
   ],
   controllers: [BillyConversationController],
   providers: [

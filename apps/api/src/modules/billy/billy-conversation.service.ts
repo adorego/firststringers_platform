@@ -55,6 +55,15 @@ export class BillyConversationService {
     });
   }
 
+  async findById(
+    conversationId: string,
+  ): Promise<{ id: string; recruiterId: string } | null> {
+    return this.prisma.billyConversation.findUnique({
+      where: { id: conversationId },
+      select: { id: true, recruiterId: true },
+    });
+  }
+
   async getMessages(conversationId: string): Promise<BillyMessage[]> {
     const conv = await this.prisma.billyConversation.findUnique({
       where: { id: conversationId },
