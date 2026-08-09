@@ -70,6 +70,7 @@ export class ConversationWorker {
         timestamp: new Date(),
       };
       await this.session.appendMessage(athleteId, assistantMessage);
+      await this.persistHistorySafely(athleteId);
 
       this.eventEmitter.emit('jerry.response', {
         athleteId,
@@ -138,6 +139,7 @@ export class ConversationWorker {
         timestamp: new Date(),
       };
       await this.session.appendMessage(athleteId, assistantMessage);
+      await this.persistHistorySafely(athleteId);
 
       if (extractedData && Object.keys(extractedData).length > 0) {
         await this.session.updateDossierSnapshot(athleteId, extractedData);
@@ -163,6 +165,19 @@ export class ConversationWorker {
         error: 'Hubo un problema procesando tu mensaje. Intenta de nuevo.',
       });
       throw error;
+    }
+  }
+
+  // History persistence must never fail the job: a DB hiccup here would
+  // trigger a Bull retry that re-runs the LLM calls and duplicates messages.
+  private async persistHistorySafely(athleteId: string): Promise<void> {
+    try {
+      await this.session.persistSessionToDb(athleteId);
+    } catch (error) {
+      this.logger.warn(
+        `Failed to persist conversation history for athlete ${athleteId}`,
+        error,
+      );
     }
   }
 }

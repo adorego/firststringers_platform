@@ -95,13 +95,59 @@ export class SessionService {
   async persistSessionToDb(athleteId: string): Promise<void> {
     const session = await this.getSession(athleteId);
 
-    await this.prisma.jerrySession.create({
-      data: {
+    const existing = await this.prisma.jerrySession.findUnique({
+      where: { athleteId },
+      select: { messages: true },
+    });
+    const stored = Array.isArray(existing?.messages)
+      ? (existing.messages as unknown as JerryMessage[])
+      : [];
+    const merged = this.mergeHistories(stored, session.messages);
+
+    await this.prisma.jerrySession.upsert({
+      where: { athleteId },
+      update: {
+        messages: merged as unknown as Prisma.InputJsonValue,
+        status: 'active',
+      },
+      create: {
         athleteId,
-        messages: session.messages as unknown as Prisma.InputJsonValue,
+        messages: merged as unknown as Prisma.InputJsonValue,
         status: 'active',
       },
     });
+  }
+
+  // Redis keeps only the last MAX_MESSAGES_IN_MEMORY messages, while the DB row
+  // holds the full history — append only what the DB has not seen yet.
+  private mergeHistories(
+    stored: JerryMessage[],
+    recent: JerryMessage[],
+  ): JerryMessage[] {
+    if (stored.length === 0) return [...recent];
+
+    const lastStoredTime = this.messageTime(stored[stored.length - 1]);
+    const storedTail = stored.filter(
+      (message) => this.messageTime(message) === lastStoredTime,
+    );
+
+    const fresh = recent.filter((message) => {
+      const time = this.messageTime(message);
+      if (time > lastStoredTime) return true;
+      if (time < lastStoredTime) return false;
+      return !storedTail.some(
+        (tail) => tail.role === message.role && tail.content === message.content,
+      );
+    });
+
+    return [...stored, ...fresh];
+  }
+
+  private messageTime(message: JerryMessage): number {
+    const time = new Date(
+      message.timestamp as unknown as string | Date,
+    ).getTime();
+    return Number.isFinite(time) ? time : 0;
   }
 
   async clearSession(athleteId: string): Promise<void> {
@@ -126,7 +172,45 @@ export class SessionService {
       }
     }
 
+    const restored = await this.restoreSessionFromDb(athleteId);
+    if (restored) return restored;
+
     return this.createSession(athleteId);
+  }
+
+  // The Redis session expires after SESSION_TTL; the DB row is the durable
+  // history, so a returning athlete resumes their conversation instead of
+  // being greeted from scratch.
+  private async restoreSessionFromDb(
+    athleteId: string,
+  ): Promise<JerrySessionState | null> {
+    try {
+      const stored = await this.prisma.jerrySession.findUnique({
+        where: { athleteId },
+        select: { messages: true, createdAt: true },
+      });
+      const messages = Array.isArray(stored?.messages)
+        ? (stored.messages as unknown as JerryMessage[])
+        : [];
+      if (messages.length === 0) return null;
+
+      const session: JerrySessionState = {
+        athleteId,
+        messages: messages.slice(-this.MAX_MESSAGES_IN_MEMORY),
+        dossierSnapshot: {},
+        missingFields: [],
+        createdAt: stored.createdAt,
+        updatedAt: new Date(),
+      };
+      await this.saveSession(athleteId, session);
+      return session;
+    } catch (err) {
+      this.logger.warn(
+        `Could not restore session from DB for athlete ${athleteId}`,
+        err,
+      );
+      return null;
+    }
   }
 
   private async createSession(athleteId: string): Promise<JerrySessionState> {

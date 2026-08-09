@@ -16,6 +16,8 @@ const mockRedisService = {
 const mockPrismaService = {
   jerrySession: {
     create: jest.fn(),
+    findUnique: jest.fn(),
+    upsert: jest.fn(),
   },
 };
 
@@ -55,6 +57,7 @@ describe('SessionService', () => {
 
     service = module.get<SessionService>(SessionService);
     jest.clearAllMocks();
+    mockPrismaService.jerrySession.findUnique.mockResolvedValue(null);
   });
 
   // ── getSession ──────────────────────────────────────────────────────────────
@@ -382,7 +385,7 @@ describe('SessionService', () => {
   // ── persistSessionToDb ──────────────────────────────────────────────────────
 
   describe('persistSessionToDb', () => {
-    it('saves the session to the database', async () => {
+    it('upserts the full session when the database has no history yet', async () => {
       const athleteId = 'athlete-123';
       const session = makeSession(athleteId);
       session.messages = [
@@ -390,28 +393,125 @@ describe('SessionService', () => {
         makeMessage('assistant', 'Hello athlete'),
       ];
       mockRedisService.get.mockResolvedValue(JSON.stringify(session));
-      mockPrismaService.jerrySession.create.mockResolvedValue({
-        id: 'session-db-1',
+      mockPrismaService.jerrySession.findUnique.mockResolvedValue(null);
+
+      await service.persistSessionToDb(athleteId);
+
+      const expectedMessages = expect.arrayContaining([
+        expect.objectContaining({ role: 'user', content: 'Hello' }),
+        expect.objectContaining({
+          role: 'assistant',
+          content: 'Hello athlete',
+        }),
+      ]) as unknown as JerryMessage[];
+      expect(mockPrismaService.jerrySession.upsert).toHaveBeenCalledWith({
+        where: { athleteId },
+        update: { messages: expectedMessages, status: 'active' },
+        create: { athleteId, messages: expectedMessages, status: 'active' },
+      });
+    });
+
+    it('appends only unseen messages when the database already has history', async () => {
+      const athleteId = 'athlete-123';
+      const older = {
+        role: 'user' as const,
+        content: 'Old message',
+        timestamp: new Date('2026-08-01T10:00:00.000Z'),
+      };
+      const shared = {
+        role: 'assistant' as const,
+        content: 'Shared message',
+        timestamp: new Date('2026-08-01T10:01:00.000Z'),
+      };
+      const fresh = {
+        role: 'user' as const,
+        content: 'New message',
+        timestamp: new Date('2026-08-01T10:02:00.000Z'),
+      };
+
+      const session = makeSession(athleteId);
+      // Redis window only holds the tail of the conversation
+      session.messages = [shared, fresh];
+      mockRedisService.get.mockResolvedValue(JSON.stringify(session));
+      mockPrismaService.jerrySession.findUnique.mockResolvedValue({
+        messages: JSON.parse(JSON.stringify([older, shared])) as JerryMessage[],
       });
 
       await service.persistSessionToDb(athleteId);
 
-      expect(mockPrismaService.jerrySession.create).toHaveBeenCalledWith({
-        data: {
-          athleteId,
-          messages: expect.arrayContaining([
-            expect.objectContaining({
-              role: 'user',
-              content: 'Hello',
-            }) as JerryMessage,
-            expect.objectContaining({
-              role: 'assistant',
-              content: 'Hello athlete',
-            }) as JerryMessage,
-          ]) as unknown as JerryMessage[],
-          status: 'active',
-        },
+      const upsertArgs = mockPrismaService.jerrySession.upsert.mock
+        .calls[0][0] as {
+        update: { messages: JerryMessage[] };
+      };
+      const persisted = upsertArgs.update.messages;
+
+      // Old history preserved, shared message not duplicated, new one appended
+      expect(persisted).toHaveLength(3);
+      expect(persisted.map((m) => m.content)).toEqual([
+        'Old message',
+        'Shared message',
+        'New message',
+      ]);
+    });
+  });
+
+  // ── restore from DB ─────────────────────────────────────────────────────────
+
+  describe('getSession — restore from database', () => {
+    it('restores the conversation from the database when Redis has expired', async () => {
+      const athleteId = 'athlete-returning';
+      const storedMessages = [
+        makeMessage('assistant', 'Welcome!'),
+        makeMessage('user', 'Hi Jerry'),
+      ];
+      mockRedisService.get.mockResolvedValue(null);
+      mockRedisService.setex.mockResolvedValue('OK');
+      mockPrismaService.jerrySession.findUnique.mockResolvedValue({
+        messages: JSON.parse(JSON.stringify(storedMessages)) as JerryMessage[],
+        createdAt: new Date('2026-08-01T09:00:00.000Z'),
       });
+
+      const result = await service.getSession(athleteId);
+
+      expect(result.messages).toHaveLength(2);
+      expect(result.messages[0]).toMatchObject({
+        role: 'assistant',
+        content: 'Welcome!',
+      });
+      // Rehydrated session is cached back into Redis
+      expect(mockRedisService.setex).toHaveBeenCalledWith(
+        `jerry:session:${athleteId}`,
+        expect.any(Number),
+        expect.any(String),
+      );
+    });
+
+    it('creates a fresh session when the database row has no messages', async () => {
+      const athleteId = 'athlete-empty-db';
+      mockRedisService.get.mockResolvedValue(null);
+      mockRedisService.setex.mockResolvedValue('OK');
+      mockPrismaService.jerrySession.findUnique.mockResolvedValue({
+        messages: [],
+        createdAt: new Date(),
+      });
+
+      const result = await service.getSession(athleteId);
+
+      expect(result.messages).toEqual([]);
+    });
+
+    it('creates a fresh session when the database lookup fails', async () => {
+      const athleteId = 'athlete-db-down';
+      mockRedisService.get.mockResolvedValue(null);
+      mockRedisService.setex.mockResolvedValue('OK');
+      mockPrismaService.jerrySession.findUnique.mockRejectedValue(
+        new Error('db unavailable'),
+      );
+
+      const result = await service.getSession(athleteId);
+
+      expect(result.athleteId).toBe(athleteId);
+      expect(result.messages).toEqual([]);
     });
   });
 });

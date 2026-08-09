@@ -54,13 +54,18 @@ function makeSession(
 const mockSession: jest.Mocked<
   Pick<
     SessionService,
-    'getSession' | 'appendMessage' | 'updateDossierSnapshot' | 'recordUpdate'
+    | 'getSession'
+    | 'appendMessage'
+    | 'updateDossierSnapshot'
+    | 'recordUpdate'
+    | 'persistSessionToDb'
   >
 > = {
   getSession: jest.fn(),
   appendMessage: jest.fn(),
   updateDossierSnapshot: jest.fn(),
   recordUpdate: jest.fn(),
+  persistSessionToDb: jest.fn(),
 };
 
 const mockIntentClassifier: jest.Mocked<
