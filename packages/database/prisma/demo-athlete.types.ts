@@ -114,6 +114,7 @@ export type DemoImportTarget = "local" | "development";
 export interface DemoImportResult {
   created: number;
   updated: number;
+  users: number;
   total: number;
 }
 
@@ -129,6 +130,9 @@ interface DemoTransactionClient {
     upsert(args: Record<string, unknown>): Promise<{ id: string }>;
   };
   dossier: {
+    upsert(args: Record<string, unknown>): Promise<unknown>;
+  };
+  user: {
     upsert(args: Record<string, unknown>): Promise<unknown>;
   };
 }

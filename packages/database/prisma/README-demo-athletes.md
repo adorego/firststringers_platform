@@ -2,7 +2,9 @@
 
 This workflow creates synthetic athletes for First Stringers demos without using the general seed,
 raw SQL, or shared athlete credentials. It writes only `Organization`, `Athlete`, and `Dossier`
-records. It does not create `User`, `JerrySession`, recruiter, or conversation records.
+records. It does not create `User`, `JerrySession`, recruiter, or conversation records — unless the
+opt-in `--with-users` flag is passed, which additionally creates an ATHLETE login account per record
+for demos that show the athlete-side Jerry experience.
 
 The checked-in pilot contains the three profiles supplied by Abel:
 
@@ -36,7 +38,16 @@ pnpm demo:athletes -- --file=/absolute/path/to/demo-athletes.json
 
 # Apply only after the dry-run and human review have passed.
 pnpm demo:athletes -- --file=/absolute/path/to/demo-athletes.json --apply --target=development
+
+# Also create ATHLETE login accounts (opt-in, for athlete-side Jerry demos).
+pnpm demo:athletes -- --file=/absolute/path/to/demo-athletes.json --apply --target=development --with-users
 ```
+
+`--with-users` upserts a `User` per athlete (role `ATHLETE`, email verified, linked by `athleteId`).
+The shared demo password comes from the `DEMO_ATHLETE_PASSWORD` environment variable and defaults to
+`athlete123`. The password is bcrypt-hashed before it reaches the importer; re-running does not
+rotate the password of an existing demo user. Because dataset validation restricts every email to
+`@demo.firststringers.test`, the upsert can never touch a real user account.
 
 The apply command uses `DATABASE_URL` from the invoking environment. Confirm the selected database
 before running it. The importer does not require a Prisma migration.

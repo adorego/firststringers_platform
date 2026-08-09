@@ -10,6 +10,14 @@ test("uses dry-run mode and the pilot fixture by default", () => {
   assert.equal(options.apply, false);
   assert.match(options.file, /demo_athletes_seed\.json$/);
   assert.equal(options.target, undefined);
+  assert.equal(options.withUsers, false);
+});
+
+test("accepts the opt-in --with-users flag", () => {
+  const options = parseDemoImportArgs(["--with-users"]);
+
+  assert.equal(options.withUsers, true);
+  assert.equal(options.apply, false);
 });
 
 test("requires an explicit safe target before applying", () => {

@@ -193,11 +193,21 @@ export function calculateDemoDossierCompleteness(
 export async function importDemoAthletes(
   prisma: DemoImportClient,
   input: unknown,
-  options: { target: DemoImportTarget },
+  options: {
+    target: DemoImportTarget;
+    withUsers?: boolean;
+    userPasswordHash?: string;
+  },
 ): Promise<DemoImportResult> {
   if (!["local", "development"].includes(options.target)) {
     throw new Error(
       "Demo athlete imports may target only local or development.",
+    );
+  }
+
+  if (options.withUsers && !/^\$2[aby]\$/.test(options.userPasswordHash ?? "")) {
+    throw new Error(
+      "--with-users requires a bcrypt password hash, never a plaintext password.",
     );
   }
 
@@ -218,6 +228,7 @@ export async function importDemoAthletes(
 
       let created = 0;
       let updated = 0;
+      let users = 0;
       const representedAt = new Date(
         `${(input as DemoAthleteDataset).generatedAt}T00:00:00.000Z`,
       );
@@ -272,11 +283,30 @@ export async function importDemoAthletes(
           },
         });
 
+        if (options.withUsers) {
+          await transaction.user.upsert({
+            where: { email: athlete.email },
+            update: {
+              role: "ATHLETE",
+              athleteId: athleteRecord.id,
+            },
+            create: {
+              email: athlete.email,
+              password: options.userPasswordHash,
+              role: "ATHLETE",
+              athleteId: athleteRecord.id,
+              emailVerified: true,
+              emailVerifiedAt: representedAt,
+            },
+          });
+          users += 1;
+        }
+
         if (existing) updated += 1;
         else created += 1;
       }
 
-      return { created, updated, total: validation.athletes.length };
+      return { created, updated, users, total: validation.athletes.length };
     },
     { maxWait: 10_000, timeout: 120_000 },
   );

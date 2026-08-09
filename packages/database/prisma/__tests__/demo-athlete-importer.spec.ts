@@ -215,7 +215,7 @@ test("creates only organization, athlete, and dossier records", async () => {
     target: "development",
   });
 
-  assert.deepEqual(result, { created: 1, updated: 0, total: 1 });
+  assert.deepEqual(result, { created: 1, updated: 0, users: 0, total: 1 });
   assert.deepEqual(calls, [
     "transaction",
     "organization.upsert",
@@ -223,6 +223,38 @@ test("creates only organization, athlete, and dossier records", async () => {
     "athlete.upsert",
     "dossier.upsert",
   ]);
+});
+
+test("creates login users only when withUsers is set", async () => {
+  const calls: string[] = [];
+  const prisma = fakePrisma(calls, new Map());
+
+  const result = await importDemoAthletes(prisma, dataset(), {
+    target: "development",
+    withUsers: true,
+    userPasswordHash: "$2b$12$demohashdemohashdemohashdemohash",
+  });
+
+  assert.deepEqual(result, { created: 1, updated: 0, users: 1, total: 1 });
+  assert.deepEqual(calls, [
+    "transaction",
+    "organization.upsert",
+    "athlete.findUnique",
+    "athlete.upsert",
+    "dossier.upsert",
+    "user.upsert",
+  ]);
+});
+
+test("rejects withUsers without a bcrypt password hash", async () => {
+  await assert.rejects(
+    importDemoAthletes(fakePrisma([], new Map()), dataset(), {
+      target: "development",
+      withUsers: true,
+      userPasswordHash: "athlete123",
+    }),
+    /bcrypt password hash/i,
+  );
 });
 
 test("is idempotent and reports an existing synthetic athlete as updated", async () => {
@@ -252,7 +284,7 @@ test("is idempotent and reports an existing synthetic athlete as updated", async
     },
   );
 
-  assert.deepEqual(result, { created: 0, updated: 1, total: 1 });
+  assert.deepEqual(result, { created: 0, updated: 1, users: 0, total: 1 });
 });
 
 test("refuses to overwrite an unmarked record even on the reserved domain", async () => {
@@ -307,6 +339,12 @@ function fakePrisma(
     dossier: {
       upsert: async () => {
         calls.push("dossier.upsert");
+        return {};
+      },
+    },
+    user: {
+      upsert: async () => {
+        calls.push("user.upsert");
         return {};
       },
     },

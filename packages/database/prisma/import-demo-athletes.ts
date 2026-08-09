@@ -1,5 +1,6 @@
 import { stat, readFile } from "node:fs/promises";
 import path from "node:path";
+import * as bcrypt from "bcrypt";
 import { PrismaClient } from "@prisma/client";
 import {
   DemoAthleteDataset,
@@ -16,17 +17,23 @@ interface CliOptions {
   apply: boolean;
   file: string;
   target?: DemoImportTarget;
+  withUsers: boolean;
 }
 
 export function parseDemoImportArgs(args: string[]): CliOptions {
   const options: CliOptions = {
     apply: false,
     file: DEFAULT_DATASET_PATH,
+    withUsers: false,
   };
 
   for (const argument of args) {
     if (argument === "--apply") {
       options.apply = true;
+      continue;
+    }
+    if (argument === "--with-users") {
+      options.withUsers = true;
       continue;
     }
     if (argument.startsWith("--file=")) {
@@ -85,22 +92,39 @@ export async function runDemoAthleteImport(args: string[]): Promise<void> {
 
   if (!options.apply) {
     console.log("\nDRY RUN: no database connection or write was performed.");
+    if (options.withUsers) {
+      console.log(
+        "--with-users: applying will also create ATHLETE login accounts for every record.",
+      );
+    }
     console.log(
       "To apply after review: pnpm demo:athletes -- --apply --target=development",
     );
     return;
   }
 
+  const userPasswordHash = options.withUsers
+    ? await bcrypt.hash(
+        process.env.DEMO_ATHLETE_PASSWORD ?? "athlete123",
+        12,
+      )
+    : undefined;
+
   const prisma = new PrismaClient();
   try {
     const result = await importDemoAthletes(
       prisma as unknown as DemoImportClient,
       dataset,
-      { target: options.target! },
+      { target: options.target!, withUsers: options.withUsers, userPasswordHash },
     );
     console.log(
-      `\nIMPORT COMPLETE: ${result.created} created, ${result.updated} updated, ${result.total} total.`,
+      `\nIMPORT COMPLETE: ${result.created} created, ${result.updated} updated, ${result.users} users, ${result.total} total.`,
     );
+    if (result.users > 0) {
+      console.log(
+        "Demo athlete logins use the demo email plus the DEMO_ATHLETE_PASSWORD env value (default athlete123).",
+      );
+    }
   } finally {
     await prisma.$disconnect();
   }
