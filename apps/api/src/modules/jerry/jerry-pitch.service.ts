@@ -13,7 +13,9 @@ export class JerryPitchService {
     private readonly llm: LLMService,
   ) {}
 
-  @OnEvent('dossier.updated')
+  // Listens to the pitch-specific event (fired once per dossier update, after
+  // the narrative exists) rather than 'dossier.updated', which is UI-facing.
+  @OnEvent('dossier.pitch_refresh')
   async handleDossierUpdated(payload: { athleteId: string }) {
     try {
       this.logger.log(`Regenerating pitch for athlete ${payload.athleteId}`);

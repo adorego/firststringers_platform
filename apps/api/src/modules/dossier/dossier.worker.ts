@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { EventEmitter2, OnEvent } from '@nestjs/event-emitter';
 import type { Prisma } from '@firststringers/database';
 import { PrismaService } from '../../shared/prisma/prisma.service';
@@ -15,6 +15,8 @@ import {
 
 @Injectable()
 export class DossierWorker {
+  private readonly logger = new Logger(DossierWorker.name);
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly llm: LLMService,
@@ -25,44 +27,65 @@ export class DossierWorker {
   async handleDossierUpdate(payload: DossierUpdateJob) {
     const { athleteId, newData } = payload;
 
-    const current = await this.prisma.dossier.findUnique({
-      where: { athleteId },
-    });
+    try {
+      const current = await this.prisma.dossier.findUnique({
+        where: { athleteId },
+      });
 
-    const currentData = normalizeDossierData(current?.data);
-    const mergedData = this.mergeDeep(
-      currentData,
-      normalizeDossierData(newData),
-    );
-    const completeness = calculateDossierCompleteness(mergedData);
-    const changedFields = this.getChangedFields(currentData, mergedData);
+      const currentData = normalizeDossierData(current?.data);
+      const mergedData = this.mergeDeep(
+        currentData,
+        normalizeDossierData(newData),
+      );
+      const completeness = calculateDossierCompleteness(mergedData);
+      const changedFields = this.getChangedFields(currentData, mergedData);
 
-    await this.prisma.dossier.upsert({
-      where: { athleteId },
-      create: {
+      await this.prisma.dossier.upsert({
+        where: { athleteId },
+        create: {
+          athleteId,
+          data: mergedData as unknown as Prisma.InputJsonValue,
+          completeness,
+        },
+        update: {
+          data: mergedData as unknown as Prisma.InputJsonValue,
+          completeness,
+        },
+      });
+
+      // UI-facing event: full payload, emitted exactly once per update.
+      this.eventEmitter.emit('dossier.updated', {
         athleteId,
-        data: mergedData as unknown as Prisma.InputJsonValue,
+        data: mergedData,
         completeness,
-      },
-      update: {
-        data: mergedData as unknown as Prisma.InputJsonValue,
-        completeness,
-      },
-    });
+        changedFields,
+      } satisfies DossierUpdatedEvent);
 
-    this.eventEmitter.emit('dossier.updated', {
-      athleteId,
-      data: mergedData,
-      completeness,
-      changedFields,
-    } satisfies DossierUpdatedEvent);
+      this.logger.log(
+        `Dossier updated for ${athleteId} — completeness: ${Math.round(completeness * 100)}%`,
+      );
 
-    console.log(
-      `Dossier updated for ${athleteId} — completeness: ${Math.round(completeness * 100)}%`,
-    );
+      if (completeness >= 0.75) {
+        // Generate the narrative first so the pitch below can use it.
+        try {
+          await this.generateNarrative(athleteId, mergedData);
+        } catch (error) {
+          this.logger.error(
+            `Narrative generation failed for athlete ${athleteId}`,
+            error,
+          );
+        }
+      }
 
-    if (completeness >= 0.75) {
-      await this.generateNarrative(athleteId, mergedData);
+      // Pitch-facing event: exactly once per update, after the narrative (if
+      // any) exists — previously 'dossier.updated' fired twice and the pitch
+      // was regenerated twice per athlete message.
+      this.eventEmitter.emit('dossier.pitch_refresh', { athleteId });
+    } catch (error) {
+      this.logger.error(
+        `Dossier update failed for athlete ${athleteId}`,
+        error,
+      );
     }
   }
 
@@ -89,10 +112,7 @@ and development potential. Maximum 3 paragraphs in English.`,
       data: { narrative },
     });
 
-    // Disparar generación del pitch de Jerry
-    this.eventEmitter.emit('dossier.updated', { athleteId });
-
-    console.log(`Narrative generated for athlete ${athleteId}`);
+    this.logger.log(`Narrative generated for athlete ${athleteId}`);
   }
 
   private getChangedFields(
