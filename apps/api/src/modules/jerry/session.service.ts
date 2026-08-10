@@ -189,7 +189,8 @@ export class SessionService {
         where: { athleteId },
         select: { messages: true, createdAt: true },
       });
-      const messages = Array.isArray(stored?.messages)
+      if (!stored) return null;
+      const messages = Array.isArray(stored.messages)
         ? (stored.messages as unknown as JerryMessage[])
         : [];
       if (messages.length === 0) return null;
