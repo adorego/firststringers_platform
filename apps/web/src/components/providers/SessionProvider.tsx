@@ -11,7 +11,15 @@ function TokenSync({ children }: { children: React.ReactNode }) {
   const { data: session } = useSession();
 
   useEffect(() => {
-    setAccessToken((session?.accessToken as string) ?? null);
+    const token = (session?.accessToken as string) ?? null;
+    setAccessToken(token);
+    // Keep localStorage in sync for consumers outside the axios layer
+    // (Billy socket handshake and fetch helpers read fs_token).
+    if (token) {
+      localStorage.setItem("fs_token", token);
+    } else {
+      localStorage.removeItem("fs_token");
+    }
   }, [session?.accessToken]);
 
   return <>{children}</>;
