@@ -192,14 +192,41 @@ describe('BillyGateway — connection auth', () => {
     );
   });
 
-  it('refuses messages from sockets that never authenticated', async () => {
-    const client = makeClient({ token: 'token', conversationId: 'conv-1' });
+  it('refuses messages from sockets with an unverifiable handshake', async () => {
+    mockJwt.verify.mockImplementation(() => {
+      throw new Error('invalid');
+    });
+    const client = makeClient({ token: 'bad', conversationId: 'conv-1' });
 
     await gateway.handleMessage(client, { content: 'hello' });
 
     expect(mockQueue.add).not.toHaveBeenCalled();
     expect((client.emitted[0][1] as { code: string }).code).toBe(
       'UNAUTHENTICATED',
+    );
+  });
+
+  it('processes a buffered message that arrives before handleConnection finishes', async () => {
+    // socket.io delivers client-buffered emits as soon as the transport is up,
+    // which can beat handleConnection's async setup — the gateway must
+    // re-derive the context from the handshake instead of dropping the message.
+    mockJwt.verify.mockReturnValue({ sub: 'user-1', recruiterId: 'rec-1' });
+    mockConversations.findById.mockResolvedValue({
+      id: 'conv-1',
+      recruiterId: 'rec-1',
+    });
+    const client = makeClient({ token: 'token', conversationId: 'conv-1' });
+
+    // No handleConnection call — simulates the race.
+    await gateway.handleMessage(client, { content: 'find me a catcher' });
+
+    expect(mockQueue.add).toHaveBeenCalledWith(
+      'process.message',
+      expect.objectContaining({
+        recruiterId: 'rec-1',
+        conversationId: 'conv-1',
+      }),
+      expect.objectContaining({ attempts: 3 }),
     );
   });
 });

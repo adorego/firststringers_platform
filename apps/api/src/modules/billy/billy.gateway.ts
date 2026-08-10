@@ -200,12 +200,47 @@ export class BillyGateway implements OnGatewayConnection, OnGatewayDisconnect {
     }
   }
 
+  // Socket.io delivers messages the client buffered while connecting as soon
+  // as the transport is up — often before handleConnection finishes its async
+  // setup and registers the context. Instead of dropping those messages,
+  // re-derive the context from the handshake with the same checks.
+  private async ensureContext(client: Socket): Promise<ClientContext | null> {
+    const existing = this.clients.get(client.id);
+    if (existing) return existing;
+
+    try {
+      const token = client.handshake.auth.token as string | undefined;
+      if (!token) return null;
+
+      const payload = this.jwt.verify<{ recruiterId?: string | null }>(token);
+      if (!payload.recruiterId) return null;
+
+      const conversationId = client.handshake.query.conversationId as string;
+      if (!conversationId) return null;
+
+      const conversation =
+        await this.billyConversations.findById(conversationId);
+      if (!conversation || conversation.recruiterId !== payload.recruiterId) {
+        return null;
+      }
+
+      const ctx: ClientContext = {
+        recruiterId: payload.recruiterId,
+        conversationId,
+      };
+      this.clients.set(client.id, ctx);
+      return ctx;
+    } catch {
+      return null;
+    }
+  }
+
   @SubscribeMessage('message')
   async handleMessage(
     @ConnectedSocket() client: Socket,
     @MessageBody() dto: { content: string },
   ) {
-    const ctx = this.clients.get(client.id);
+    const ctx = await this.ensureContext(client);
     if (!ctx) {
       client.emit('error', {
         code: 'UNAUTHENTICATED',
@@ -236,7 +271,8 @@ export class BillyGateway implements OnGatewayConnection, OnGatewayDisconnect {
         message: dto.content,
       };
       await this.billyQueue.add('process.message', job, {
-        attempts: 1,
+        attempts: 3,
+        backoff: { type: 'fixed', delay: 2000 },
         removeOnComplete: true,
         removeOnFail: true,
       });
@@ -309,7 +345,7 @@ export class BillyGateway implements OnGatewayConnection, OnGatewayDisconnect {
     @ConnectedSocket() client: Socket,
     @MessageBody() dto: { athleteId: string },
   ) {
-    const ctx = this.clients.get(client.id);
+    const ctx = await this.ensureContext(client);
     if (!ctx) return;
 
     try {
@@ -348,7 +384,7 @@ export class BillyGateway implements OnGatewayConnection, OnGatewayDisconnect {
     @ConnectedSocket() client: Socket,
     @MessageBody() dto: { athleteId: string; athleteName: string },
   ) {
-    const ctx = this.clients.get(client.id);
+    const ctx = await this.ensureContext(client);
     if (!ctx || !dto?.athleteId) return;
 
     client.emit('status', { status: 'typing' });
