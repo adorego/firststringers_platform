@@ -112,7 +112,14 @@ ${lines.map((l) => `      ${l}`).join('\n')}
       'league level':
         'Competition context helps you understand the environment they are developing in. Ask: "What league or level of competition do you play in?"',
     };
-    return contexts[field] ?? 'Only ask about this specific information.';
+    // Field labels arrive from more than one producer (planner priority list,
+    // validator missing-fields) — match case-insensitively so "GPA"/"gpa"
+    // resolve to the same context.
+    const lowered = field.toLowerCase();
+    const key = Object.keys(contexts).find(
+      (candidate) => candidate.toLowerCase() === lowered,
+    );
+    return key ? contexts[key] : 'Only ask about this specific information.';
   }
 
   private getFieldQuestion(field: string): string | undefined {
@@ -122,11 +129,20 @@ ${lines.map((l) => `      ${l}`).join('\n')}
     return question.endsWith('?') ? question : question.replace(/[.!]+$/, '?');
   }
 
+  // Strategies whose entire purpose is to land on a specific question — if the
+  // model rambles and drops it, the target question is appended.
+  private static readonly QUESTION_ENFORCED_STRATEGIES = new Set<
+    ConversationStrategy['type']
+  >(['answer_and_redirect', 'strategic_ask', 'confirm_and_probe']);
+
   enforceConversationLeadership(
     response: string,
     strategy: ConversationStrategy,
   ): string {
-    if (strategy.type !== 'answer_and_redirect' || !strategy.targetField) {
+    if (
+      !PromptBuilderService.QUESTION_ENFORCED_STRATEGIES.has(strategy.type) ||
+      !strategy.targetField
+    ) {
       return response;
     }
 

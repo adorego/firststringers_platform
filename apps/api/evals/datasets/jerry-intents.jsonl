@@ -1,0 +1,30 @@
+{"id": "int-001", "message": "I threw for 3,284 yards and 34 touchdowns last season", "expected": ["stats"]}
+{"id": "int-002", "message": "My pop time is 1.92 and I threw out 40% of base stealers last year", "expected": ["stats"]}
+{"id": "int-003", "message": "I'm 6'3\" and 205 pounds, right-handed", "expected": ["stats"]}
+{"id": "int-004", "message": "I tweaked my hamstring last month but I'm fully cleared to play now", "expected": ["stats"]}
+{"id": "int-005", "message": "I batted .410 with 8 home runs this spring", "expected": ["stats"]}
+{"id": "int-006", "message": "I broke my school's stolen base record this year", "expected": ["stats"]}
+{"id": "int-007", "message": "I have a 3.8 GPA and got a 1240 on the SAT", "expected": ["academic"]}
+{"id": "int-008", "message": "I want to major in business administration, maybe sports management", "expected": ["academic"]}
+{"id": "int-009", "message": "Tengo un GPA de 3.9 y quiero estudiar ingeniería", "expected": ["academic"]}
+{"id": "int-010", "message": "I'm a catcher at Westminster Christian in Miami, class of 2027", "expected": ["personal"]}
+{"id": "int-011", "message": "My name is Jerry and I play baseball", "expected": ["personal"]}
+{"id": "int-012", "message": "Juego de receptor en un colegio de Miami", "expected": ["personal"]}
+{"id": "int-013", "message": "I play varsity for the 6A division", "expected": ["personal", "stats"]}
+{"id": "int-014", "message": "I'd prefer to stay in the Southeast but I'm open to anywhere for the right program", "expected": ["availability", "recruiting"]}
+{"id": "int-015", "message": "I need a full scholarship, my family can't afford tuition otherwise", "expected": ["availability"]}
+{"id": "int-016", "message": "I'm not in the transfer portal", "expected": ["availability"]}
+{"id": "int-017", "message": "Here's my highlight tape: https://example.com/jerry-highlights", "expected": ["media"]}
+{"id": "int-018", "message": "My Hudl profile has all my junior season film", "expected": ["media"]}
+{"id": "int-019", "message": "My Instagram is @JerryCatcher27 if coaches want to reach me there", "expected": ["media"]}
+{"id": "int-020", "message": "My coach says I'm the hardest worker on the team and I never miss a practice", "expected": ["character"]}
+{"id": "int-021", "message": "I stayed late every day this season to help the younger guys with their swing", "expected": ["character"]}
+{"id": "int-022", "message": "My goal is to play D1 baseball and I want to commit by spring of senior year", "expected": ["recruiting"]}
+{"id": "int-023", "message": "I'm mostly targeting FCS and strong D2 programs", "expected": ["recruiting"]}
+{"id": "int-024", "message": "I'm captain this year and my teammates voted me team MVP", "expected": ["character", "stats"]}
+{"id": "int-025", "message": "What do college coaches look for in a catcher?", "expected": ["question"]}
+{"id": "int-026", "message": "How does this platform work exactly?", "expected": ["question"]}
+{"id": "int-027", "message": "When is the transfer portal deadline?", "expected": ["question"]}
+{"id": "int-028", "message": "hey", "expected": ["other"]}
+{"id": "int-029", "message": "thanks, that helps!", "expected": ["other", "question"]}
+{"id": "int-030", "message": "asdfgh", "expected": ["other"]}
