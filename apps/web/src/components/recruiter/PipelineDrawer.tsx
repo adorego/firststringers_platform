@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { X, TrendingUp } from "lucide-react";
 import { api, PipelineEntry } from "@/lib/api";
 import { AthleteResult } from "@/hooks/useBilly";
+import { getReadiness } from "@/components/ui/ReadinessBadge";
 
 function toAthleteResult(entry: PipelineEntry): AthleteResult {
   return {
@@ -124,7 +125,11 @@ export function PipelineDrawer({ isOpen, onClose, hiddenAthleteIds, onViewDossie
                     {metaParts.length > 0 && (
                       <p className="text-sm text-[#ADA8A5]">{metaParts.join(" · ")}</p>
                     )}
-                    <p className="mt-1 text-xs text-[#ADA8A5]">
+                    <p className="mt-1 flex items-center gap-1.5 text-xs text-[#ADA8A5]">
+                      <span
+                        className="h-1.5 w-1.5 flex-shrink-0 rounded-full"
+                        style={{ background: getReadiness(entry.completenessScore).dot }}
+                      />
                       Profile {Math.round(entry.completenessScore * 100)}% complete
                     </p>
 

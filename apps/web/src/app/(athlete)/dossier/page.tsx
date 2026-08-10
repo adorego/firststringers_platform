@@ -5,6 +5,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useSession } from "next-auth/react";
 import { ChevronRight, Zap } from "lucide-react";
 import { useDossierStore } from "@/stores/dossier-store";
+import { ReadinessBadge } from "@/components/ui/ReadinessBadge";
 
 type DossierData = NonNullable<ReturnType<typeof useDossierStore.getState>["data"]>;
 
@@ -335,7 +336,6 @@ export default function DossierPage() {
 
   const identity = data?.identity ?? {};
   const performance = data?.performance ?? {};
-  const clampedCompleteness = Math.min(100, Math.max(0, completeness ?? 0));
   const knownSignals = sections.reduce((sum, section) => sum + knownCount(section.fields), 0);
   const totalSignals = sections.reduce((sum, section) => sum + section.fields.length, 0);
   const knownSignalsLabel =
@@ -404,10 +404,7 @@ export default function DossierPage() {
                 <span className="text-[#27251E]/60">
                   {performance.leagueLevel ?? identity.competitiveLevel ?? "Development level pending"}
                 </span>
-                <span className="flex items-center gap-1.5 text-[#4A5F79]">
-                  <span className="h-1.5 w-1.5 rounded-full bg-[#6F7F95]" />
-                  {clampedCompleteness > 0 ? "Evolving" : "Awaiting activation"}
-                </span>
+                <ReadinessBadge score={completeness ?? 0} showPercent />
               </div>
             </section>
 

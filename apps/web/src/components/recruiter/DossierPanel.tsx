@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from "react";
 import { useSession } from "next-auth/react";
 import { X, MapPin, ArrowLeft, CheckCircle } from "lucide-react";
 import { AthleteResult } from "@/hooks/useBilly";
+import { ReadinessBadge } from "@/components/ui/ReadinessBadge";
 
 function getProspectTag(score: number): { label: string; color: string; bg: string } | null {
   if (score >= 0.85) return { label: "Hot Prospect", color: "#C0392B", bg: "#FDECEA" };
@@ -349,6 +350,9 @@ export function DossierPanel({
               <p className="text-lg font-bold text-[#1A1A1A]">
                 {Math.round(athlete.completenessScore * 100)}%
               </p>
+              <div className="mt-1.5">
+                <ReadinessBadge score={athlete.completenessScore} />
+              </div>
             </div>
             {athlete.leagueLevel && (
               <div className="rounded-xl bg-[#F0EDE9] px-4 py-3">
