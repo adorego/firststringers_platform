@@ -36,6 +36,7 @@ Rules:
 - Every question must materially improve the recruiting decision; do not interrogate or ask filler questions
 - Prioritize recruiting objective, context, verified information, athlete fit, academics, character/readiness, athletic ability, geography, and timeline — highlight media never replaces reasoning
 - Never treat a minimum GPA as required to run a search — omit "minGpa" from the filters entirely unless the recruiter states one
+- If the recruiter's program profile below already includes a sport, treat it as known — never ask for it again, and use it as the default for every search unless they explicitly mention a different one
 - After gathering enough info (at least sport + position + a recruiting objective or one meaningful fit criterion), offer to search
 - If the recruiter asks for more athletes, other options, or anyone else (e.g. "show me more", "who else"), treat it as a new search using the same criteria unless they mention new ones — the platform automatically excludes athletes already shown in this conversation, so you will never repeat a previous recommendation
 - When you have enough information, respond with a JSON block at the end of your message in this exact format:
@@ -172,7 +173,7 @@ export class BillyWorker {
       .join('\n');
 
     const profileContext = profileLines
-      ? `\n\nThis recruiter's program profile (use this when they ask about their profile, program, or saved info):\n${profileLines}`
+      ? `\n\nThis recruiter's program profile — already known, do not ask for these again; use them when they ask about their profile, program, or saved info, and as defaults for searches:\n${profileLines}`
       : '';
 
     const response = await this.openai.chat.completions.create({
@@ -217,6 +218,7 @@ export class BillyWorker {
           division: updatedFields.division,
           openings: updatedFields.openings,
         });
+        this.refreshRecruiterPitch(recruiterId);
       } catch (err) {
         this.logger.warn(
           `Could not apply profile update for recruiter ${recruiterId}`,
@@ -237,6 +239,7 @@ export class BillyWorker {
           recruiterId,
           parsed.filters as never,
         );
+        this.refreshRecruiterPitch(recruiterId, parsed.query);
         const scoutResult = await this.runSearch(
           parsed.query,
           parsed.filters,
@@ -482,6 +485,7 @@ export class BillyWorker {
 
   private async generateRecruiterPitch(
     profile: Record<string, unknown>,
+    recentSearchInterest?: string,
   ): Promise<string> {
     const p = profile as Record<string, string | undefined>;
     const lines = [
@@ -491,9 +495,16 @@ export class BillyWorker {
       p['sport'] && `Sport: ${p['sport']}`,
       p['organizationType'] && `Organization: ${p['organizationType']}`,
       p['division'] && `Division: ${p['division']}`,
+      p['positions'] && `Positions they evaluate: ${p['positions']}`,
+      p['evaluationPriority'] &&
+        `What matters most to them: ${p['evaluationPriority']}`,
+      p['programNotes'] && `Program notes: ${p['programNotes']}`,
+      recentSearchInterest && `Recently searching for: ${recentSearchInterest}`,
     ]
       .filter(Boolean)
       .join('\n');
+
+    if (!lines) return '';
 
     try {
       const response = await this.openai.chat.completions.create({
@@ -502,7 +513,7 @@ export class BillyWorker {
           {
             role: 'system',
             content:
-              'Write a 2–3 sentence introduction for a college sports recruiter that will be shown to an athlete receiving a connection request. Be specific, warm, and professional. Highlight what makes the program attractive to a prospective athlete. No quotes, no bullet points — flowing text only.',
+              'Write a concise introduction for a college sports recruiter that will be shown to an athlete receiving a connection request — 2 sentences, never more than 3. Be specific, warm, and professional. Highlight what makes the program attractive to a prospective athlete. No quotes, no bullet points — flowing text only.',
           },
           {
             role: 'user',
@@ -517,6 +528,43 @@ export class BillyWorker {
       this.logger.warn('Could not generate recruiter pitch', err);
       return '';
     }
+  }
+
+  // Keeps the recruiter's pitch (shown to athletes on connection requests) up
+  // to date as Billy learns more about their program or search preferences —
+  // fire-and-forget so a background LLM call never slows down the chat reply.
+  private refreshRecruiterPitch(
+    recruiterId: string,
+    recentSearchInterest?: string,
+  ): void {
+    void this.recruiterService
+      .findById(recruiterId)
+      .then(async (recruiter) => {
+        if (!recruiter) return;
+        const profileData: Record<string, unknown> = {
+          university: recruiter.university,
+          location: recruiter.location,
+          scholarshipType: recruiter.scholarshipType,
+          sport: recruiter.sport,
+          organizationType: recruiter.organizationType,
+          division: recruiter.division,
+          positions: recruiter.positions,
+          evaluationPriority: recruiter.evaluationPriority,
+          programNotes: recruiter.programNotes,
+        };
+        const pitch = await this.generateRecruiterPitch(
+          profileData,
+          recentSearchInterest,
+        );
+        if (!pitch) return;
+        await this.recruiterService.updateProfile(recruiterId, { pitch });
+      })
+      .catch((err: unknown) => {
+        this.logger.warn(
+          `Could not refresh recruiter pitch for ${recruiterId}`,
+          err,
+        );
+      });
   }
 
   private async runSearch(

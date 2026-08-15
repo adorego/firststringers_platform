@@ -4,12 +4,17 @@ import { useState } from "react";
 import { api } from "@/lib/api";
 
 interface Question {
-  key: "organizationType" | "recruiterRole" | "location";
+  key: "sport" | "organizationType" | "recruiterRole" | "location";
   label: string;
   options: string[];
 }
 
 const QUESTIONS: Question[] = [
+  {
+    key: "sport",
+    label: "What sport are you recruiting for?",
+    options: ["Football", "Baseball", "Basketball", "Soccer", "Volleyball", "Other"],
+  },
   {
     key: "organizationType",
     label: "What type of organization do you work with?",
@@ -41,6 +46,18 @@ const QUESTIONS: Question[] = [
   },
 ];
 
+const EVALUATION_PRIORITY_OPTIONS = [
+  "Athleticism",
+  "Academics",
+  "Character",
+  "Coachability",
+  "Physical Traits",
+  "Development Potential",
+  "Film",
+  "Other",
+];
+const MAX_EVALUATION_PRIORITY = 3;
+
 interface Props {
   recruiterName: string;
   onComplete: () => void;
@@ -49,15 +66,29 @@ interface Props {
 export function RecruiterOnboardingForm({ recruiterName, onComplete }: Props) {
   const [answers, setAnswers] = useState<Record<string, string>>({});
   const [otherText, setOtherText] = useState<Record<string, string>>({});
+  const [evaluationPriority, setEvaluationPriority] = useState<string[]>([]);
+  const [evaluationOtherText, setEvaluationOtherText] = useState("");
   const [notes, setNotes] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState(false);
 
-  const isComplete = QUESTIONS.every((q) => {
+  const toggleEvaluationPriority = (option: string) => {
+    setEvaluationPriority((prev) => {
+      if (prev.includes(option)) return prev.filter((o) => o !== option);
+      if (prev.length >= MAX_EVALUATION_PRIORITY) return prev;
+      return [...prev, option];
+    });
+  };
+
+  const singleAnswersComplete = QUESTIONS.every((q) => {
     const answer = answers[q.key];
     if (!answer) return false;
     return answer === "Other" ? !!otherText[q.key]?.trim() : true;
   });
+  const evaluationComplete =
+    evaluationPriority.length > 0 &&
+    (!evaluationPriority.includes("Other") || !!evaluationOtherText.trim());
+  const isComplete = singleAnswersComplete && evaluationComplete;
 
   const handleSubmit = async () => {
     if (!isComplete || submitting) return;
@@ -65,12 +96,18 @@ export function RecruiterOnboardingForm({ recruiterName, onComplete }: Props) {
     setError(false);
     const resolved = (key: Question["key"]) =>
       answers[key] === "Other" ? otherText[key].trim() : answers[key];
+    const resolvedEvaluationPriority = evaluationPriority
+      .map((o) => (o === "Other" ? evaluationOtherText.trim() : o))
+      .filter(Boolean)
+      .join(", ");
 
     try {
       await api.submitOnboarding({
+        sport: resolved("sport"),
         organizationType: resolved("organizationType"),
         recruiterRole: resolved("recruiterRole"),
         location: resolved("location"),
+        evaluationPriority: resolvedEvaluationPriority,
         programNotes: notes.trim() || undefined,
       });
       onComplete();
@@ -132,6 +169,44 @@ export function RecruiterOnboardingForm({ recruiterName, onComplete }: Props) {
               )}
             </div>
           ))}
+
+          <div>
+            <label className="mb-2 block text-sm font-medium text-[#1A1A1A]">
+              When evaluating an athlete for the first time, what usually matters most to you?
+            </label>
+            <p className="mb-2 text-xs text-[#ADA8A5]">Select up to 3</p>
+            <div className="flex flex-wrap gap-2">
+              {EVALUATION_PRIORITY_OPTIONS.map((option) => {
+                const selected = evaluationPriority.includes(option);
+                const disabled = !selected && evaluationPriority.length >= MAX_EVALUATION_PRIORITY;
+                return (
+                  <button
+                    key={option}
+                    type="button"
+                    onClick={() => toggleEvaluationPriority(option)}
+                    disabled={disabled}
+                    className={`rounded-full border px-4 py-2 text-sm transition-colors ${
+                      selected
+                        ? "border-[#1A1A1A] bg-[#1A1A1A] text-white"
+                        : "border-[#E4DDD7] bg-white text-[#4B4745] hover:border-[#ADA8A5] disabled:opacity-40"
+                    }`}
+                  >
+                    {option}
+                  </button>
+                );
+              })}
+            </div>
+
+            {evaluationPriority.includes("Other") && (
+              <input
+                type="text"
+                value={evaluationOtherText}
+                onChange={(e) => setEvaluationOtherText(e.target.value)}
+                placeholder="Please specify"
+                className="mt-2 w-full rounded-xl border border-[#E4DDD7] bg-white px-4 py-3 text-sm text-[#1A1A1A] placeholder:text-[#ADA8A5] focus:border-[#3B6FE8] focus:outline-none"
+              />
+            )}
+          </div>
 
           <div>
             <label className="mb-2 block text-sm font-medium text-[#1A1A1A]">

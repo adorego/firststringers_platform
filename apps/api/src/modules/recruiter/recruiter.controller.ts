@@ -39,9 +39,11 @@ export class RecruiterController {
     @CurrentUser() user: { recruiterId: string | null },
     @Body()
     dto: {
+      sport?: string;
       organizationType?: string;
       recruiterRole?: string;
       location?: string;
+      evaluationPriority?: string;
       programNotes?: string;
     },
   ) {
