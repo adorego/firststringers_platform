@@ -23,6 +23,7 @@ gated behavior (e.g. FS-CS-005 representation lifecycle) must be updated in the 
 | [FS-CS-005A](FS-CS-005A-athlete-representation-activation-conversation.md) | Athlete Representation Activation Conversation | Jerry's activation conversation sections, rhythm, summary, and adaptive rules |
 | [FS-CS-006](FS-CS-006-jerry-activation-leadership.md) | Jerry Activation Leadership | How Jerry acknowledges athlete input while continuing the Dossier flow |
 | [FS-CS-007](FS-CS-007-billy-conversation-quality.md) | Billy Conversation Quality | Billy v2: objective-first conversations, uncertainty, and reasoned recommendations |
+| [FS-CS-008](FS-CS-008-jerry-billy-representation-contract.md) | Jerry–Billy Representation Contract | Versioned, privacy-safe communication between recruiting and athlete representation |
 
 ## Governance (Abel's process)
 
