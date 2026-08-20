@@ -1,7 +1,10 @@
 import { BillySessionService } from '../billy-session.service';
 import { RedisService } from '../../../shared/redis/redis.service';
 import { BillyConversationService } from '../billy-conversation.service';
-import { BillyMessage, BillySessionState } from '../../../shared/types/billy.types';
+import {
+  BillyMessage,
+  BillySessionState,
+} from '../../../shared/types/billy.types';
 
 // ─── Mocks ──────────────────────────────────────────────────────────────────
 
@@ -38,7 +41,10 @@ function makeSession(
   };
 }
 
-function makeMessage(role: 'user' | 'assistant', content: string): BillyMessage {
+function makeMessage(
+  role: 'user' | 'assistant',
+  content: string,
+): BillyMessage {
   return { role, content, timestamp: new Date() };
 }
 
@@ -92,7 +98,9 @@ describe('BillySessionService', () => {
       mockConversations.getMessages.mockResolvedValue([
         makeMessage('user', 'hello'),
       ]);
-      mockConversations.getSearchCriteria.mockResolvedValue({ sport: 'football' });
+      mockConversations.getSearchCriteria.mockResolvedValue({
+        sport: 'football',
+      });
 
       const result = await service.getSession('conv-1', 'recruiter-1');
 
@@ -121,7 +129,9 @@ describe('BillySessionService', () => {
 
     it('overrides isOnboarding when explicitly passed, without touching the rest of the cached session', async () => {
       mockRedisService.get.mockResolvedValue(
-        JSON.stringify(makeSession({ isOnboarding: false, shownAthleteIds: ['a1'] })),
+        JSON.stringify(
+          makeSession({ isOnboarding: false, shownAthleteIds: ['a1'] }),
+        ),
       );
 
       const result = await service.getSession('conv-1', 'recruiter-1', true);
@@ -139,7 +149,11 @@ describe('BillySessionService', () => {
 
       await service.recordShownAthletes('conv-1', 'recruiter-1', ['a2', 'a3']);
 
-      expect(lastSavedSession().shownAthleteIds.sort()).toEqual(['a1', 'a2', 'a3']);
+      expect(lastSavedSession().shownAthleteIds.sort()).toEqual([
+        'a1',
+        'a2',
+        'a3',
+      ]);
     });
 
     it('deduplicates ids that were already recorded', async () => {
@@ -166,7 +180,11 @@ describe('BillySessionService', () => {
     it('appends a message to the session', async () => {
       mockRedisService.get.mockResolvedValue(JSON.stringify(makeSession()));
 
-      await service.appendMessage('conv-1', 'recruiter-1', makeMessage('user', 'hi'));
+      await service.appendMessage(
+        'conv-1',
+        'recruiter-1',
+        makeMessage('user', 'hi'),
+      );
 
       const saved = lastSavedSession();
       expect(saved.messages).toHaveLength(1);
@@ -181,7 +199,11 @@ describe('BillySessionService', () => {
       });
       mockRedisService.get.mockResolvedValue(JSON.stringify(session));
 
-      await service.appendMessage('conv-1', 'recruiter-1', makeMessage('user', 'msg-30'));
+      await service.appendMessage(
+        'conv-1',
+        'recruiter-1',
+        makeMessage('user', 'msg-30'),
+      );
 
       const saved = lastSavedSession();
       expect(saved.messages).toHaveLength(30);
@@ -196,10 +218,15 @@ describe('BillySessionService', () => {
         JSON.stringify(makeSession({ searchCriteria: { sport: 'football' } })),
       );
 
-      await service.updateSearchCriteria('conv-1', 'recruiter-1', { position: 'QB' });
+      await service.updateSearchCriteria('conv-1', 'recruiter-1', {
+        position: 'QB',
+      });
 
       const saved = lastSavedSession();
-      expect(saved.searchCriteria).toEqual({ sport: 'football', position: 'QB' });
+      expect(saved.searchCriteria).toEqual({
+        sport: 'football',
+        position: 'QB',
+      });
     });
   });
 
@@ -225,7 +252,10 @@ describe('BillySessionService', () => {
 
   describe('pending suggestions', () => {
     it('round-trips suggestions through set and get', async () => {
-      await service.setPendingSuggestions('recruiter-1', ['find a QB', 'find a WR']);
+      await service.setPendingSuggestions('recruiter-1', [
+        'find a QB',
+        'find a WR',
+      ]);
       const [key, , payload] = mockRedisService.setex.mock.calls[0] as [
         string,
         number,
