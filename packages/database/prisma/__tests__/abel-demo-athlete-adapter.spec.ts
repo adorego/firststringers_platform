@@ -212,3 +212,25 @@ test("rejects an unknown transfer status instead of silently guessing", () => {
   assert.equal(result.valid, false);
   assert.match(result.errors.join("\n"), /transfer_status/i);
 });
+
+test("rejects an unknown NCAA eligibility status instead of treating it as false", () => {
+  const source = sourceDataset();
+  source.athletes[0].academics.ncaa_eligibility_status = "Needs review";
+
+  const result = adaptAbelDemoAthleteDataset(source);
+
+  assert.equal(result.valid, false);
+  assert.match(result.errors.join("\n"), /ncaa_eligibility_status/i);
+});
+
+test("requires explicit synthetic identifiers on every source athlete", () => {
+  const source = sourceDataset();
+  source.athletes[0].demo_id = "ATHLETE-001";
+  source.athletes[0].demo_label = "REAL ATHLETE";
+
+  const result = adaptAbelDemoAthleteDataset(source);
+
+  assert.equal(result.valid, false);
+  assert.match(result.errors.join("\n"), /demo_id/i);
+  assert.match(result.errors.join("\n"), /fictional profile/i);
+});

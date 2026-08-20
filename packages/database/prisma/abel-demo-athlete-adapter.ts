@@ -95,6 +95,19 @@ function validateSourceAthlete(
     return;
   }
 
+  const demoId = requiredString(value.demo_id, `${path}.demo_id`, errors);
+  if (demoId && !/^FS-DEMO-[A-Z0-9-]+$/.test(demoId)) {
+    errors.push(`${path}.demo_id must start with FS-DEMO-.`);
+  }
+  const demoLabel = requiredString(
+    value.demo_label,
+    `${path}.demo_label`,
+    errors,
+  );
+  if (demoLabel && !/DEMO ATHLETE.*FICTIONAL PROFILE/i.test(demoLabel)) {
+    errors.push(`${path}.demo_label must identify a fictional profile.`);
+  }
+
   const identity = isObject(value.identity) ? value.identity : {};
   const email = requiredString(
     identity.email,
@@ -167,6 +180,13 @@ function validateSourceAthlete(
   if (!isKnownTransferStatus(availability.transfer_status)) {
     errors.push(
       `${path}.availability.transfer_status must explicitly indicate transferring, transfer portal, or not transferring.`,
+    );
+  }
+
+  const academics = object(value.academics);
+  if (!isKnownNcaaEligibility(academics.ncaa_eligibility_status)) {
+    errors.push(
+      `${path}.academics.ncaa_eligibility_status must explicitly state on track, eligible, not eligible, or ineligible.`,
     );
   }
 }
@@ -377,6 +397,16 @@ function parseNcaaEligibility(value: unknown): boolean {
     return false;
   }
   return normalized.includes("on track") || normalized.includes("eligible");
+}
+
+function isKnownNcaaEligibility(value: unknown): boolean {
+  const normalized = text(value).toLowerCase();
+  return (
+    normalized.includes("on track") ||
+    normalized.includes("not eligible") ||
+    normalized.includes("ineligible") ||
+    normalized === "eligible"
+  );
 }
 
 function score(value: unknown): string | undefined {
