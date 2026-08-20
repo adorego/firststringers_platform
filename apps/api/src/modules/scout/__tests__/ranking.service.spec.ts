@@ -1,5 +1,8 @@
 import { RankingService } from '../ranking.service';
-import { ScoutAthleteCandidate, SearchFilters } from '../../../shared/types/scout.types';
+import {
+  ScoutAthleteCandidate,
+  SearchFilters,
+} from '../../../shared/types/scout.types';
 
 function makeAthlete(
   overrides: Partial<ScoutAthleteCandidate> = {},
@@ -61,9 +64,16 @@ describe('RankingService', () => {
 
     it('flags GPA as meeting the requirement when it does', () => {
       const athlete = makeAthlete({ gpa: 3.8 });
-      const explanation = service.generateExplanation(athlete, 0.7, 'qb', filters);
+      const explanation = service.generateExplanation(
+        athlete,
+        0.7,
+        'qb',
+        filters,
+      );
       expect(
-        explanation.topMatchingFactors.some((f) => f.includes('meets requirement')),
+        explanation.topMatchingFactors.some((f) =>
+          f.includes('meets requirement'),
+        ),
       ).toBe(true);
     });
 
@@ -72,7 +82,9 @@ describe('RankingService', () => {
       const explanation = service.generateExplanation(athlete, 0.7, 'qb', {});
       expect(explanation.topMatchingFactors).toContain('GPA 2.5');
       expect(
-        explanation.topMatchingFactors.some((f) => f.includes('meets requirement')),
+        explanation.topMatchingFactors.some((f) =>
+          f.includes('meets requirement'),
+        ),
       ).toBe(false);
     });
 
@@ -91,10 +103,14 @@ describe('RankingService', () => {
         {},
       );
       expect(
-        withInterest.topMatchingFactors.some((f) => f.includes('transfer portal')),
+        withInterest.topMatchingFactors.some((f) =>
+          f.includes('transfer portal'),
+        ),
       ).toBe(true);
       expect(
-        withoutInterest.topMatchingFactors.some((f) => f.includes('transfer portal')),
+        withoutInterest.topMatchingFactors.some((f) =>
+          f.includes('transfer portal'),
+        ),
       ).toBe(false);
     });
 
@@ -120,8 +136,16 @@ describe('RankingService', () => {
 
   describe('rankAthletes', () => {
     it('sorts athletes by fitScore, highest first', () => {
-      const strong = makeAthlete({ id: 'strong', similarity: 0.9, completenessScore: 0.9 });
-      const weak = makeAthlete({ id: 'weak', similarity: 0.1, completenessScore: 0.1 });
+      const strong = makeAthlete({
+        id: 'strong',
+        similarity: 0.9,
+        completenessScore: 0.9,
+      });
+      const weak = makeAthlete({
+        id: 'weak',
+        similarity: 0.1,
+        completenessScore: 0.1,
+      });
 
       const ranked = service.rankAthletes([weak, strong], 'qb', {});
 
@@ -138,25 +162,26 @@ describe('RankingService', () => {
         ncaaEligible: true,
       });
 
-      const [ranked] = service.rankAthletes(
-        [athlete],
-        'qb',
-        { sport: 'football', position: 'QB', minGpa: 3.5, ncaaEligible: true },
-      );
+      const [ranked] = service.rankAthletes([athlete], 'qb', {
+        sport: 'football',
+        position: 'QB',
+        minGpa: 3.5,
+        ncaaEligible: true,
+      });
 
-      expect(ranked.matchReasons.some((r) => r.includes('football'))).toBe(true);
+      expect(ranked.matchReasons.some((r) => r.includes('football'))).toBe(
+        true,
+      );
       expect(ranked.matchReasons.some((r) => r.includes('QB'))).toBe(true);
-      expect(ranked.matchReasons.some((r) => r.includes('NCAA eligible'))).toBe(true);
+      expect(ranked.matchReasons.some((r) => r.includes('NCAA eligible'))).toBe(
+        true,
+      );
     });
 
     it('does not credit a filter the athlete fails to satisfy', () => {
       const athlete = makeAthlete({ sport: 'football', gpa: 2.0 });
 
-      const [ranked] = service.rankAthletes(
-        [athlete],
-        'qb',
-        { minGpa: 3.5 },
-      );
+      const [ranked] = service.rankAthletes([athlete], 'qb', { minGpa: 3.5 });
 
       expect(ranked.matchReasons.some((r) => r.includes('GPA'))).toBe(false);
     });

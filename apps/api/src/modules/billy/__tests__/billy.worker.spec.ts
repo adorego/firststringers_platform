@@ -4,7 +4,10 @@ import type { BillyConversationService } from '../billy-conversation.service';
 import type { EventEmitter2 } from '@nestjs/event-emitter';
 import type { ScoutService, ScoutResult } from '../../scout/scout.service';
 import type { RecruiterService } from '../../recruiter/recruiter.service';
-import { BillyMessageJob, BillySessionState } from '../../../shared/types/billy.types';
+import {
+  BillyMessageJob,
+  BillySessionState,
+} from '../../../shared/types/billy.types';
 import { BillyWorker } from '../billy.worker';
 
 // The worker builds its own OpenAI client inside its constructor (no DI seam) —
@@ -67,7 +70,12 @@ function makeScoutResult(overrides: Partial<ScoutResult> = {}): ScoutResult {
         similarity: 0.7,
         dossier: null,
         fitScore: 0.75,
-        fitExplanation: { similarity: 0.7, completeness: 0.8, trajectory: 0.7, topMatchingFactors: [] },
+        fitExplanation: {
+          similarity: 0.7,
+          completeness: 0.8,
+          trajectory: 0.7,
+          topMatchingFactors: [],
+        },
         matchReasons: [],
       },
     ],
@@ -143,7 +151,11 @@ describe('BillyWorker', () => {
     createCompletion = jest.fn();
     // The worker builds its own OpenAI client in the constructor (no DI seam) —
     // swap it out for a mock so tests never hit the network.
-    (worker as unknown as { openai: { chat: { completions: { create: jest.Mock } } } }).openai = {
+    (
+      worker as unknown as {
+        openai: { chat: { completions: { create: jest.Mock } } };
+      }
+    ).openai = {
       chat: { completions: { create: createCompletion } },
     };
 
@@ -152,7 +164,7 @@ describe('BillyWorker', () => {
   });
 
   describe('handleSearch — "show me more" deduplication', () => {
-    it('passes the session\'s shownAthleteIds to Scout so it excludes them', async () => {
+    it("passes the session's shownAthleteIds to Scout so it excludes them", async () => {
       const session = makeSession({ shownAthleteIds: ['already-shown-1'] });
       mockSession.getSession.mockResolvedValue(session);
       mockScout.search.mockResolvedValue(makeScoutResult());
