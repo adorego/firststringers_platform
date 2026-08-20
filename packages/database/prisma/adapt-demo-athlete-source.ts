@@ -1,16 +1,16 @@
 import { readFile, stat, writeFile } from "node:fs/promises";
 import path from "node:path";
-import { adaptAbelDemoAthleteDataset } from "./abel-demo-athlete-adapter";
+import { adaptDemoAthleteSourceDataset } from "./demo-athlete-source-adapter";
 
 const MAX_SOURCE_BYTES = 5 * 1024 * 1024;
 
-interface AbelAdapterOptions {
+interface SourceAdapterOptions {
   file: string;
   out: string;
   force: boolean;
 }
 
-export function parseAbelAdapterArgs(args: string[]): AbelAdapterOptions {
+export function parseSourceAdapterArgs(args: string[]): SourceAdapterOptions {
   let file: string | undefined;
   let out: string | undefined;
   let force = false;
@@ -32,15 +32,15 @@ export function parseAbelAdapterArgs(args: string[]): AbelAdapterOptions {
     throw new Error(`Unknown argument: ${argument}`);
   }
 
-  if (!file) throw new Error("--file requires an Abel source JSON path.");
+  if (!file) throw new Error("--file requires a source dataset JSON path.");
   if (!out) throw new Error("--out requires a canonical output JSON path.");
   if (file === out)
     throw new Error("--file and --out must use different paths.");
   return { file, out, force };
 }
 
-export async function runAbelDemoAdaptation(args: string[]): Promise<void> {
-  const options = parseAbelAdapterArgs(args);
+export async function runDemoAthleteSourceAdaptation(args: string[]): Promise<void> {
+  const options = parseSourceAdapterArgs(args);
   const sourceStats = await stat(options.file);
   if (!sourceStats.isFile())
     throw new Error("Source path must reference a file.");
@@ -55,7 +55,7 @@ export async function runAbelDemoAdaptation(args: string[]): Promise<void> {
     throw new Error("Source dataset contains invalid JSON.");
   }
 
-  const result = adaptAbelDemoAthleteDataset(source);
+  const result = adaptDemoAthleteSourceDataset(source);
   result.warnings.forEach((warning) => console.warn(`Warning: ${warning}`));
   if (!result.valid || !result.dataset) {
     result.errors.forEach((error) => console.error(`Error: ${error}`));
@@ -104,7 +104,7 @@ function isFileExistsError(error: unknown): boolean {
 }
 
 if (require.main === module) {
-  runAbelDemoAdaptation(process.argv.slice(2)).catch((error: unknown) => {
+  runDemoAthleteSourceAdaptation(process.argv.slice(2)).catch((error: unknown) => {
     console.error(
       error instanceof Error
         ? error.message

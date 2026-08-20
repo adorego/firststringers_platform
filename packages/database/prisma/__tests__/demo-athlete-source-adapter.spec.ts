@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { adaptAbelDemoAthleteDataset } from "../abel-demo-athlete-adapter";
+import { adaptDemoAthleteSourceDataset } from "../demo-athlete-source-adapter";
 import { validateDemoAthleteDataset } from "../demo-athlete-importer";
 
 function validSourceAthlete() {
@@ -115,14 +115,14 @@ function validSourceAthlete() {
 function sourceDataset() {
   return {
     schema_version: 1,
-    dataset: "abel-football-2026-08",
+    dataset: "football-2026-08",
     generated_at: "2026-08-19",
     athletes: [validSourceAthlete()],
   };
 }
 
-test("adapts Abel's versioned source format into the canonical demo dataset", () => {
-  const result = adaptAbelDemoAthleteDataset(sourceDataset());
+test("adapts the versioned source format into the canonical demo dataset", () => {
+  const result = adaptDemoAthleteSourceDataset(sourceDataset());
 
   assert.equal(result.valid, true, result.errors.join("\n"));
   assert.ok(result.dataset);
@@ -139,7 +139,7 @@ test("adapts Abel's versioned source format into the canonical demo dataset", ()
 });
 
 test("excludes date-of-birth and medical detail fields from canonical output", () => {
-  const result = adaptAbelDemoAthleteDataset(sourceDataset());
+  const result = adaptDemoAthleteSourceDataset(sourceDataset());
   const serialized = JSON.stringify(result.dataset);
 
   assert.equal(result.valid, true, result.errors.join("\n"));
@@ -156,11 +156,11 @@ test("excludes date-of-birth and medical detail fields from canonical output", (
   );
 });
 
-test("does not invent First Stringers product decisions missing from Abel's export", () => {
+test("does not invent First Stringers product decisions missing from the source export", () => {
   const source = sourceDataset();
   delete (source.athletes[0] as Record<string, unknown>).first_stringers;
 
-  const result = adaptAbelDemoAthleteDataset(source);
+  const result = adaptDemoAthleteSourceDataset(source);
 
   assert.equal(result.valid, false);
   assert.equal(result.dataset, undefined);
@@ -171,7 +171,7 @@ test("does not invent First Stringers product decisions missing from Abel's expo
 });
 
 test("recognizes the current legacy array and returns migration instructions", () => {
-  const result = adaptAbelDemoAthleteDataset([validSourceAthlete()]);
+  const result = adaptDemoAthleteSourceDataset([validSourceAthlete()]);
 
   assert.equal(result.valid, false);
   assert.match(result.errors.join("\n"), /legacy array/i);
@@ -183,7 +183,7 @@ test("rejects non-demo emails before producing canonical data", () => {
   const source = sourceDataset();
   source.athletes[0].identity.email = "real-athlete@example.com";
 
-  const result = adaptAbelDemoAthleteDataset(source);
+  const result = adaptDemoAthleteSourceDataset(source);
 
   assert.equal(result.valid, false);
   assert.equal(result.dataset, undefined);
@@ -194,7 +194,7 @@ test("does not interpret 'Not eligible' as NCAA eligible", () => {
   const source = sourceDataset();
   source.athletes[0].academics.ncaa_eligibility_status = "Not eligible";
 
-  const result = adaptAbelDemoAthleteDataset(source);
+  const result = adaptDemoAthleteSourceDataset(source);
 
   assert.equal(result.valid, true, result.errors.join("\n"));
   assert.equal(
@@ -207,7 +207,7 @@ test("rejects an unknown transfer status instead of silently guessing", () => {
   const source = sourceDataset();
   source.athletes[0].availability.transfer_status = "Maybe later";
 
-  const result = adaptAbelDemoAthleteDataset(source);
+  const result = adaptDemoAthleteSourceDataset(source);
 
   assert.equal(result.valid, false);
   assert.match(result.errors.join("\n"), /transfer_status/i);
@@ -217,7 +217,7 @@ test("rejects an unknown NCAA eligibility status instead of treating it as false
   const source = sourceDataset();
   source.athletes[0].academics.ncaa_eligibility_status = "Needs review";
 
-  const result = adaptAbelDemoAthleteDataset(source);
+  const result = adaptDemoAthleteSourceDataset(source);
 
   assert.equal(result.valid, false);
   assert.match(result.errors.join("\n"), /ncaa_eligibility_status/i);
@@ -228,7 +228,7 @@ test("requires explicit synthetic identifiers on every source athlete", () => {
   source.athletes[0].demo_id = "ATHLETE-001";
   source.athletes[0].demo_label = "REAL ATHLETE";
 
-  const result = adaptAbelDemoAthleteDataset(source);
+  const result = adaptDemoAthleteSourceDataset(source);
 
   assert.equal(result.valid, false);
   assert.match(result.errors.join("\n"), /demo_id/i);

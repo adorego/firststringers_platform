@@ -1,7 +1,7 @@
 import type { DemoAthleteDataset } from "./demo-athlete.types";
 import { validateDemoAthleteDataset } from "./demo-athlete-importer";
 
-export interface AbelDemoAdaptation {
+export interface DemoAthleteSourceAdaptation {
   valid: boolean;
   errors: string[];
   warnings: string[];
@@ -20,15 +20,15 @@ const REQUIRED_PRODUCT_FIELDS = [
   "scholarship_need",
 ] as const;
 
-export function adaptAbelDemoAthleteDataset(
+export function adaptDemoAthleteSourceDataset(
   input: unknown,
-): AbelDemoAdaptation {
+): DemoAthleteSourceAdaptation {
   if (Array.isArray(input)) {
     return invalid([
       "Legacy array detected. Wrap athletes in an object with schema_version, dataset, generated_at, and athletes.",
       "schema_version must be 1.",
       "generated_at must use YYYY-MM-DD format.",
-      "Each athlete must add the first_stringers block from abel_demo_athlete_source_v1.json.",
+      "Each athlete must add the first_stringers block from demo_athlete_source_v1.json.",
     ]);
   }
 
@@ -309,7 +309,7 @@ function mapSourceAthlete(value: Record<string, unknown>, dataset: string) {
       demoMetadata: {
         synthetic: true as const,
         dataset,
-        source: "Abel demo athlete source v1",
+        source: "demo-athlete-source-v1",
       },
     },
   };
@@ -488,6 +488,6 @@ function isObject(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
-function invalid(errors: string[]): AbelDemoAdaptation {
+function invalid(errors: string[]): DemoAthleteSourceAdaptation {
   return { valid: false, errors, warnings: [] };
 }

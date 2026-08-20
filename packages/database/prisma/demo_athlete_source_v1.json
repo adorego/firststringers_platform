@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "dataset": "abel-demo-batch-YYYY-MM",
+  "dataset": "demo-batch-YYYY-MM",
   "generated_at": "2026-08-19",
   "athletes": [
     {

@@ -6,7 +6,7 @@ records. It does not create `User`, `JerrySession`, recruiter, or conversation r
 opt-in `--with-users` flag is passed, which additionally creates an ATHLETE login account per record
 for demos that show the athlete-side Jerry experience.
 
-The checked-in pilot contains the three profiles supplied by Abel:
+The checked-in pilot contains three profiles:
 
 - Marcus Johnson: proven 2027 quarterback with production, leadership, and strong academics.
 - Elijah Brooks: underexposed 2028 safety/nickel prospect with verified athletic traits.
@@ -43,11 +43,11 @@ pnpm demo:athletes -- --file=/absolute/path/to/demo-athletes.json --apply --targ
 pnpm demo:athletes -- --file=/absolute/path/to/demo-athletes.json --apply --target=development --with-users
 ```
 
-## Adapting Abel's detailed dossier format
+## Adapting the detailed dossier source format
 
-Use `abel_demo_athlete_source_v1.json` as the source template when Abel generates new sport
-batches. It preserves his detailed athlete format while adding a small `first_stringers` block for
-product decisions the adapter must not guess:
+Use `demo_athlete_source_v1.json` as the source template when generating new sport batches. It
+preserves the detailed athlete format while adding a small `first_stringers` block for product
+decisions the adapter must not guess:
 
 - canonical recruiter search position;
 - scenario and advocacy score;
@@ -61,8 +61,8 @@ The source must use the versioned envelope with `schema_version`, `dataset`, `ge
 From `packages/database`:
 
 ```bash
-# Convert Abel's source file to the strict canonical import format. No database access.
-pnpm demo:athletes:adapt -- --file=/absolute/path/to/abel-source.json --out=/absolute/path/to/canonical.json
+# Convert a source file to the strict canonical import format. No database access.
+pnpm demo:athletes:adapt -- --file=/absolute/path/to/source.json --out=/absolute/path/to/canonical.json
 
 # Validate the resulting canonical file. Still no database access.
 pnpm demo:athletes -- --file=/absolute/path/to/canonical.json
@@ -87,7 +87,7 @@ before running it. The importer does not require a Prisma migration.
 
 ## Generation workflow for 100–150 athletes
 
-1. Treat `abel_demo_athlete_source_v1.json` as the generation template.
+1. Treat `demo_athlete_source_v1.json` as the generation template.
 2. Agree on a coverage matrix before generating records.
 3. Generate batches of 20–25 athletes rather than one large response.
 4. Save each response as JSON without Markdown fences.
@@ -113,13 +113,13 @@ supports a realistic recruiter demo or tests a meaningful Billy decision.
 
 ## Prompt for ChatGPT or Claude
 
-Use this prompt together with `abel_demo_athlete_source_v1.json` as an attached example:
+Use this prompt together with `demo_athlete_source_v1.json` as an attached example:
 
 ```text
 You are creating fictional athlete records exclusively for First Stringers product demos.
 
 Return valid JSON only. Do not use Markdown fences, comments, trailing commas, or prose outside the
-JSON. Follow exactly the schema and nesting in the attached abel_demo_athlete_source_v1.json. Set
+JSON. Follow exactly the schema and nesting in the attached demo_athlete_source_v1.json. Set
 schema_version to 1 and use the provided dataset identifier in the source envelope.
 
 Safety requirements:
