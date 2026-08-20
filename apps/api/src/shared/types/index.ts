@@ -121,6 +121,15 @@ export interface DossierData {
     growthAreas?: string[];
     selfRepresentation?: string;
   };
+  // Root-level recruiting fields
+  fitTags?: string[];
+  trajectory?: string;
+  recruiterPitch?: string;
+  demoMetadata?: {
+    synthetic?: boolean;
+    dataset?: string;
+    source?: string;
+  };
 }
 
 export interface MessageJob {
