@@ -28,6 +28,7 @@ export function parseDemoImportArgs(args: string[]): CliOptions {
   };
 
   for (const argument of args) {
+    if (argument === "--") continue;
     if (argument === "--apply") {
       options.apply = true;
       continue;
@@ -104,10 +105,7 @@ export async function runDemoAthleteImport(args: string[]): Promise<void> {
   }
 
   const userPasswordHash = options.withUsers
-    ? await bcrypt.hash(
-        process.env.DEMO_ATHLETE_PASSWORD ?? "athlete123",
-        12,
-      )
+    ? await bcrypt.hash(process.env.DEMO_ATHLETE_PASSWORD ?? "athlete123", 12)
     : undefined;
 
   const prisma = new PrismaClient();
@@ -115,7 +113,11 @@ export async function runDemoAthleteImport(args: string[]): Promise<void> {
     const result = await importDemoAthletes(
       prisma as unknown as DemoImportClient,
       dataset,
-      { target: options.target!, withUsers: options.withUsers, userPasswordHash },
+      {
+        target: options.target!,
+        withUsers: options.withUsers,
+        userPasswordHash,
+      },
     );
     console.log(
       `\nIMPORT COMPLETE: ${result.created} created, ${result.updated} updated, ${result.users} users, ${result.total} total.`,

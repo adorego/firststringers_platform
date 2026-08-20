@@ -28,6 +28,7 @@ export function adaptAbelDemoAthleteDataset(
       "Legacy array detected. Wrap athletes in an object with schema_version, dataset, generated_at, and athletes.",
       "schema_version must be 1.",
       "generated_at must use YYYY-MM-DD format.",
+      "Each athlete must add the first_stringers block from abel_demo_athlete_source_v1.json.",
     ]);
   }
 
@@ -161,6 +162,13 @@ function validateSourceAthlete(
   if (typeof product.scholarship_need !== "boolean") {
     errors.push(`${path}.first_stringers.scholarship_need must be a boolean.`);
   }
+
+  const availability = object(value.availability);
+  if (!isKnownTransferStatus(availability.transfer_status)) {
+    errors.push(
+      `${path}.availability.transfer_status must explicitly indicate transferring, transfer portal, or not transferring.`,
+    );
+  }
 }
 
 function mapSourceAthlete(value: Record<string, unknown>, dataset: string) {
@@ -240,8 +248,8 @@ function mapSourceAthlete(value: Record<string, unknown>, dataset: string) {
           academics.sat_score ?? academics.act_score,
         ),
         intendedMajor: text(academics.intended_college_major),
-        ncaaEligibility: /on track|eligible/i.test(
-          text(academics.ncaa_eligibility_status),
+        ncaaEligibility: parseNcaaEligibility(
+          academics.ncaa_eligibility_status,
         ),
         academicInterests: stringArray(academics.academic_interests),
       },
@@ -349,6 +357,26 @@ function parseTransferStatus(value: unknown): boolean {
   return (
     normalized.includes("transfer portal") || normalized === "transferring"
   );
+}
+
+function isKnownTransferStatus(value: unknown): boolean {
+  const normalized = text(value).toLowerCase();
+  return (
+    normalized.includes("not transfer") ||
+    normalized.includes("transfer portal") ||
+    normalized === "transferring"
+  );
+}
+
+function parseNcaaEligibility(value: unknown): boolean {
+  const normalized = text(value).toLowerCase();
+  if (
+    normalized.includes("not eligible") ||
+    normalized.includes("ineligible")
+  ) {
+    return false;
+  }
+  return normalized.includes("on track") || normalized.includes("eligible");
 }
 
 function score(value: unknown): string | undefined {

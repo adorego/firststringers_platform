@@ -189,3 +189,26 @@ test("rejects non-demo emails before producing canonical data", () => {
   assert.equal(result.dataset, undefined);
   assert.match(result.errors.join("\n"), /demo\.firststringers\.test/i);
 });
+
+test("does not interpret 'Not eligible' as NCAA eligible", () => {
+  const source = sourceDataset();
+  source.athletes[0].academics.ncaa_eligibility_status = "Not eligible";
+
+  const result = adaptAbelDemoAthleteDataset(source);
+
+  assert.equal(result.valid, true, result.errors.join("\n"));
+  assert.equal(
+    result.dataset?.athletes[0].dossier.academic.ncaaEligibility,
+    false,
+  );
+});
+
+test("rejects an unknown transfer status instead of silently guessing", () => {
+  const source = sourceDataset();
+  source.athletes[0].availability.transfer_status = "Maybe later";
+
+  const result = adaptAbelDemoAthleteDataset(source);
+
+  assert.equal(result.valid, false);
+  assert.match(result.errors.join("\n"), /transfer_status/i);
+});

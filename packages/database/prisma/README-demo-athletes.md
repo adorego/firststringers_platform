@@ -43,6 +43,39 @@ pnpm demo:athletes -- --file=/absolute/path/to/demo-athletes.json --apply --targ
 pnpm demo:athletes -- --file=/absolute/path/to/demo-athletes.json --apply --target=development --with-users
 ```
 
+## Adapting Abel's detailed dossier format
+
+Use `abel_demo_athlete_source_v1.json` as the source template when Abel generates new sport
+batches. It preserves his detailed athlete format while adding a small `first_stringers` block for
+product decisions the adapter must not guess:
+
+- canonical recruiter search position;
+- scenario and advocacy score;
+- trajectory and fit tags;
+- athlete archetype and self-representation;
+- non-negotiables and scholarship need.
+
+The source must use the versioned envelope with `schema_version`, `dataset`, `generated_at`, and
+`athletes`. A legacy top-level array is rejected with migration instructions.
+
+From `packages/database`:
+
+```bash
+# Convert Abel's source file to the strict canonical import format. No database access.
+pnpm demo:athletes:adapt -- --file=/absolute/path/to/abel-source.json --out=/absolute/path/to/canonical.json
+
+# Validate the resulting canonical file. Still no database access.
+pnpm demo:athletes -- --file=/absolute/path/to/canonical.json
+```
+
+The adapter refuses to replace an existing output file unless `--force` is explicit. It maps only
+allowlisted fields and validates the result with the canonical importer. Date of birth, age, injury
+history, surgery history, medical availability, and other health details are never copied into the
+canonical Dossier; the command reports their field paths as excluded without logging their values.
+
+Do not ask the model to produce those sensitive fields. The adapter recognizes them only so that
+older samples can be reviewed and safely excluded. This workflow requires no Prisma migration.
+
 `--with-users` upserts a `User` per athlete (role `ATHLETE`, email verified, linked by `athleteId`).
 The shared demo password comes from the `DEMO_ATHLETE_PASSWORD` environment variable and defaults to
 `athlete123`. The password is bcrypt-hashed before it reaches the importer; re-running does not
@@ -54,15 +87,16 @@ before running it. The importer does not require a Prisma migration.
 
 ## Generation workflow for 100–150 athletes
 
-1. Treat `demo_athletes_seed.json` as the canonical JSON example.
+1. Treat `abel_demo_athlete_source_v1.json` as the generation template.
 2. Agree on a coverage matrix before generating records.
 3. Generate batches of 20–25 athletes rather than one large response.
 4. Save each response as JSON without Markdown fences.
-5. Run the importer in dry-run mode.
-6. Review names, schools, narratives, statistics, and scenario distribution with a product owner.
-7. Merge approved batches into the canonical dataset and run dry-run again.
-8. Import the three-athlete pilot into development first and smoke-test Billy and Dossier rendering.
-9. Import the larger dataset only after the pilot is accepted.
+5. Run `demo:athletes:adapt` to produce the canonical file.
+6. Run the canonical importer in dry-run mode.
+7. Review names, schools, narratives, statistics, and scenario distribution with a product owner.
+8. Merge approved batches into the canonical dataset and run dry-run again.
+9. Import the three-athlete pilot into development first and smoke-test Billy and Dossier rendering.
+10. Import the larger dataset only after the pilot is accepted.
 
 Suggested dimensions to distribute deliberately:
 
@@ -79,20 +113,20 @@ supports a realistic recruiter demo or tests a meaningful Billy decision.
 
 ## Prompt for ChatGPT or Claude
 
-Use this prompt together with `demo_athletes_seed.json` as an attached example:
+Use this prompt together with `abel_demo_athlete_source_v1.json` as an attached example:
 
 ```text
 You are creating fictional athlete records exclusively for First Stringers product demos.
 
 Return valid JSON only. Do not use Markdown fences, comments, trailing commas, or prose outside the
-JSON. Follow exactly the schema and nesting in the attached demo_athletes_seed.json. Set
-schemaVersion to 1 and use the provided dataset identifier consistently in every demoMetadata
-object.
+JSON. Follow exactly the schema and nesting in the attached abel_demo_athlete_source_v1.json. Set
+schema_version to 1 and use the provided dataset identifier in the source envelope.
 
 Safety requirements:
 - Every person, school, coach, achievement, statistic, and narrative must be fictional.
 - Do not copy or closely imitate a real athlete.
 - Do not include birth dates, phone numbers, street addresses, parent details, or private data.
+- Do not include injury, surgery, medical, or health details.
 - Athlete emails must be deterministic, unique, lowercase, and end in
   @demo.firststringers.test.
 - Media URLs must use https://example.com/ with fictional slugs.
@@ -101,6 +135,7 @@ Safety requirements:
 
 Quality requirements:
 - Complete every field that exists in each reference Dossier section.
+- Complete every field in first_stringers explicitly; never infer or omit product decisions.
 - Keep top-level sport and position in the canonical search format requested in the coverage matrix.
 - Keep facts internally consistent across identity, stats, narrative, recruiterPitch, fitTags, and
   recruiting direction.
