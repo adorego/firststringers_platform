@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "dataset": "abel-pilot-2026-08",
+  "dataset": "fs-pilot-2026-08",
   "generatedAt": "2026-08-04",
   "athletes": [
     {
@@ -134,7 +134,7 @@
         "recruiterPitch": "A verified 2027 Florida quarterback with 3,284 passing yards, a 68.1% completion rate, a 3.82 GPA, and proven varsity leadership. Marcus offers a strong combination of production, preparation, academics, and fit for a multiple or pro-style offense.",
         "demoMetadata": {
           "synthetic": true,
-          "dataset": "abel-pilot-2026-08",
+          "dataset": "fs-pilot-2026-08",
           "source": "First Stringers Demo Athlete Dossiers"
         }
       }
@@ -272,7 +272,7 @@
         "recruiterPitch": "A 2028 Alabama safety and nickel prospect with verified 4.49 speed, 96 tackles, six interceptions, a 3.45 GPA, and leadership experience. Elijah is a credible discovery candidate whose exposure trails his verified traits and production.",
         "demoMetadata": {
           "synthetic": true,
-          "dataset": "abel-pilot-2026-08",
+          "dataset": "fs-pilot-2026-08",
           "source": "First Stringers Demo Athlete Dossiers"
         }
       }
@@ -411,7 +411,7 @@
         "recruiterPitch": "A 2029 Texas offensive lineman with verified 6-foot-6 length, a 4.02 GPA, strong pass-protection foundations, and clear long-term upside. Caleb is an excellent fit for a high-academic program that can invest in physical and technical development.",
         "demoMetadata": {
           "synthetic": true,
-          "dataset": "abel-pilot-2026-08",
+          "dataset": "fs-pilot-2026-08",
           "source": "First Stringers Demo Athlete Dossiers"
         }
       }
