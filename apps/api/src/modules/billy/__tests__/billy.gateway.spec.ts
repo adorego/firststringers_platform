@@ -46,7 +46,7 @@ function makeClient(overrides: {
     emit(event: string, payload: unknown) {
       emitted.push([event, payload]);
     },
-    disconnect() {
+    disconnect(this: { disconnected: boolean }) {
       this.disconnected = true;
     },
     join: jest.fn(),
@@ -114,7 +114,10 @@ describe('BillyGateway — connection auth', () => {
 
   it('rejects a valid token that does not belong to a recruiter', async () => {
     mockJwt.verify.mockReturnValue({ sub: 'user-1', athleteId: 'ath-1' });
-    const client = makeClient({ token: 'athlete-token', conversationId: 'conv-1' });
+    const client = makeClient({
+      token: 'athlete-token',
+      conversationId: 'conv-1',
+    });
 
     await gateway.handleConnection(client);
 
@@ -124,7 +127,7 @@ describe('BillyGateway — connection auth', () => {
     );
   });
 
-  it("rejects a conversation that belongs to another recruiter", async () => {
+  it('rejects a conversation that belongs to another recruiter', async () => {
     mockJwt.verify.mockReturnValue({ sub: 'user-1', recruiterId: 'rec-1' });
     mockConversations.findById.mockResolvedValue({
       id: 'conv-1',

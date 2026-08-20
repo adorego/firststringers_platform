@@ -140,12 +140,14 @@ export const api = {
     return data;
   },
 
-  // Short mini-form onboarding (organization, role, region, optional notes) —
-  // replaces the old chat-driven onboarding intro.
+  // Short mini-form onboarding (sport, organization, role, region, evaluation
+  // priority, optional notes) — replaces the old chat-driven onboarding intro.
   async submitOnboarding(answers: {
+    sport: string;
     organizationType: string;
     recruiterRole: string;
     location: string;
+    evaluationPriority: string;
     programNotes?: string;
   }): Promise<{ ok: true }> {
     const { data } = await http.post<{ ok: true }>("/recruiter/onboarding/complete", answers);

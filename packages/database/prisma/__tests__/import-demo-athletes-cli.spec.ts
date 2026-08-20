@@ -20,6 +20,12 @@ test("accepts the opt-in --with-users flag", () => {
   assert.equal(options.apply, false);
 });
 
+test("accepts pnpm's standalone argument separator", () => {
+  const options = parseDemoImportArgs(["--", "--file=demo.json"]);
+
+  assert.match(options.file, /demo\.json$/);
+});
+
 test("requires an explicit safe target before applying", () => {
   assert.throws(() => parseDemoImportArgs(["--apply"]), /requires --target/i);
   assert.throws(

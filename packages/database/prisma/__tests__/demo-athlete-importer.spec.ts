@@ -84,7 +84,7 @@ function validAthlete(overrides: Record<string, unknown> = {}) {
       recruiterPitch: "A verified, academically qualified prospect.",
       demoMetadata: {
         synthetic: true,
-        dataset: "abel-pilot-2026-08",
+        dataset: "fs-pilot-2026-08",
       },
     },
     ...overrides,
@@ -94,7 +94,7 @@ function validAthlete(overrides: Record<string, unknown> = {}) {
 function dataset(athletes = [validAthlete()]): DemoAthleteDataset {
   return {
     schemaVersion: 1,
-    dataset: "abel-pilot-2026-08",
+    dataset: "fs-pilot-2026-08",
     generatedAt: "2026-08-04",
     athletes: athletes as DemoAthleteDataset["athletes"],
   };
@@ -108,7 +108,7 @@ test("accepts a complete synthetic athlete and computes product completeness", (
   assert.equal(result.athletes[0].completeness, 1);
 });
 
-test("validates Abel pilot athletes with distinct recruiter scenarios", () => {
+test("validates pilot athletes with distinct recruiter scenarios", () => {
   const result = validateDemoAthleteDataset(pilotDataset);
 
   assert.equal(result.valid, true, result.errors.join("\n"));
@@ -267,7 +267,7 @@ test("is idempotent and reports an existing synthetic athlete as updated", async
           data: {
             demoMetadata: {
               synthetic: true,
-              dataset: "abel-pilot-2026-08",
+              dataset: "fs-pilot-2026-08",
             },
           },
         },

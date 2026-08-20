@@ -96,4 +96,37 @@ describe('dossier normalizer', () => {
     expect(normalized.performance?.physicalProfile?.height).toBe("6'2");
     expect(normalized.performance?.stats).toEqual({ completionRate: 64 });
   });
+
+  it('preserves the root-level recruiting fields that live outside the six sections', () => {
+    const normalized = normalizeDossierData({
+      identity: { sport: 'football' },
+      fitTags: ['pro-style', 'high-academic'],
+      trajectory: 'IMPROVING',
+      recruiterPitch: 'Three-year starter with elite film study habits.',
+      demoMetadata: { synthetic: true, dataset: 'fs-pilot-2026-08' },
+    });
+
+    expect(normalized.fitTags).toEqual(['pro-style', 'high-academic']);
+    expect(normalized.trajectory).toBe('IMPROVING');
+    expect(normalized.recruiterPitch).toBe(
+      'Three-year starter with elite film study habits.',
+    );
+    expect(normalized.demoMetadata).toEqual({
+      synthetic: true,
+      dataset: 'fs-pilot-2026-08',
+    });
+  });
+
+  it('omits the root-level recruiting fields when they are absent or empty', () => {
+    const normalized = normalizeDossierData({
+      identity: { sport: 'football' },
+      fitTags: [],
+      trajectory: '',
+    });
+
+    expect(normalized.fitTags).toBeUndefined();
+    expect(normalized.trajectory).toBeUndefined();
+    expect(normalized.recruiterPitch).toBeUndefined();
+    expect(normalized.demoMetadata).toBeUndefined();
+  });
 });

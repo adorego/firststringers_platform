@@ -136,7 +136,8 @@ export class SessionService {
       if (time > lastStoredTime) return true;
       if (time < lastStoredTime) return false;
       return !storedTail.some(
-        (tail) => tail.role === message.role && tail.content === message.content,
+        (tail) =>
+          tail.role === message.role && tail.content === message.content,
       );
     });
 

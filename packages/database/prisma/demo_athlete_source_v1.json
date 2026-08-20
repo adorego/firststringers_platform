@@ -1,0 +1,116 @@
+{
+  "schema_version": 1,
+  "dataset": "demo-batch-YYYY-MM",
+  "generated_at": "2026-08-19",
+  "athletes": [
+    {
+      "demo_id": "FS-DEMO-SPORT-001",
+      "demo_label": "DEMO ATHLETE — FICTIONAL PROFILE",
+      "identity": {
+        "full_name": "Jordan Taylor Demo",
+        "preferred_name": "Jordan",
+        "sport": "Football",
+        "primary_position": "Quarterback",
+        "secondary_position": null,
+        "position_abbreviation": "QB",
+        "graduation_class": 2027,
+        "dominant_hand": "Right",
+        "nationality": "United States",
+        "email": "jordan.demo@demo.firststringers.test"
+      },
+      "school_and_location": {
+        "city": "Demo City",
+        "state": "Florida",
+        "country": "United States",
+        "high_school": "Demo High School",
+        "school_classification": "Demo Class 5A",
+        "current_team_level": "Varsity",
+        "head_coach": "Alex Demo",
+        "position_coach_or_coordinator": "Morgan Demo"
+      },
+      "physical_profile": {
+        "height": "6'2\"",
+        "weight_lbs": 195
+      },
+      "athletic_measurements": {
+        "forty_yard_dash_seconds": 4.72,
+        "vertical_jump_inches": 33
+      },
+      "statistics": {
+        "games_played": 12,
+        "games_started": 12,
+        "passing_yards": 2800,
+        "passing_touchdowns": 28,
+        "career_statistics": {
+          "career_passing_yards": 5100,
+          "career_passing_touchdowns": 49
+        }
+      },
+      "sports_profile": {
+        "primary_strengths": [
+          "Leadership",
+          "Decision-making",
+          "Pocket awareness"
+        ],
+        "areas_for_growth": ["Deep-ball consistency", "Lower-body mechanics"]
+      },
+      "academics": {
+        "cumulative_gpa": 3.7,
+        "sat_score": 1210,
+        "intended_college_major": "Business Administration",
+        "ncaa_eligibility_status": "On track",
+        "academic_interests": ["Leadership", "Entrepreneurship"]
+      },
+      "recruiting_goals": {
+        "target_college_level": "NCAA Division I",
+        "geographic_preference": "Southeast United States",
+        "open_to_national_opportunities": true
+      },
+      "objectives": {
+        "short_term": ["Lead the team through a successful senior season"],
+        "long_term": ["Graduate and become a college starter"]
+      },
+      "character": {
+        "leadership": 9,
+        "coachability": 10,
+        "response_to_adversity": "Strong",
+        "observations": "Prepared, accountable, and receptive to coaching."
+      },
+      "availability": {
+        "cleared_for_participation": true,
+        "transfer_status": "Not transferring"
+      },
+      "multimedia": {
+        "primary_highlight_film": "https://example.com/jordan-demo-highlights",
+        "full_game_film_1": "https://example.com/jordan-demo-game-1",
+        "training_film": "https://example.com/jordan-demo-training",
+        "hudl_profile": "https://example.com/jordan-demo-hudl"
+      },
+      "verification": {
+        "identity": "Verified",
+        "school_enrollment": "Verified",
+        "graduation_class": "Verified",
+        "athletic_measurements": "Verified",
+        "statistics": "Verified by fictional coaching staff",
+        "gpa": "Verified",
+        "film": "Verified",
+        "overall_verification_level": "High"
+      },
+      "recruiting_activity": {
+        "decision_timeline": "After senior season"
+      },
+      "representation_summary": "Jordan Demo is a fictional, productive, academically qualified quarterback with strong leadership and verified varsity experience.",
+      "first_stringers": {
+        "search_position": "QB",
+        "scenario": "proven-prospect",
+        "advocacy_score": 0.92,
+        "trajectory": "IMPROVING",
+        "fit_tags": ["verified-production", "strong-academics"],
+        "archetype": "Prepared field general",
+        "self_representation": "A prepared teammate who leads by example and responds to coaching.",
+        "non_negotiables": ["Strong academic fit"],
+        "scholarship_need": true
+      }
+    }
+  ]
+}
