@@ -92,6 +92,10 @@ export function normalizeDossierData(input: unknown): DossierData {
       socialMedia: compactObject(socialMedia),
     }),
     character: compactObject(character),
+    fitTags: stringArray(source.fitTags),
+    trajectory: stringValue(source.trajectory),
+    recruiterPitch: stringValue(source.recruiterPitch),
+    demoMetadata: compactObject(asRecord(source.demoMetadata)),
   });
 }
 
@@ -138,6 +142,10 @@ function compactDossier(sections: {
   availability?: PlainObject;
   media?: PlainObject;
   character?: PlainObject;
+  fitTags?: string[];
+  trajectory?: string;
+  recruiterPitch?: string;
+  demoMetadata?: PlainObject;
 }): DossierData {
   return Object.fromEntries(
     Object.entries(sections).filter(([, value]) => hasValue(value)),

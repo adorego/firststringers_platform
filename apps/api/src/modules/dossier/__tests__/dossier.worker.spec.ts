@@ -6,9 +6,7 @@ import { LLMService } from '../../../shared/llm/llm.service';
 import { calculateDossierCompleteness } from '../dossier-normalizer';
 
 jest.mock('../dossier-normalizer', () => ({
-  normalizeDossierData: jest.fn(
-    (data: unknown) => (data as Record<string, unknown>) ?? {},
-  ),
+  ...jest.requireActual<Record<string, unknown>>('../dossier-normalizer'),
   calculateDossierCompleteness: jest.fn(() => 0.5),
 }));
 
@@ -113,6 +111,35 @@ describe('DossierWorker — event emissions', () => {
 
     expect(eventsNamed('dossier.pitch_refresh')).toHaveLength(1);
     expect(eventsNamed('dossier.updated')).toHaveLength(1);
+  });
+
+  it('keeps the stored recruiting fields that Jerry never sends', async () => {
+    mockPrisma.dossier.findUnique.mockResolvedValue({
+      athleteId: 'ath-1',
+      data: {
+        identity: { sport: 'football', position: 'QB' },
+        fitTags: ['pro-style', 'high-academic'],
+        trajectory: 'IMPROVING',
+        recruiterPitch: 'Three-year starter with elite film study habits.',
+        demoMetadata: { synthetic: true, dataset: 'fs-pilot-2026-08' },
+      },
+    });
+
+    await worker.handleDossierUpdate({
+      athleteId: 'ath-1',
+      newData: { academic: { gpa: 3.8 } },
+    });
+
+    const [upsertArgs] = mockPrisma.dossier.upsert.mock.calls[0] as [
+      { update: { data: Record<string, unknown> } },
+    ];
+    expect(upsertArgs.update.data).toMatchObject({
+      fitTags: ['pro-style', 'high-academic'],
+      trajectory: 'IMPROVING',
+      recruiterPitch: 'Three-year starter with elite film study habits.',
+      demoMetadata: { synthetic: true, dataset: 'fs-pilot-2026-08' },
+      academic: { gpa: 3.8 },
+    });
   });
 
   it('swallows dossier persistence failures without throwing (fire-and-forget listener)', async () => {
