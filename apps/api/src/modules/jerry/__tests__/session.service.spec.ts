@@ -439,10 +439,8 @@ describe('SessionService', () => {
 
       await service.persistSessionToDb(athleteId);
 
-      const upsertArgs = mockPrismaService.jerrySession.upsert.mock
-        .calls[0][0] as {
-        update: { messages: JerryMessage[] };
-      };
+      const [upsertArgs] = mockPrismaService.jerrySession.upsert.mock
+        .calls[0] as [{ update: { messages: JerryMessage[] } }];
       const persisted = upsertArgs.update.messages;
 
       // Old history preserved, shared message not duplicated, new one appended
