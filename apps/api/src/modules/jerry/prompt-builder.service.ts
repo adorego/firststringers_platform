@@ -150,14 +150,42 @@ ${lines.map((l) => `      ${l}`).join('\n')}
     if (!requiredQuestion) return response;
 
     const trimmed = response.trim();
-    if (trimmed.toLowerCase().endsWith(requiredQuestion.toLowerCase())) {
+    if (this.alreadyAsks(trimmed, requiredQuestion)) {
       return trimmed;
     }
 
     const withoutHandoff = this.removeGenericHandoff(trimmed);
-    return withoutHandoff
-      ? `${withoutHandoff} ${requiredQuestion}`
+    const withoutQuestions = this.removeTrailingQuestions(withoutHandoff);
+    return withoutQuestions
+      ? `${withoutQuestions} ${requiredQuestion}`
       : requiredQuestion;
+  }
+
+  private alreadyAsks(response: string, question: string): boolean {
+    const normalize = (value: string) =>
+      value
+        .toLowerCase()
+        .replace(/[‐-―]/g, '-')
+        .replace(/[^a-z0-9?]+/g, ' ')
+        .trim();
+
+    return normalize(response).endsWith(normalize(question));
+  }
+
+  private removeTrailingQuestions(response: string): string {
+    let result = response.trim();
+
+    while (result.endsWith('?')) {
+      const boundary = Math.max(
+        result.lastIndexOf('. ', result.length - 2),
+        result.lastIndexOf('? ', result.length - 2),
+        result.lastIndexOf('! ', result.length - 2),
+      );
+      if (boundary === -1) return '';
+      result = result.slice(0, boundary + 1).trim();
+    }
+
+    return result;
   }
 
   private removeGenericHandoff(response: string): string {

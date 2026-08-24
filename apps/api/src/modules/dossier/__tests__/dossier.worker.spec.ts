@@ -4,6 +4,7 @@ import { DossierWorker } from '../dossier.worker';
 import { PrismaService } from '../../../shared/prisma/prisma.service';
 import { LLMService } from '../../../shared/llm/llm.service';
 import { calculateDossierCompleteness } from '../dossier-normalizer';
+import type { DossierData } from '../../../shared/types';
 
 jest.mock('../dossier-normalizer', () => ({
   ...jest.requireActual<Record<string, unknown>>('../dossier-normalizer'),
@@ -139,6 +140,55 @@ describe('DossierWorker — event emissions', () => {
       recruiterPitch: 'Three-year starter with elite film study habits.',
       demoMetadata: { synthetic: true, dataset: 'fs-pilot-2026-08' },
       academic: { gpa: 3.8 },
+    });
+  });
+
+  it('keeps height and weight when a later turn only adds the dominant side', async () => {
+    mockPrisma.dossier.findUnique.mockResolvedValue({
+      athleteId: 'ath-1',
+      data: {
+        performance: {
+          leagueLevel: 'Varsity',
+          physicalProfile: { height: "6'2", weight: '185 lbs' },
+        },
+      },
+    });
+
+    await worker.handleDossierUpdate({
+      athleteId: 'ath-1',
+      newData: {
+        performance: { physicalProfile: { dominantSide: 'right' } },
+      },
+    });
+
+    const [upsertArgs] = mockPrisma.dossier.upsert.mock.calls[0] as [
+      { update: { data: DossierData } },
+    ];
+    expect(upsertArgs.update.data.performance?.physicalProfile).toEqual({
+      height: "6'2",
+      weight: '185 lbs',
+      dominantSide: 'right',
+    });
+    expect(upsertArgs.update.data.performance?.leagueLevel).toBe('Varsity');
+  });
+
+  it('merges new stats into the stored ones instead of replacing them', async () => {
+    mockPrisma.dossier.findUnique.mockResolvedValue({
+      athleteId: 'ath-1',
+      data: { performance: { stats: { passingYards: 3240 } } },
+    });
+
+    await worker.handleDossierUpdate({
+      athleteId: 'ath-1',
+      newData: { performance: { stats: { touchdowns: 28 } } },
+    });
+
+    const [upsertArgs] = mockPrisma.dossier.upsert.mock.calls[0] as [
+      { update: { data: DossierData } },
+    ];
+    expect(upsertArgs.update.data.performance?.stats).toEqual({
+      passingYards: 3240,
+      touchdowns: 28,
     });
   });
 

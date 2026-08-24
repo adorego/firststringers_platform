@@ -214,6 +214,36 @@ describe('PromptBuilderService', () => {
         response,
       );
     });
+
+    it('does not duplicate the question when the model only changed the punctuation', () => {
+      const strategy: ConversationStrategy = {
+        type: 'confirm_and_probe',
+        targetField: 'goals',
+      };
+      const response =
+        "Thanks for sharing that. Now, let's focus on your goals. What's the main opportunity you're working toward right now? Scholarships, roster spots, exposure, development, professional pathways, international competition—or something else?";
+
+      const result = service.enforceConversationLeadership(response, strategy);
+
+      expect(result).toBe(response);
+      expect(result.match(/main opportunity/g)).toHaveLength(1);
+    });
+
+    it('never ends with two questions when the model asked a different one', () => {
+      const strategy: ConversationStrategy = {
+        type: 'confirm_and_probe',
+        targetField: 'dominant side',
+      };
+
+      const result = service.enforceConversationLeadership(
+        'Securing a scholarship is a smart focus. To understand your goals better, can you tell me about your biggest current priority or objective in training or competition?',
+        strategy,
+      );
+
+      expect(result).not.toContain('biggest current priority');
+      expect(result.match(/\?/g)).toHaveLength(1);
+      expect(result.endsWith("What's your dominant hand or foot?")).toBe(true);
+    });
   });
 
   describe('strategy: clarify', () => {

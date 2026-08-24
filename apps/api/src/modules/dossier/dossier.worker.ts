@@ -128,25 +128,32 @@ and development potential. Maximum 3 paragraphs in English.`,
     target: Partial<DossierData>,
     source: Partial<DossierData>,
   ): DossierData {
+    return this.mergeObjects(
+      target as Record<string, unknown>,
+      source as Record<string, unknown>,
+    ) as DossierData;
+  }
+
+  private mergeObjects(
+    target: Record<string, unknown>,
+    source: Record<string, unknown>,
+  ): Record<string, unknown> {
     const result: Record<string, unknown> = { ...target };
 
-    for (const key of Object.keys(source) as (keyof DossierData)[]) {
-      const sourceVal = source[key];
-      const targetVal = target[key];
+    for (const [key, sourceVal] of Object.entries(source)) {
+      const targetVal = result[key];
 
-      if (
-        sourceVal &&
-        typeof sourceVal === 'object' &&
-        !Array.isArray(sourceVal) &&
-        targetVal &&
-        typeof targetVal === 'object'
-      ) {
-        result[key] = { ...targetVal, ...sourceVal };
+      if (isPlainObject(sourceVal) && isPlainObject(targetVal)) {
+        result[key] = this.mergeObjects(targetVal, sourceVal);
       } else if (sourceVal !== undefined && sourceVal !== null) {
         result[key] = sourceVal;
       }
     }
 
-    return result as DossierData;
+    return result;
   }
+}
+
+function isPlainObject(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
