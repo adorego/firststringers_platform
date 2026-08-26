@@ -155,7 +155,7 @@ ${lines.map((l) => `      ${l}`).join('\n')}
     }
 
     const withoutHandoff = this.removeGenericHandoff(trimmed);
-    const withoutQuestions = this.removeTrailingQuestions(withoutHandoff);
+    const withoutQuestions = this.removeModelQuestions(withoutHandoff);
     return withoutQuestions
       ? `${withoutQuestions} ${requiredQuestion}`
       : requiredQuestion;
@@ -172,20 +172,12 @@ ${lines.map((l) => `      ${l}`).join('\n')}
     return normalize(response).endsWith(normalize(question));
   }
 
-  private removeTrailingQuestions(response: string): string {
-    let result = response.trim();
-
-    while (result.endsWith('?')) {
-      const boundary = Math.max(
-        result.lastIndexOf('. ', result.length - 2),
-        result.lastIndexOf('? ', result.length - 2),
-        result.lastIndexOf('! ', result.length - 2),
-      );
-      if (boundary === -1) return '';
-      result = result.slice(0, boundary + 1).trim();
-    }
-
-    return result;
+  private removeModelQuestions(response: string): string {
+    return response
+      .split(/(?<=[.!?])\s+/)
+      .filter((sentence) => !sentence.trim().endsWith('?'))
+      .join(' ')
+      .trim();
   }
 
   private removeGenericHandoff(response: string): string {

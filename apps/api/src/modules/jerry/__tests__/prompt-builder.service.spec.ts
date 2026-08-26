@@ -244,6 +244,24 @@ describe('PromptBuilderService', () => {
       expect(result.match(/\?/g)).toHaveLength(1);
       expect(result.endsWith("What's your dominant hand or foot?")).toBe(true);
     });
+
+    it('drops a model question buried mid-response, not just a trailing one', () => {
+      const strategy: ConversationStrategy = {
+        type: 'confirm_and_probe',
+        targetField: 'goals',
+      };
+
+      const result = service.enforceConversationLeadership(
+        "Thanks for clarifying that you're right-handed. Knowing these details helps us structure opportunities around your strengths. Now, building on your priority to secure scholarships, what area of your performance are you most focused on improving right now? This insight can guide me in identifying the best fit for your development journey.",
+        strategy,
+      );
+
+      expect(result).not.toContain('what area of your performance');
+      expect(result).toContain(
+        "Thanks for clarifying that you're right-handed.",
+      );
+      expect(result.endsWith('or something else?')).toBe(true);
+    });
   });
 
   describe('strategy: clarify', () => {
