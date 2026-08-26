@@ -308,8 +308,19 @@ test("does not allow the importer to target production", async () => {
     importDemoAthletes(fakePrisma([], new Map()), dataset(), {
       target: "production" as "development",
     }),
-    /local or development/i,
+    /local, development or staging/i,
   );
+});
+
+test("imports into staging, the Railway environment the team actually uses", async () => {
+  const result = await importDemoAthletes(
+    fakePrisma([], new Map()),
+    dataset(),
+    { target: "staging" },
+  );
+
+  assert.equal(result.created, 1);
+  assert.equal(result.total, 1);
 });
 
 function fakePrisma(

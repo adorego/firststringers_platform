@@ -199,9 +199,9 @@ export async function importDemoAthletes(
     userPasswordHash?: string;
   },
 ): Promise<DemoImportResult> {
-  if (!["local", "development"].includes(options.target)) {
+  if (!["local", "development", "staging"].includes(options.target)) {
     throw new Error(
-      "Demo athlete imports may target only local or development.",
+      "Demo athlete imports may target only local, development or staging.",
     );
   }
 

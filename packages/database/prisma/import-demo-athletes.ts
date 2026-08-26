@@ -45,8 +45,10 @@ export function parseDemoImportArgs(args: string[]): CliOptions {
     }
     if (argument.startsWith("--target=")) {
       const target = argument.slice("--target=".length);
-      if (target !== "local" && target !== "development") {
-        throw new Error("--target must be local or development.");
+      if (
+        target !== "local" && target !== "development" && target !== "staging"
+      ) {
+        throw new Error("--target must be local, development or staging.");
       }
       options.target = target;
       continue;
@@ -55,7 +57,9 @@ export function parseDemoImportArgs(args: string[]): CliOptions {
   }
 
   if (options.apply && !options.target) {
-    throw new Error("--apply requires --target=local or --target=development.");
+    throw new Error(
+      "--apply requires --target=local, --target=development or --target=staging.",
+    );
   }
 
   return options;
@@ -99,7 +103,7 @@ export async function runDemoAthleteImport(args: string[]): Promise<void> {
       );
     }
     console.log(
-      "To apply after review: pnpm demo:athletes -- --apply --target=development",
+      "To apply after review: pnpm demo:athletes -- --apply --target=staging",
     );
     return;
   }
