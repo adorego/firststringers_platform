@@ -356,6 +356,28 @@ describe('BillyWorker', () => {
     });
   });
 
+  describe('handleSearch — malformed [SEARCH_READY] payload', () => {
+    it('never leaks the raw internal tag into the visible chat, even when the JSON inside it fails to parse', async () => {
+      mockSession.getSession.mockResolvedValue(makeSession());
+      createCompletion.mockResolvedValue(
+        mockOpenAiResponse(
+          'One moment. [SEARCH_READY]{"query": "linebacker", "filters": {sport: "football",}}[/SEARCH_READY]',
+        ),
+      );
+
+      await worker.handle(makeJob());
+
+      expect(mockScout.search).not.toHaveBeenCalled();
+      const emittedCall = mockEventEmitter.emit.mock.calls.find(
+        ([event]) => event === 'billy.response',
+      );
+      const payload = emittedCall?.[1] as { message: string };
+      expect(payload.message).not.toContain('[SEARCH_READY]');
+      expect(payload.message).not.toContain('filters');
+      expect(payload.message).toContain('try asking again');
+    });
+  });
+
   describe('handleSearch — zero-match diagnosis', () => {
     it('asks a grounded trade-off question when Scout diagnosed a limiting criterion', async () => {
       mockSession.getSession.mockResolvedValue(makeSession());

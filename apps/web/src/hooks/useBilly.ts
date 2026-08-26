@@ -198,17 +198,10 @@ export function useBilly(recruiterId: string, conversationId: string) {
       "onboarding_complete",
       (data: { suggestedSearches?: string[]; newConversationId?: string }) => {
         setIsOnboarding(false);
-        if (data.suggestedSearches) setSuggestedSearches(data.suggestedSearches);
+        setSuggestedSearches(data.suggestedSearches ?? []);
         if (data.newConversationId) setRedirectTo(data.newConversationId);
       },
     );
-
-    socket.on("onboarding_started", () => setIsOnboarding(true));
-
-    socket.on("onboarding_complete", (data: { suggestedSearches: string[] }) => {
-      setIsOnboarding(false);
-      setSuggestedSearches(data.suggestedSearches ?? []);
-    });
 
     socket.on("status", (data: { status: string }) => {
       if (data.status === "typing") setIsTyping(true);
@@ -218,13 +211,11 @@ export function useBilly(recruiterId: string, conversationId: string) {
       setSearchCriteria(data.criteria);
     });
 
-    socket.on("search_results", (data: { results: AthleteResult[] }) => {
-      setMessages((prev) => {
-        const last = prev[prev.length - 1];
-        if (!last) return prev;
-        return [...prev.slice(0, -1), { ...last, searchResults: data.results }];
-      });
-    });
+    // searchResults arrives inline on the "message" event above — no
+    // separate event needed. (A prior "search_results" event that patched
+    // results onto "the last message in the array" was removed: it raced
+    // with fast-arriving follow-up messages and could attach one message's
+    // results to a different, newer message.)
 
     return () => {
       socket.disconnect();

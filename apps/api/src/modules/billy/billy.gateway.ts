@@ -297,6 +297,15 @@ export class BillyGateway implements OnGatewayConnection, OnGatewayDisconnect {
     isFallbackRecommendation?: boolean;
     isExpandedSearch?: boolean;
   }) {
+    // searchResults travels inline on the message payload — the client
+    // attaches it to the message it belongs to using this single event, no
+    // separate lookup required. A prior version also emitted a standalone
+    // 'search_results' event that the client matched to "the last message in
+    // the array"; when two responses landed close together (e.g. a coach
+    // sending a follow-up before the first reply's results arrived), a
+    // delayed event could clobber a newer message's real results with a
+    // stale/empty set. Removed rather than fixed — the inline field already
+    // does this correctly with no ordering assumption.
     this.server.to(`conversation:${payload.conversationId}`).emit('message', {
       role: 'assistant',
       content: payload.message,
@@ -311,12 +320,6 @@ export class BillyGateway implements OnGatewayConnection, OnGatewayDisconnect {
       this.server
         .to(`conversation:${payload.conversationId}`)
         .emit('criteria_updated', { criteria: payload.searchCriteria });
-    }
-
-    if (payload.searchResults) {
-      this.server
-        .to(`conversation:${payload.conversationId}`)
-        .emit('search_results', { results: payload.searchResults });
     }
   }
 

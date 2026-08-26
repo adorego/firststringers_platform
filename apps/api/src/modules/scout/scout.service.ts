@@ -294,9 +294,14 @@ export class ScoutService {
     const where: Prisma.AthleteWhereInput = {
       representationStatus: { in: ['represented', 'verified'] },
     };
-    if (filters.sport && this.isRequired(filters, 'sport'))
+    // Sport and position are always hard DB filters when present — never
+    // gated on isRequired(). They're structural boundaries the platform
+    // itself guarantees (SEARCH_SYSTEM_PROMPT tells the recruiter as much),
+    // not something that should silently disappear if the LLM's own
+    // priority tagging for a given turn happens to mark them otherwise.
+    if (filters.sport)
       where.sport = { equals: filters.sport, mode: 'insensitive' };
-    if (normalizedPosition && this.isRequired(filters, 'position'))
+    if (normalizedPosition)
       where.position = { equals: normalizedPosition, mode: 'insensitive' };
     if (excludeIds.length > 0) where.id = { notIn: excludeIds };
 

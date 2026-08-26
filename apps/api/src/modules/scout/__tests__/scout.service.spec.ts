@@ -56,6 +56,22 @@ describe('ScoutService', () => {
     },
   );
 
+  it('still hard-filters by position and sport even if the LLM mistags their priority as non-required', async () => {
+    // Regression test: sport/position must never depend on Billy's own
+    // priority classification for that turn — a QA finding showed athletes
+    // of a completely different position (OL) being recommended for an LB
+    // search, traced to this filter being conditional on isRequired().
+    await service.search('linebacker', {
+      sport: 'football',
+      position: 'linebacker',
+      priorities: { sport: 'preference', position: 'flexible' },
+    });
+
+    const { where } = findMany.mock.calls[0][0];
+    expect(where.sport).toEqual({ equals: 'football', mode: 'insensitive' });
+    expect(where.position).toEqual({ equals: 'LB', mode: 'insensitive' });
+  });
+
   describe('"show me more" (excludeIds)', () => {
     it('excludes previously shown athletes from the query', async () => {
       await service.search(

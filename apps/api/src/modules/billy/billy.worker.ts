@@ -49,6 +49,7 @@ Rules:
 - Prioritize recruiting objective, context, verified information, athlete fit, academics, character/readiness, athletic ability, geography, and timeline — highlight media never replaces reasoning
 - Never treat a minimum GPA as required to run a search — omit "minGpa" from the filters entirely unless the recruiter states one
 - If the recruiter's program profile below already includes a sport, treat it as known — never ask for it again, and use it as the default for every search unless they explicitly mention a different one
+- More generally: nothing in the recruiter's stored program profile is ever a reason to pause and ask for confirmation. It's background context, not a constraint to defend — a brand-new conversation starts with a blank search every time. When the recruiter's current message explicitly names a position, region, class, or anything else that differs from the stored profile, just search for what they asked — never present the stored value back to them as something to confirm or choose between
 - After gathering enough info (at least sport + position + a recruiting objective or one meaningful fit criterion), offer to search
 - If the recruiter asks for more athletes, other options, or anyone else (e.g. "show me more", "who else"), treat it as a new search using the same criteria unless they mention new ones — the platform automatically excludes athletes already shown in this conversation, so you will never repeat a previous recommendation
 - When you have enough information, respond with a JSON block at the end of your message in this exact format, tagging the priority tier of every filter you set in "priorities" (omit a key from "priorities" only if you truly can't judge its priority — never omit "position" or "graduationYear" when they're set):
@@ -230,7 +231,7 @@ export class BillyWorker {
       .join('\n');
 
     const profileContext = profileLines
-      ? `\n\nThis recruiter's program profile — already known, do not ask for these again; use them when they ask about their profile, program, or saved info, and as defaults for searches:\n${profileLines}`
+      ? `\n\nThis recruiter's program profile — already known, do not ask for these again; use them when they ask about their profile, program, or saved info. Treat them as soft defaults for a search ONLY when the recruiter's current message doesn't specify otherwise. The moment their message names something explicit and different (a different position, region, class, etc.), silently follow the message — never pause to ask them to confirm or choose between the stored default and what they just said, and never announce the stored default back to them unless they asked about their profile directly. This applies fresh in every conversation, including a brand-new one with no prior search:\n${profileLines}`
       : '';
 
     const response = await this.openai.chat.completions.create({
@@ -258,13 +259,16 @@ export class BillyWorker {
     let scoutExpanded = false;
 
     if (updateMatch) {
+      // Strip the tag from the visible text up front — an internal control
+      // tag must never reach the coach's chat, even if the JSON inside it
+      // fails to parse below.
+      visibleContent = rawContent
+        .replace(/\[PROFILE_UPDATE\].*?\[\/PROFILE_UPDATE\]/s, '')
+        .trim();
       try {
         const updatedFields = JSON.parse(
           updateMatch[1],
         ) as UpdateRecruiterProfileDto;
-        visibleContent = rawContent
-          .replace(/\[PROFILE_UPDATE\].*?\[\/PROFILE_UPDATE\]/s, '')
-          .trim();
         // Cherry-pick known fields only — never forward arbitrary LLM JSON keys to Prisma.
         await this.recruiterService.updateProfile(recruiterId, {
           university: updatedFields.university,
@@ -285,6 +289,12 @@ export class BillyWorker {
     }
 
     if (searchMatch) {
+      // Same rule as above: strip the tag before attempting to parse it, so
+      // a malformed payload can never leak the internal search schema into
+      // the visible chat (previously it did — see FS-CS-003).
+      visibleContent = rawContent
+        .replace(/\[SEARCH_READY\].*?\[\/SEARCH_READY\]/s, '')
+        .trim();
       try {
         const parsed = JSON.parse(searchMatch[1]) as {
           query: string;
@@ -319,8 +329,17 @@ export class BillyWorker {
             scoutResult.athletes.map((a) => a.id),
           );
         }
-      } catch {
-        // keep raw content if parse fails
+      } catch (err) {
+        // The tag is already stripped above regardless of what happens here.
+        // Previously a parse failure left the raw internal payload visible
+        // in the chat and silently dropped the search — now the recruiter
+        // always gets an honest, actionable message instead.
+        this.logger.warn(
+          `Could not parse [SEARCH_READY] payload for conversation ${conversationId}`,
+          err,
+        );
+        visibleContent =
+          'Sorry, something went wrong while I was preparing that search. Could you try asking again?';
       }
     }
 
@@ -408,16 +427,17 @@ export class BillyWorker {
       .trim();
 
     if (profileMatch) {
+      // Strip the tag up front — it must never reach the recruiter's chat,
+      // even if the JSON inside it fails to parse below (same fix as the
+      // [SEARCH_READY] / [PROFILE_UPDATE] tags in handleSearch).
+      visibleContent = visibleContent
+        .replace(/\[PROFILE_READY\].*?\[\/PROFILE_READY\]/s, '')
+        .trim();
       try {
         const profileData = JSON.parse(profileMatch[1]) as Record<
           string,
           unknown
         >;
-
-        // Strip the tag — closing text is already what we want to show
-        visibleContent = visibleContent
-          .replace(/\[PROFILE_READY\].*?\[\/PROFILE_READY\]/s, '')
-          .trim();
 
         const [pitch, suggestedSearches] = await Promise.all([
           this.generateRecruiterPitch(profileData),
