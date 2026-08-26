@@ -77,6 +77,7 @@ function makeScoutResult(overrides: Partial<ScoutResult> = {}): ScoutResult {
           topMatchingFactors: [],
         },
         matchReasons: [],
+        deviations: [],
       },
     ],
     ...overrides,
@@ -253,6 +254,201 @@ describe('BillyWorker', () => {
       expect(mockEventEmitter.emit).toHaveBeenCalledWith(
         'billy.response',
         expect.objectContaining({ isExpandedSearch: false }),
+      );
+    });
+  });
+
+  describe('handleSearch — recommendation narration', () => {
+    it('grounds the message in real deviations when an athlete misses a required/important criterion', async () => {
+      mockSession.getSession.mockResolvedValue(makeSession());
+      const baseAthlete = makeScoutResult().athletes[0];
+      mockScout.search.mockResolvedValue(
+        makeScoutResult({
+          athletes: [
+            {
+              ...baseAthlete,
+              graduationYear: 2026,
+              deviations: [
+                {
+                  field: 'graduationYear',
+                  priority: 'required',
+                  note: "Class of 2026, 1 year ahead of the 2027 class you're targeting",
+                },
+              ],
+            },
+          ],
+        }),
+      );
+      createCompletion
+        .mockResolvedValueOnce(
+          mockOpenAiResponse(
+            '[SEARCH_READY]{"query":"linebacker","filters":{"sport":"football","position":"LB","graduationYear":2027}}[/SEARCH_READY]',
+          ),
+        )
+        .mockResolvedValueOnce(
+          mockOpenAiResponse(
+            "This linebacker is class of 2026, a year ahead of what you're targeting, but everything else about the profile lines up well.",
+          ),
+        );
+
+      await worker.handle(makeJob());
+
+      expect(createCompletion).toHaveBeenCalledTimes(2);
+      expect(mockEventEmitter.emit).toHaveBeenCalledWith(
+        'billy.response',
+        expect.objectContaining({
+          message: expect.stringContaining(
+            'class of 2026',
+          ) as unknown as string,
+        }),
+      );
+    });
+
+    it('always explains the recommendation, grounded in dossier context, even when every athlete fully matches', async () => {
+      mockSession.getSession.mockResolvedValue(makeSession());
+      const baseAthlete = makeScoutResult().athletes[0];
+      mockScout.search.mockResolvedValue(
+        makeScoutResult({
+          athletes: [
+            {
+              ...baseAthlete,
+              keyStrengths: ['quick release', 'reads coverage well'],
+              matchReasons: [
+                'Plays football ✓ (required)',
+                'Position QB ✓ (required)',
+              ],
+              dossier: {
+                summary: 'Strong academic profile and locker-room leader.',
+                recruiterPitch: null,
+              },
+            },
+          ],
+        }),
+      );
+      createCompletion
+        .mockResolvedValueOnce(
+          mockOpenAiResponse(
+            'Here you go. [SEARCH_READY]{"query":"quarterback","filters":{"sport":"football","position":"QB"}}[/SEARCH_READY]',
+          ),
+        )
+        .mockResolvedValueOnce(
+          mockOpenAiResponse(
+            'I found one quarterback I think you should look at — he fits your position and class, and stands out academically and as a leader. Want me to pull up his dossier?',
+          ),
+        );
+
+      await worker.handle(makeJob());
+
+      expect(createCompletion).toHaveBeenCalledTimes(2);
+      const calls = createCompletion.mock.calls as unknown as unknown[][];
+      const narrationCall = calls[1][0] as {
+        messages: { content: string }[];
+      };
+      expect(narrationCall.messages[1].content).toContain('locker-room leader');
+      expect(mockEventEmitter.emit).toHaveBeenCalledWith(
+        'billy.response',
+        expect.objectContaining({
+          message: expect.stringContaining(
+            'pull up his dossier',
+          ) as unknown as string,
+        }),
+      );
+    });
+  });
+
+  describe('handleSearch — zero-match diagnosis', () => {
+    it('asks a grounded trade-off question when Scout diagnosed a limiting criterion', async () => {
+      mockSession.getSession.mockResolvedValue(makeSession());
+      mockScout.search.mockResolvedValue(
+        makeScoutResult({
+          athletes: [],
+          diagnosis: {
+            limitingFactors: [
+              {
+                field: 'region',
+                priority: 'required',
+                resultCountIfDropped: 3,
+              },
+              {
+                field: 'position',
+                priority: 'required',
+                resultCountIfDropped: 0,
+              },
+            ],
+            broadestFitScore: 0.6,
+          },
+        }),
+      );
+      createCompletion
+        .mockResolvedValueOnce(
+          mockOpenAiResponse(
+            '[SEARCH_READY]{"query":"linebacker in Puebla","filters":{"sport":"football","position":"LB","region":"Puebla"}}[/SEARCH_READY]',
+          ),
+        )
+        .mockResolvedValueOnce(
+          mockOpenAiResponse(
+            'No exact match today — location in Puebla is the most limiting criterion. I could keep position and class and expand to all of Mexico, or keep Puebla and loosen something else. Which would you rather prioritize?',
+          ),
+        );
+
+      await worker.handle(makeJob());
+
+      expect(createCompletion).toHaveBeenCalledTimes(2);
+      expect(mockEventEmitter.emit).toHaveBeenCalledWith(
+        'billy.response',
+        expect.objectContaining({
+          message: expect.stringContaining(
+            'most limiting criterion',
+          ) as unknown as string,
+        }),
+      );
+    });
+
+    it('falls back to the generic message when Scout had nothing structural to diagnose', async () => {
+      mockSession.getSession.mockResolvedValue(makeSession());
+      mockScout.search.mockResolvedValue(makeScoutResult({ athletes: [] }));
+      createCompletion.mockResolvedValueOnce(
+        mockOpenAiResponse(
+          '[SEARCH_READY]{"query":"quarterback","filters":{"sport":"football","position":"QB"}}[/SEARCH_READY]',
+        ),
+      );
+
+      await worker.handle(makeJob());
+
+      expect(createCompletion).toHaveBeenCalledTimes(1);
+      expect(mockEventEmitter.emit).toHaveBeenCalledWith(
+        'billy.response',
+        expect.objectContaining({
+          message: expect.stringContaining(
+            "couldn't find an athlete",
+          ) as unknown as string,
+        }),
+      );
+    });
+  });
+
+  describe('handleSearch — confidence floor', () => {
+    it('gives the honest no-confident-match message without an extra LLM call', async () => {
+      mockSession.getSession.mockResolvedValue(makeSession());
+      mockScout.search.mockResolvedValue(
+        makeScoutResult({ athletes: [], noConfidentMatch: true }),
+      );
+      createCompletion.mockResolvedValueOnce(
+        mockOpenAiResponse(
+          '[SEARCH_READY]{"query":"quarterback","filters":{"sport":"football","position":"QB"}}[/SEARCH_READY]',
+        ),
+      );
+
+      await worker.handle(makeJob());
+
+      expect(createCompletion).toHaveBeenCalledTimes(1);
+      expect(mockEventEmitter.emit).toHaveBeenCalledWith(
+        'billy.response',
+        expect.objectContaining({
+          message: expect.stringContaining(
+            "I'd feel confident",
+          ) as unknown as string,
+        }),
       );
     });
   });

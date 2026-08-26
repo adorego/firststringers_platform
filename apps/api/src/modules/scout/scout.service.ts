@@ -5,6 +5,9 @@ import { RankingService, RankedAthlete } from './ranking.service';
 import {
   SearchFilters,
   DossierScoutFields,
+  CriteriaField,
+  ZeroMatchDiagnosis,
+  resolveCriteriaPriority,
 } from '../../shared/types/scout.types';
 import { DossierData } from '../../shared/types';
 
@@ -27,7 +30,26 @@ export interface ScoutResult {
   // the ones already shown this session ("show me more" with nothing left
   // under the original criteria) — these are real options, just looser fits.
   expanded?: boolean;
+  // Set on a fresh (non "show me more") search that came back with zero
+  // athletes — tells Billy which criterion is most responsible so it can ask
+  // the recruiter a reasoned trade-off question instead of going quiet or
+  // silently substituting a different search.
+  diagnosis?: ZeroMatchDiagnosis;
+  // Set when athletes structurally matched every hard criterion but none
+  // cleared MIN_CONFIDENT_FIT_SCORE — relaxing a filter wouldn't fix this
+  // (it's a quality problem, not a structural one), so Billy should be
+  // honest that nothing here is worth recommending rather than run the
+  // criterion-diagnosis flow (FS-CS-001 "optimize for confidence, not
+  // quantity").
+  noConfidentMatch?: boolean;
 }
+
+// Billy never pads the result list just to make the count look bigger — an
+// athlete only ships to the recruiter if their fitScore clears this bar.
+// 1 excellent fit shows as 1; 0 genuine fits shows as 0. Deliberately
+// conservative for the MVP: better to under-show than to manufacture
+// relevance that isn't there.
+export const MIN_CONFIDENT_FIT_SCORE = 0.45;
 
 // Keyed by sport because the same short code means different things in
 // different sports (e.g. "C" is a baseball catcher and a basketball center).
@@ -116,13 +138,39 @@ export class ScoutService {
     if (primary.athletes.length > 0) {
       return { query, filters, latencyMs: Date.now() - start, ...primary };
     }
-    if (!filters.position && !isShowMore) {
-      return { query, filters, latencyMs: Date.now() - start, ...primary };
+
+    if (!isShowMore) {
+      if (primary.totalFound > 0) {
+        // Athletes structurally matched every hard criterion, but none
+        // cleared the confidence bar — relaxing a filter wouldn't fix a
+        // quality problem, so skip the criterion diagnosis and let Billy be
+        // honest instead of forcing a marginal recommendation.
+        return {
+          query,
+          filters,
+          latencyMs: Date.now() - start,
+          ...primary,
+          noConfidentMatch: true,
+        };
+      }
+      // Truly zero structural matches — diagnose which criterion is most
+      // responsible instead of silently substituting a broadened search.
+      // Billy turns this into a question for the recruiter (FS-CS-001
+      // "Fit, Not Match") rather than deciding the trade-off on its own.
+      const diagnosis = await this.diagnoseZeroMatch(filters, excludeIds);
+      return {
+        query,
+        filters,
+        latencyMs: Date.now() - start,
+        ...primary,
+        diagnosis,
+      };
     }
 
-    // Either the exact position had no matches, or (on a "show me more"
-    // request) every athlete matching it has already been shown — broaden to
-    // other positions in the same sport so Billy can still offer someone.
+    // Past this point every athlete matching the current criteria has
+    // already been shown this conversation ("show me more" with nothing
+    // left) — broaden to other positions in the same sport so Billy can
+    // still offer someone new.
     if (filters.position) {
       const relaxedFilters: SearchFilters = {
         ...filters,
@@ -133,6 +181,7 @@ export class ScoutService {
         relaxedFilters,
         limit,
         excludeIds,
+        false,
       );
       if (relaxed.athletes.length > 0) {
         return {
@@ -141,16 +190,9 @@ export class ScoutService {
           latencyMs: Date.now() - start,
           ...relaxed,
           relaxedPosition: filters.position,
-          expanded: isShowMore,
+          expanded: true,
         };
       }
-      if (!isShowMore) {
-        return { query, filters, latencyMs: Date.now() - start, ...relaxed };
-      }
-    }
-
-    if (!isShowMore) {
-      return { query, filters, latencyMs: Date.now() - start, ...primary };
     }
 
     // Still nothing new — drop every soft filter and keep only sport, so a
@@ -160,6 +202,7 @@ export class ScoutService {
       { sport: filters.sport },
       limit,
       excludeIds,
+      false,
     );
     return {
       query,
@@ -170,11 +213,76 @@ export class ScoutService {
     };
   }
 
+  private isRequired(filters: SearchFilters, field: CriteriaField): boolean {
+    return resolveCriteriaPriority(filters, field) === 'required';
+  }
+
+  // For a fresh search that came back with zero athletes: test each hard
+  // criterion in isolation (drop just that one, keep everything else) to see
+  // how many athletes it alone is excluding — the field that unlocks the
+  // most results when dropped is the real bottleneck. Also checks the
+  // broadest reasonable version of the search (sport only) so Billy can be
+  // honest when even that turns up nothing worth recommending.
+  private async diagnoseZeroMatch(
+    filters: SearchFilters,
+    excludeIds: string[],
+  ): Promise<ZeroMatchDiagnosis | undefined> {
+    const candidateFields = (
+      [
+        'position',
+        'leagueLevel',
+        'ncaaEligible',
+        'transferPortal',
+        'region',
+      ] as CriteriaField[]
+    ).filter((field) => {
+      if (!filters[field as keyof SearchFilters]) return false;
+      return field === 'position' || this.isRequired(filters, field);
+    });
+
+    if (candidateFields.length === 0) return undefined;
+
+    const limitingFactors = await Promise.all(
+      candidateFields.map(async (field) => {
+        const relaxedFilters: SearchFilters = {
+          ...filters,
+          [field]: undefined,
+        };
+        const relaxed = await this.runQuery('', relaxedFilters, 5, excludeIds);
+        return {
+          field,
+          priority: resolveCriteriaPriority(filters, field),
+          resultCountIfDropped: relaxed.totalFound,
+        };
+      }),
+    );
+    limitingFactors.sort(
+      (a, b) => b.resultCountIfDropped - a.resultCountIfDropped,
+    );
+
+    const broadest = await this.runQuery(
+      '',
+      { sport: filters.sport },
+      5,
+      excludeIds,
+    );
+
+    return {
+      limitingFactors,
+      broadestFitScore: broadest.athletes[0]?.fitScore ?? null,
+    };
+  }
+
   private async runQuery(
     query: string,
     filters: SearchFilters,
     limit: number,
     excludeIds: string[] = [],
+    // Off for the intentionally-loosened "show me more" broadening queries —
+    // those are already explicitly framed to the recruiter as looser fits,
+    // so the confidence bar that keeps a *first* search honest would defeat
+    // the point of asking to see more.
+    applyConfidenceFloor = true,
   ): Promise<{ totalFound: number; athletes: RankedAthlete[] }> {
     const sportMap = filters.sport
       ? POSITION_MAP[filters.sport.toLowerCase()]
@@ -186,9 +294,9 @@ export class ScoutService {
     const where: Prisma.AthleteWhereInput = {
       representationStatus: { in: ['represented', 'verified'] },
     };
-    if (filters.sport)
+    if (filters.sport && this.isRequired(filters, 'sport'))
       where.sport = { equals: filters.sport, mode: 'insensitive' };
-    if (normalizedPosition)
+    if (normalizedPosition && this.isRequired(filters, 'position'))
       where.position = { equals: normalizedPosition, mode: 'insensitive' };
     if (excludeIds.length > 0) where.id = { notIn: excludeIds };
 
@@ -242,17 +350,39 @@ export class ScoutService {
       };
     });
 
-    // Filtros en memoria sobre dossier.data — más flexibles
+    // Filtros en memoria sobre dossier.data. sport/position ya se filtraron a
+    // nivel de DB arriba; ncaaEligible/transferPortal/leagueLevel son estados
+    // binarios reales (no existe "casi elegible"), así que siguen excluyendo
+    // cuando son 'required'. minGpa y graduationYear son criterios graduales
+    // — Billy busca FIT, no solo MATCH (FS-CS-001): un atleta que casi
+    // cumple sigue siendo un candidato válido, así que nunca se excluyen aquí.
+    // ranking.service los pondera fuerte cuando son 'required' y registra la
+    // brecha como CriterionDeviation para que Billy la explique al coach.
     const filtered = normalized.filter((a) => {
       if (
         filters.leagueLevel &&
+        this.isRequired(filters, 'leagueLevel') &&
         a.leagueLevel.toUpperCase() !== filters.leagueLevel.toUpperCase()
       )
         return false;
-      if (filters.ncaaEligible && !a.ncaaEligible) return false;
-      if (filters.transferPortal && !a.inTransferPortal) return false;
-      if (filters.minGpa && (!a.gpa || a.gpa < filters.minGpa)) return false;
-      // No filtrar por graduationYear estrictamente — solo como boost
+      if (
+        filters.ncaaEligible &&
+        this.isRequired(filters, 'ncaaEligible') &&
+        !a.ncaaEligible
+      )
+        return false;
+      if (
+        filters.transferPortal &&
+        this.isRequired(filters, 'transferPortal') &&
+        !a.inTransferPortal
+      )
+        return false;
+      if (
+        filters.region &&
+        this.isRequired(filters, 'region') &&
+        !a.preferredRegions.includes(filters.region)
+      )
+        return false;
       return true;
     });
 
@@ -260,9 +390,17 @@ export class ScoutService {
 
     const ranked = this.ranking.rankAthletes(filtered, query, filters);
 
+    // Billy optimizes for confidence, not quantity (FS-CS-001): never pad
+    // the list with a weak candidate just to make the result count look
+    // bigger. totalFound stays the raw structural count (used for zero-match
+    // diagnosis); athletes is only the ones actually worth recommending.
+    const confident = applyConfidenceFloor
+      ? ranked.filter((a) => a.fitScore >= MIN_CONFIDENT_FIT_SCORE)
+      : ranked;
+
     return {
       totalFound: filtered.length,
-      athletes: ranked.slice(0, limit),
+      athletes: confident.slice(0, limit),
     };
   }
 

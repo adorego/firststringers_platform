@@ -4,9 +4,35 @@ import {
   RankedAthlete,
   FitExplanation,
   SearchFilters,
+  CriteriaField,
+  CriteriaPriority,
+  CriterionDeviation,
+  resolveCriteriaPriority,
 } from '../../shared/types/scout.types';
 
 export type { RankedAthlete, FitExplanation };
+
+// How much a criterion's match/miss moves the blended filter score, by
+// priority tier. sport/position/leagueLevel/ncaaEligible/transferPortal are
+// hard-excluded upstream by ScoutService when 'required' — binary states
+// where "almost" isn't meaningful. minGpa and graduationYear are graduated
+// criteria that ScoutService never excludes on, so an athlete who misses one
+// can still reach here; the weight below is what lets a strong-elsewhere
+// athlete still rank well despite the miss, which computeDeviations then
+// records so Billy can explain it instead of silently substituting them in.
+const PRIORITY_WEIGHT: Record<CriteriaPriority, number> = {
+  required: 3,
+  important: 2,
+  preference: 1,
+  flexible: 0.5,
+};
+
+const PRIORITY_LABEL: Record<CriteriaPriority, string> = {
+  required: 'required',
+  important: 'high priority',
+  preference: 'preference',
+  flexible: 'flexible',
+};
 
 @Injectable()
 export class RankingService {
@@ -128,49 +154,138 @@ export class RankingService {
             filters,
           ),
           matchReasons: this.buildMatchReasons(a, filters),
+          deviations: this.computeDeviations(a, filters),
         };
       })
       .sort((a, b) => b.fitScore - a.fitScore);
+  }
+
+  // The counterpart to buildMatchReasons: every stated criterion this athlete
+  // does NOT satisfy, described in plain language built only from real
+  // filter/athlete values. Billy searches for fit, not just match (FS-CS-001)
+  // — a strong-elsewhere athlete who misses a criterion still belongs in the
+  // results, but the recruiter must always be told why.
+  private computeDeviations(
+    athlete: ScoutAthleteCandidate,
+    filters: SearchFilters,
+  ): CriterionDeviation[] {
+    const deviations: CriterionDeviation[] = [];
+    const add = (field: CriteriaField, note: string) =>
+      deviations.push({
+        field,
+        priority: resolveCriteriaPriority(filters, field),
+        note,
+      });
+
+    if (filters.graduationYear && athlete.graduationYear) {
+      const diff = athlete.graduationYear - filters.graduationYear;
+      if (diff !== 0) {
+        const years = Math.abs(diff);
+        const direction = diff > 0 ? 'behind' : 'ahead of';
+        add(
+          'graduationYear',
+          `Class of ${athlete.graduationYear}, ${years} year${years > 1 ? 's' : ''} ${direction} the ${filters.graduationYear} class you're targeting`,
+        );
+      }
+    } else if (filters.graduationYear && !athlete.graduationYear) {
+      add(
+        'graduationYear',
+        `Graduation year not on file (you're targeting class of ${filters.graduationYear})`,
+      );
+    }
+
+    if (filters.minGpa) {
+      if (athlete.gpa && athlete.gpa < filters.minGpa) {
+        add(
+          'minGpa',
+          `GPA ${athlete.gpa}, below the ${filters.minGpa} you're looking for`,
+        );
+      } else if (!athlete.gpa) {
+        add('minGpa', `GPA not on file (looking for ${filters.minGpa}+)`);
+      }
+    }
+
+    if (
+      filters.leagueLevel &&
+      athlete.leagueLevel &&
+      athlete.leagueLevel !== filters.leagueLevel
+    ) {
+      add(
+        'leagueLevel',
+        `Plays at the ${athlete.leagueLevel} level, not ${filters.leagueLevel}`,
+      );
+    }
+
+    if (
+      filters.region &&
+      athlete.preferredRegions?.length &&
+      !athlete.preferredRegions.includes(filters.region)
+    ) {
+      add(
+        'region',
+        `Prefers ${athlete.preferredRegions.join('/')}, not ${filters.region}`,
+      );
+    }
+
+    if (filters.transferPortal && !athlete.inTransferPortal) {
+      add('transferPortal', 'Not currently in the transfer portal');
+    }
+
+    if (filters.ncaaEligible && !athlete.ncaaEligible) {
+      add('ncaaEligible', 'NCAA eligibility not yet confirmed');
+    }
+
+    return deviations;
   }
 
   private calcFilterMatchScore(
     athlete: ScoutAthleteCandidate,
     filters: SearchFilters,
   ): number {
-    let matched = 0;
-    let total = 0;
+    let matchedWeight = 0;
+    let totalWeight = 0;
 
-    if (filters.sport) {
-      total++;
-      if (athlete.sport === filters.sport) matched++;
-    }
-    if (filters.position) {
-      total++;
-      if (athlete.position?.toLowerCase() === filters.position?.toLowerCase())
-        matched++;
-    }
-    if (filters.leagueLevel) {
-      total++;
-      if (athlete.leagueLevel === filters.leagueLevel) matched++;
-    }
-    if (filters.minGpa) {
-      total++;
-      if (athlete.gpa && athlete.gpa >= filters.minGpa) matched++;
-    }
-    if (filters.transferPortal) {
-      total++;
-      if (athlete.inTransferPortal) matched++;
-    }
-    if (filters.ncaaEligible) {
-      total++;
-      if (athlete.ncaaEligible) matched++;
-    }
-    if (filters.region) {
-      total++;
-      if (athlete.preferredRegions?.includes(filters.region)) matched++;
-    }
+    const score = (
+      field: CriteriaField,
+      isPresent: boolean,
+      isMatch: boolean,
+    ) => {
+      if (!isPresent) return;
+      const weight = PRIORITY_WEIGHT[resolveCriteriaPriority(filters, field)];
+      totalWeight += weight;
+      if (isMatch) matchedWeight += weight;
+    };
 
-    return total > 0 ? matched / total : 0.5;
+    score('sport', !!filters.sport, athlete.sport === filters.sport);
+    score(
+      'position',
+      !!filters.position,
+      athlete.position?.toLowerCase() === filters.position?.toLowerCase(),
+    );
+    score(
+      'leagueLevel',
+      !!filters.leagueLevel,
+      athlete.leagueLevel === filters.leagueLevel,
+    );
+    score(
+      'minGpa',
+      !!filters.minGpa,
+      !!athlete.gpa && athlete.gpa >= filters.minGpa!,
+    );
+    score('transferPortal', !!filters.transferPortal, athlete.inTransferPortal);
+    score('ncaaEligible', !!filters.ncaaEligible, athlete.ncaaEligible);
+    score(
+      'region',
+      !!filters.region,
+      !!athlete.preferredRegions?.includes(filters.region!),
+    );
+    score(
+      'graduationYear',
+      !!filters.graduationYear,
+      athlete.graduationYear === filters.graduationYear,
+    );
+
+    return totalWeight > 0 ? matchedWeight / totalWeight : 0.5;
   }
 
   private buildMatchReasons(
@@ -178,19 +293,31 @@ export class RankingService {
     filters: SearchFilters,
   ): string[] {
     const reasons: string[] = [];
+    const tag = (field: CriteriaField) =>
+      `(${PRIORITY_LABEL[resolveCriteriaPriority(filters, field)]})`;
+
     if (filters.sport && athlete.sport === filters.sport)
-      reasons.push(`Plays ${athlete.sport} ✓`);
+      reasons.push(`Plays ${athlete.sport} ✓ ${tag('sport')}`);
     if (
       filters.position &&
       athlete.position?.toLowerCase() === filters.position?.toLowerCase()
     )
-      reasons.push(`Position ${athlete.position} ✓`);
+      reasons.push(`Position ${athlete.position} ✓ ${tag('position')}`);
+    if (
+      filters.graduationYear &&
+      athlete.graduationYear === filters.graduationYear
+    )
+      reasons.push(
+        `Class of ${athlete.graduationYear} ✓ ${tag('graduationYear')}`,
+      );
     if (filters.minGpa && athlete.gpa && athlete.gpa >= filters.minGpa)
-      reasons.push(`GPA ${athlete.gpa} meets requirement ✓`);
+      reasons.push(`GPA ${athlete.gpa} meets requirement ✓ ${tag('minGpa')}`);
     if (filters.transferPortal && athlete.inTransferPortal)
-      reasons.push('In transfer portal ✓');
+      reasons.push(`In transfer portal ✓ ${tag('transferPortal')}`);
     if (filters.ncaaEligible && athlete.ncaaEligible)
-      reasons.push('NCAA eligible ✓');
+      reasons.push(`NCAA eligible ✓ ${tag('ncaaEligible')}`);
+    if (filters.region && athlete.preferredRegions?.includes(filters.region))
+      reasons.push(`Region: ${filters.region} ✓ ${tag('region')}`);
     if (athlete.trajectory === 'IMPROVING')
       reasons.push('Improving trajectory ✓');
     return reasons;

@@ -291,7 +291,9 @@ function BillyChatPageContent() {
                             ? `${msg.searchResults.length} other athlete${msg.searchResults.length === 1 ? "" : "s"} — broader match, not as tight a fit`
                             : msg.isFallbackRecommendation
                               ? `${msg.searchResults.length} related athlete${msg.searchResults.length === 1 ? "" : "s"} you might like`
-                              : `Found ${msg.searchResults.length} athletes matching your recruiting criteria`}
+                              : msg.searchResults.length === 1
+                                ? "One athlete I think you should look at"
+                                : `${msg.searchResults.length} athletes I think you should review`}
                         </p>
                       )}
                     </div>

@@ -28,6 +28,18 @@ Your job is to understand what the coach or recruiter is trying to accomplish th
 8. Academic requirements (minimum GPA) — you can ask about this, but always make clear it's optional and the recruiter doesn't need to set one
 9. Any specific physical attributes, playing style, character signals, or fit criteria
 
+Understand priorities, not only filters:
+A recruiting request is never a flat list of equally-weighted filters. For every criterion you identify, judge how much it actually matters to the recruiter and classify it into one of four tiers:
+- required — the criterion the recruiter would consider the search a failure without (e.g. sport, position, graduating class when stated explicitly). Sport and position are hard boundaries — the platform will not cross into a different sport or position family. Every other "required" field is still weighted far above everything else, but the platform may still surface an athlete who narrowly misses it if they're otherwise an excellent fit — never a reason for you to avoid tagging something required
+- important — materially changes fit but should never by itself exclude an athlete (e.g. academics, "ready to contribute now")
+- preference — nice to have, should shift ranking but never exclude (e.g. state or region, physical measurables like height)
+- flexible — a loose signal the recruiter mentioned in passing; barely moves the ranking
+
+Example: "I need a linebacker, 2027 class, at least 6'2", from Florida, a good student, who can compete right away" breaks down as: position=required, graduation class=required, ready-to-contribute=important, academics=important, height=preference, Florida=preference. Do not default everything to required — only tag a criterion required when the recruiter would consider the search a failure without it.
+
+Search for fit, not just match:
+A traditional search engine asks "does this satisfy every filter?" Billy asks "who is the best fit for what this recruiter actually needs?" An athlete does not need to satisfy 100% of the stated criteria to be worth recommending — the platform will still surface a highly-relevant athlete who narrowly misses a criterion instead of hiding them. When that happens, the athlete's results will come with the specific gap already identified (e.g. "class of 2026, one year ahead of the 2027 you're targeting") — you must always name that gap plainly and explain why the athlete is still worth the recruiter's attention, grounded only in what you're given. Never imply an athlete matches something they don't, and never hide a deviation to make a recommendation look cleaner.
+
 Rules:
 - Ask ONE question at a time, never multiple
 - Be conversational and brief — usually 2 sentences, max 3 when explaining reasoning
@@ -39,15 +51,60 @@ Rules:
 - If the recruiter's program profile below already includes a sport, treat it as known — never ask for it again, and use it as the default for every search unless they explicitly mention a different one
 - After gathering enough info (at least sport + position + a recruiting objective or one meaningful fit criterion), offer to search
 - If the recruiter asks for more athletes, other options, or anyone else (e.g. "show me more", "who else"), treat it as a new search using the same criteria unless they mention new ones — the platform automatically excludes athletes already shown in this conversation, so you will never repeat a previous recommendation
-- When you have enough information, respond with a JSON block at the end of your message in this exact format:
-  [SEARCH_READY]{"query": "the full natural language query", "filters": {"sport": "...", "position": "...", "minGpa": 0.0, "graduationYear": 0, "transferPortal": true/false, "ncaaEligible": true/false}}[/SEARCH_READY]
+- When you have enough information, respond with a JSON block at the end of your message in this exact format, tagging the priority tier of every filter you set in "priorities" (omit a key from "priorities" only if you truly can't judge its priority — never omit "position" or "graduationYear" when they're set):
+  [SEARCH_READY]{"query": "the full natural language query", "filters": {"sport": "...", "position": "...", "minGpa": 0.0, "graduationYear": 0, "transferPortal": true/false, "ncaaEligible": true/false, "priorities": {"position": "required", "graduationYear": "required", "minGpa": "important", "region": "preference"}}}[/SEARCH_READY]
 - If the user says they want to search now, generate the search immediately
 - If the recruiter asks about their own profile, program, or saved information, respond with the details from the "Recruiter profile on file" section in a clean, readable format — do NOT search for athletes in this case
 - If the recruiter asks to update or change any of their profile fields (university, location, scholarshipType, sport, division, gender, openings), confirm the change in plain text and append the update tag with ONLY the changed fields:
   [PROFILE_UPDATE]{"sport": "basketball"}[/PROFILE_UPDATE]
 - When preparing a search or recommendation, explain why the athlete fits the stated objective, which constraints are satisfied, and what uncertainty remains
 - Never invent information, never hide uncertainty, never treat athletes as inventory. Do not rank athletes without context
+- Billy optimizes for confidence, not quantity: 1 excellent fit is shown as 1, 0 genuine fits is shown as 0 — never pad the list just to make the result count look bigger
+- If a search turns up no one you'd genuinely feel comfortable recommending, say so plainly rather than forcing a recommendation — that is a legitimate outcome, not a failure
+- Never frame results as a database return ("I found 5 results", "3 athletes matching your criteria") — talk like a recruiting advisor making a recommendation ("I found two athletes I think you should review", "There's one athlete in particular I want you to know about")
 - Keep a friendly, professional tone: thoughtful, direct, confident, never hype-driven`;
+
+// Used for a second, results-grounded pass over the message once Scout has
+// actually run — the first pass (SEARCH_SYSTEM_PROMPT) writes before the
+// search happens, so it can't reference real athletes. Runs on every
+// successful, non-empty result set (see handleSearch) — Billy recommends
+// athletes, he doesn't return query results, so every recommendation gets a
+// real "why," not just the clean ones with a deviation to explain.
+export const RECOMMENDATION_NARRATION_SYSTEM_PROMPT = `You are Billy, the Director of Recruiting Intelligence for First Stringers, introducing search results to a recruiter.
+
+Billy recommends athletes; he does not return database results. Never say things like "I found N results" or "N athletes matching your criteria" — talk the way a trusted recruiting advisor would: "I found two athletes I think you should review," or "There's one athlete in particular I want you to know about."
+
+For each athlete you're given: real match strengths, any stated criterion they don't fully meet ("deviations"), and broader dossier context (key strengths, fit tags, and a narrative summary where available) — all computed from real data, never invented.
+
+Rules:
+- Write 2-5 sentences total, introducing the athletes below as a group or individually — whichever reads more naturally.
+- Explain WHY each athlete is worth the recruiter's attention using the fuller context you're given — never rely only on position, height, weight, location, or class. Reference things like academic performance, ability to contribute soon, character or fit signals, or athletic profile when the data actually supports it.
+- For every deviation listed, name the specific gap in plain language and briefly explain why the athlete is still worth attention, grounded ONLY in the strengths/context given for that athlete.
+- Never invent a number, measurement, fact, or trait that isn't in the data given to you. If the context for an athlete is thin, say less rather than embellishing.
+- Do not restate every field — the athlete cards shown below your message already have full details.
+- End with a natural, low-key invitation to go deeper (e.g. "Want me to pull up their dossier?") — vary the phrasing, don't repeat it verbatim every time.
+- No hype, no marketing language, no clichés.
+- Plain text only — no JSON, no bullet points.`;
+
+// Fires when a fresh search comes back with zero athletes and Scout was able
+// to diagnose why (see ScoutService.diagnoseZeroMatch). Turns an empty
+// result into a recruiting conversation instead of a dead end (FS-CS-001
+// "Fit, Not Match"): name the real bottleneck, offer reasoned trade-offs,
+// and ask — never decide unilaterally, and never fabricate a candidate.
+export const ZERO_MATCH_SYSTEM_PROMPT = `You are Billy, the Director of Recruiting Intelligence for First Stringers. A search just came back with zero athletes matching every stated criterion, and you're given structured diagnostic data about why.
+
+Turn this into a recruiting conversation, not a dead end:
+1. Say plainly that there's no exact match today.
+2. You're given, for each hard criterion in the search, how many athletes would match if ONLY that one criterion were dropped (everything else kept). The one with the highest count is the real bottleneck — name it and explain it in one sentence, grounded only in those numbers. If multiple criteria show similarly low counts, say the combination itself is rare rather than singling one out.
+3. Offer up to two concrete, reasoned trade-offs: (A) keep the other criteria and relax the limiting one, or (B) keep the limiting one and relax something else that has room (a different criterion with a non-zero count). Never propose relaxing a criterion you have no data for.
+4. Ask which trade-off the recruiter would rather make — do not decide for them or run a broader search yourself.
+5. You're also given the best fit score available for this sport with every other filter dropped. If that score is null or very low, there is no version of this search worth pushing further — say plainly that you don't have anyone in the network today you'd feel comfortable recommending, instead of proposing alternatives. That is a legitimate answer, not a failure — never invent a candidate or relevance that isn't there.
+
+Rules:
+- 3-5 sentences total.
+- Never invent a number, count, or fact that isn't in the data given to you.
+- No hype, no filler, no over-apologizing.
+- Plain text only — no JSON, no bullet points.`;
 
 export const ONBOARDING_SYSTEM_PROMPT = `You are Billy, the Director of Recruiting Intelligence for First Stringers. A recruiter just created their account. Your goal is to learn how this recruiter thinks, understand their recruiting responsibilities, and establish the context Billy needs to help them make better decisions — not to complete a form.
 
@@ -249,7 +306,11 @@ export class BillyWorker {
         scoutRelaxedPosition = scoutResult.relaxedPosition;
         scoutExpanded = !!scoutResult.expanded;
 
-        visibleContent = this.buildSearchMessage(rawContent, scoutResult);
+        visibleContent = await this.buildSearchMessage(
+          parsed.query,
+          rawContent,
+          scoutResult,
+        );
 
         if (scoutResult.athletes.length > 0) {
           await this.session.recordShownAthletes(
@@ -587,12 +648,20 @@ export class BillyWorker {
 
   // Billy still has something useful to say even when nothing matches exactly —
   // fall back to a related recommendation instead of going quiet.
-  private buildSearchMessage(
+  private async buildSearchMessage(
+    query: string,
     rawContent: string,
     scoutResult: ScoutResult,
-  ): string {
+  ): Promise<string> {
     if (scoutResult.athletes.length === 0) {
-      return "Right now I couldn't find an athlete with those descriptions. Try broadening your criteria — a different region, GPA range, or graduating class — and I'll take another look.";
+      // Optimize for confidence, not quantity (FS-CS-001): structural
+      // matches existed here, but none cleared the bar — relaxing a filter
+      // wouldn't fix a quality problem, so this is a distinct, more direct
+      // message from the criterion-diagnosis flow below.
+      if (scoutResult.noConfidentMatch) {
+        return BillyWorker.NO_CONFIDENT_MATCH_MESSAGE;
+      }
+      return this.narrateZeroMatch(query, scoutResult);
     }
 
     if (scoutResult.expanded) {
@@ -618,9 +687,106 @@ export class BillyWorker {
       return `Right now I couldn't find an athlete with those descriptions — no available ${requestedLabel} match right now — but I can introduce you to ${foundLabel} who share a similar profile and could still be a great fit for your program.`;
     }
 
+    // Billy recommends athletes, he doesn't return query results — every
+    // successful search gets a real, dossier-grounded "why," not just the
+    // ones with a deviation to explain (FS-CS-001).
+    const narration = await this.narrateRecommendation(query, scoutResult);
+    if (narration) return narration;
+
     return (
       rawContent.replace(/\[SEARCH_READY\].*?\[\/SEARCH_READY\]/s, '').trim() ||
       'Great! I have everything I need. Launching search...'
     );
+  }
+
+  private async narrateRecommendation(
+    query: string,
+    scoutResult: ScoutResult,
+  ): Promise<string | null> {
+    const athleteSummaries = scoutResult.athletes.map((a) => ({
+      name: a.fullName,
+      strengths: a.matchReasons,
+      deviations: a.deviations
+        .filter((d) => d.priority === 'required' || d.priority === 'important')
+        .map((d) => d.note),
+      context: {
+        keyStrengths: a.keyStrengths,
+        fitTags: a.fitTags,
+        summary: a.dossier?.summary ?? a.dossier?.recruiterPitch ?? null,
+      },
+    }));
+
+    try {
+      const response = await this.openai.chat.completions.create({
+        model: 'gpt-4o-mini',
+        messages: [
+          { role: 'system', content: RECOMMENDATION_NARRATION_SYSTEM_PROMPT },
+          {
+            role: 'user',
+            content: JSON.stringify({ query, athletes: athleteSummaries }),
+          },
+        ],
+        temperature: 0.6,
+        max_tokens: 260,
+      });
+      return response.choices[0].message.content?.trim() || null;
+    } catch (err) {
+      this.logger.warn('Could not generate recommendation narration', err);
+      return null;
+    }
+  }
+
+  // A fresh search with zero results and no diagnosis (nothing structural to
+  // isolate — e.g. only sport was set) falls back to this generic prompt.
+  // Anything with a real diagnosis gets narrated below, grounded in the
+  // actual bottleneck instead of a one-size-fits-all message.
+  private static readonly NO_MATCH_FALLBACK =
+    "Right now I couldn't find an athlete with those descriptions. Try broadening your criteria — a different region, GPA range, or graduating class — and I'll take another look.";
+
+  // Athletes matched every hard criterion, but none were strong enough for
+  // Billy to put in front of the recruiter — a static, honest message
+  // (FS-CS-001 "optimize for confidence, not quantity"), deliberately not
+  // LLM-generated since there's no real per-athlete data worth narrating.
+  private static readonly NO_CONFIDENT_MATCH_MESSAGE =
+    "I don't have anyone in the network right now that I'd feel confident putting in front of you for this — the profile just isn't there yet. I'd rather tell you that directly than send over a marginal fit. Want me to keep this search in mind and flag you if someone comes up, or should we adjust the criteria?";
+
+  private async narrateZeroMatch(
+    query: string,
+    scoutResult: ScoutResult,
+  ): Promise<string> {
+    const diagnosis = scoutResult.diagnosis;
+    if (!diagnosis || diagnosis.limitingFactors.length === 0) {
+      return BillyWorker.NO_MATCH_FALLBACK;
+    }
+
+    try {
+      const response = await this.openai.chat.completions.create({
+        model: 'gpt-4o-mini',
+        messages: [
+          { role: 'system', content: ZERO_MATCH_SYSTEM_PROMPT },
+          {
+            role: 'user',
+            content: JSON.stringify({
+              query,
+              requestedFilters: scoutResult.filters,
+              limitingFactors: diagnosis.limitingFactors,
+              broadestFitScore: diagnosis.broadestFitScore,
+            }),
+          },
+        ],
+        temperature: 0.6,
+        max_tokens: 260,
+      });
+      return (
+        response.choices[0].message.content?.trim() ||
+        BillyWorker.NO_MATCH_FALLBACK
+      );
+    } catch (err) {
+      this.logger.warn(
+        'Could not generate zero-match diagnosis narration',
+        err,
+      );
+      return BillyWorker.NO_MATCH_FALLBACK;
+    }
   }
 }

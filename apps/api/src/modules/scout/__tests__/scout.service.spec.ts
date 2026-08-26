@@ -142,4 +142,81 @@ describe('ScoutService', () => {
       expect(result.athletes).toEqual([]);
     });
   });
+
+  describe('zero-match diagnosis', () => {
+    it('identifies the most limiting required criterion when a fresh search comes back empty', async () => {
+      const unlockedByDroppingRegion = {
+        id: 'lb-1',
+        name: 'Region Unlocked',
+        sport: 'football',
+        position: 'LB',
+        dossier: null,
+        createdAt: new Date(),
+      };
+      const broadestAthlete = {
+        id: 'lb-2',
+        name: 'Broadest Athlete',
+        sport: 'football',
+        position: 'LB',
+        dossier: null,
+        createdAt: new Date(),
+      };
+      findMany
+        .mockResolvedValueOnce([]) // primary: position + region required
+        .mockResolvedValueOnce([]) // diagnosis: drop position, keep region
+        .mockResolvedValueOnce([unlockedByDroppingRegion]) // diagnosis: drop region, keep position
+        .mockResolvedValueOnce([broadestAthlete]); // broadest: sport only
+
+      const result = await service.search('linebacker in Puebla', {
+        sport: 'football',
+        position: 'LB',
+        region: 'Puebla',
+        priorities: { region: 'required' },
+      });
+
+      expect(result.athletes).toEqual([]);
+      expect(result.diagnosis?.limitingFactors[0]).toMatchObject({
+        field: 'region',
+        resultCountIfDropped: 1,
+      });
+      expect(result.diagnosis?.broadestFitScore).not.toBeNull();
+    });
+
+    it('skips diagnosis entirely when there is nothing structural to isolate', async () => {
+      const result = await service.search('any quarterback', {
+        sport: 'football',
+      });
+
+      expect(findMany).toHaveBeenCalledTimes(1);
+      expect(result.diagnosis).toBeUndefined();
+    });
+  });
+
+  describe('confidence floor (never pad the list)', () => {
+    it('reports noConfidentMatch — not a diagnosis — when athletes structurally match but none clear the bar', async () => {
+      findMany.mockResolvedValueOnce([
+        {
+          id: 'qb-weak',
+          name: 'Weak Signal',
+          sport: 'football',
+          position: 'QB',
+          dossier: null,
+          createdAt: new Date(),
+        },
+      ]);
+
+      const result = await service.search('quarterback', {
+        sport: 'football',
+        position: 'quarterback',
+        leagueLevel: 'D1',
+      });
+
+      expect(result.athletes).toEqual([]);
+      expect(result.noConfidentMatch).toBe(true);
+      expect(result.diagnosis).toBeUndefined();
+      // Relaxing a filter wouldn't fix a quality problem, so diagnosis
+      // shouldn't even run.
+      expect(findMany).toHaveBeenCalledTimes(1);
+    });
+  });
 });
