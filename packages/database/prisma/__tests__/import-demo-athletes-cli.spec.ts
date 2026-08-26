@@ -30,8 +30,15 @@ test("requires an explicit safe target before applying", () => {
   assert.throws(() => parseDemoImportArgs(["--apply"]), /requires --target/i);
   assert.throws(
     () => parseDemoImportArgs(["--apply", "--target=production"]),
-    /local or development/i,
+    /local, development or staging/i,
   );
+});
+
+test("accepts every non-production target", () => {
+  for (const target of ["local", "development", "staging"] as const) {
+    const options = parseDemoImportArgs(["--apply", `--target=${target}`]);
+    assert.equal(options.target, target);
+  }
 });
 
 test("reads and validates the checked-in pilot fixture", async () => {

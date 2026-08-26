@@ -15,8 +15,8 @@ The checked-in pilot contains three profiles:
 ## Safety model
 
 - Dry-run and validation are the default; they do not instantiate Prisma or connect to a database.
-- Database writes require both `--apply` and an explicit `--target=local|development`.
-- Production is intentionally unsupported.
+- Database writes require both `--apply` and an explicit `--target=local|development|staging`.
+- Production is intentionally unsupported. On Railway the team works in `staging`; `production` is a separate empty database.
 - A dataset is limited to 200 records and 5 MB.
 - Every email must use `@demo.firststringers.test` and be unique.
 - Every Dossier must include `demoMetadata.synthetic: true`.
@@ -37,10 +37,10 @@ pnpm demo:athletes
 pnpm demo:athletes -- --file=/absolute/path/to/demo-athletes.json
 
 # Apply only after the dry-run and human review have passed.
-pnpm demo:athletes -- --file=/absolute/path/to/demo-athletes.json --apply --target=development
+pnpm demo:athletes -- --file=/absolute/path/to/demo-athletes.json --apply --target=staging
 
 # Also create ATHLETE login accounts (opt-in, for athlete-side Jerry demos).
-pnpm demo:athletes -- --file=/absolute/path/to/demo-athletes.json --apply --target=development --with-users
+pnpm demo:athletes -- --file=/absolute/path/to/demo-athletes.json --apply --target=staging --with-users
 ```
 
 ## Adapting the detailed dossier source format
@@ -95,7 +95,7 @@ before running it. The importer does not require a Prisma migration.
 6. Run the canonical importer in dry-run mode.
 7. Review names, schools, narratives, statistics, and scenario distribution with a product owner.
 8. Merge approved batches into the canonical dataset and run dry-run again.
-9. Import the three-athlete pilot into development first and smoke-test Billy and Dossier rendering.
+9. Import the three-athlete pilot into staging first and smoke-test Billy and Dossier rendering.
 10. Import the larger dataset only after the pilot is accepted.
 
 Suggested dimensions to distribute deliberately:

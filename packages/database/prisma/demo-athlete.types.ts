@@ -109,7 +109,7 @@ export interface DemoDatasetValidation {
   };
 }
 
-export type DemoImportTarget = "local" | "development";
+export type DemoImportTarget = "local" | "development" | "staging";
 
 export interface DemoImportResult {
   created: number;
