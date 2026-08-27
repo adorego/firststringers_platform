@@ -378,6 +378,59 @@ describe('BillyWorker', () => {
     });
   });
 
+  describe('handleSearch — truncated (unclosed) [SEARCH_READY] tag', () => {
+    it('never leaks a dangling internal payload when the completion is cut off mid-tag', async () => {
+      mockSession.getSession.mockResolvedValue(makeSession());
+      createCompletion.mockResolvedValue(
+        mockOpenAiResponse(
+          '1. Athlete Name: Jordan Smith - Position: Quarterback\n' +
+            '[SEARCH_READY]{"query": "long-term development athletes", "filters": {"sport":"football","position":"all","graduationYear":2026,"transferPortal',
+        ),
+      );
+
+      await worker.handle(makeJob());
+
+      expect(mockScout.search).not.toHaveBeenCalled();
+      const emittedCall = mockEventEmitter.emit.mock.calls.find(
+        ([event]) => event === 'billy.response',
+      );
+      const payload = emittedCall?.[1] as { message: string };
+      expect(payload.message).not.toContain('[SEARCH_READY]');
+      expect(payload.message).not.toContain('Jordan Smith');
+      expect(payload.message).not.toContain('filters');
+      expect(payload.message).toContain('try asking again');
+    });
+  });
+
+  describe('handleSearch — grounds the model in the last search filters', () => {
+    it("includes the session's current search criteria in the system prompt so a confirmed trade-off can act on it directly, instead of re-deriving filters from free text", async () => {
+      mockSession.getSession.mockResolvedValue(
+        makeSession({
+          searchCriteria: {
+            sport: 'football',
+            position: 'LB',
+            graduationYear: 2027,
+          },
+        }),
+      );
+      createCompletion.mockResolvedValue(
+        mockOpenAiResponse(
+          '[SEARCH_READY]{"query":"linebacker","filters":{"sport":"football","graduationYear":2027}}[/SEARCH_READY]',
+        ),
+      );
+
+      await worker.handle(makeJob({ message: 'A' }));
+
+      const calls = createCompletion.mock.calls as unknown as unknown[][];
+      const searchCall = calls[0][0] as {
+        messages: { role: string; content: string }[];
+      };
+      const systemMessage = searchCall.messages[0].content;
+      expect(systemMessage).toContain('"position":"LB"');
+      expect(systemMessage).toContain('current working set');
+    });
+  });
+
   describe('handleSearch — zero-match diagnosis', () => {
     it('asks a grounded trade-off question when Scout diagnosed a limiting criterion', async () => {
       mockSession.getSession.mockResolvedValue(makeSession());
@@ -424,6 +477,58 @@ describe('BillyWorker', () => {
           ) as unknown as string,
         }),
       );
+    });
+
+    it('never sends the raw requested filters to the trade-off narration, only the diagnosed limiting factors', async () => {
+      // Regression: a coach who explicitly declined to set a GPA still had
+      // "relax the GPA requirement" offered as a trade-off, because the raw
+      // filters object (with a placeholder minGpa the coach never set) was
+      // being handed to the model alongside the real diagnosis data, and it
+      // pulled the fake criterion from there instead of limitingFactors.
+      mockSession.getSession.mockResolvedValue(makeSession());
+      mockScout.search.mockResolvedValue(
+        makeScoutResult({
+          athletes: [],
+          filters: {
+            sport: 'football',
+            position: 'LB',
+            minGpa: 0.0,
+            graduationYear: 2027,
+          },
+          diagnosis: {
+            limitingFactors: [
+              {
+                field: 'position',
+                priority: 'required',
+                resultCountIfDropped: 4,
+              },
+            ],
+            broadestFitScore: 0.6,
+          },
+        }),
+      );
+      createCompletion
+        .mockResolvedValueOnce(
+          mockOpenAiResponse(
+            '[SEARCH_READY]{"query":"linebacker","filters":{"sport":"football","position":"LB","graduationYear":2027}}[/SEARCH_READY]',
+          ),
+        )
+        .mockResolvedValueOnce(
+          mockOpenAiResponse(
+            'No exact match today — position is the limiting factor. Option A: relax position. Option B: relax graduation year. Which would you prefer?',
+          ),
+        );
+
+      await worker.handle(makeJob());
+
+      const calls = createCompletion.mock.calls as unknown as unknown[][];
+      const narrationCall = calls[1][0] as {
+        messages: { content: string }[];
+      };
+      const narrationPayload = narrationCall.messages[1].content;
+      expect(narrationPayload).not.toContain('requestedFilters');
+      expect(narrationPayload).not.toContain('minGpa');
+      expect(narrationPayload).not.toContain('graduationYear');
     });
 
     it('falls back to the generic message when Scout had nothing structural to diagnose', async () => {

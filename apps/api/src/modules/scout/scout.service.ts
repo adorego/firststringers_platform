@@ -114,6 +114,20 @@ const POSITION_MAP: Record<string, Record<string, string>> = {
   },
 };
 
+// Billy sometimes writes a "no preference" sentinel into a filter instead
+// of omitting the key entirely (e.g. position: "all" for "any position is
+// fine") — left as a literal value, it never equals a stored position or
+// sport and silently zeroes out every result instead of broadening the
+// search the way the recruiter actually asked for.
+const NO_PREFERENCE_VALUES = new Set([
+  'all',
+  'any',
+  'all positions',
+  'any position',
+  'anyone',
+  'any sport',
+]);
+
 @Injectable()
 export class ScoutService {
   private readonly logger = new Logger(ScoutService.name);
@@ -131,6 +145,7 @@ export class ScoutService {
     // "show me more" request surfaces someone new instead of repeating them.
     excludeIds: string[] = [],
   ): Promise<ScoutResult> {
+    filters = this.normalizeFilters(filters);
     const start = Date.now();
     const isShowMore = excludeIds.length > 0;
 
@@ -213,9 +228,38 @@ export class ScoutService {
     };
   }
 
+  private normalizeFilters(filters: SearchFilters): SearchFilters {
+    const normalized = { ...filters };
+    if (
+      normalized.position &&
+      NO_PREFERENCE_VALUES.has(normalized.position.toLowerCase())
+    ) {
+      normalized.position = undefined;
+    }
+    if (
+      normalized.sport &&
+      NO_PREFERENCE_VALUES.has(normalized.sport.toLowerCase())
+    ) {
+      normalized.sport = undefined;
+    }
+    return normalized;
+  }
+
   private isRequired(filters: SearchFilters, field: CriteriaField): boolean {
     return resolveCriteriaPriority(filters, field) === 'required';
   }
+
+  // A diagnosis probe needs the TRUE structural count for each relaxed
+  // filter combination, not a display-sized sample — runQuery's `limit`
+  // controls both the DB fetch window (take: limit * 3) and the count it
+  // reports (totalFound), so reusing the normal "how many to show" limit
+  // here silently capped every diagnosis at ~15 records. Once the recruiter's
+  // structured filters were just sport + position (the common case — most
+  // detail lives in free-text query, not filters), "drop position" always
+  // resolved to the identical capped query for every search sharing a sport,
+  // which is why unrelated threads kept reporting the exact same headline
+  // number regardless of what was actually being asked.
+  private static readonly DIAGNOSIS_SAMPLE_SIZE = 500;
 
   // For a fresh search that came back with zero athletes: test each hard
   // criterion in isolation (drop just that one, keep everything else) to see
@@ -248,7 +292,12 @@ export class ScoutService {
           ...filters,
           [field]: undefined,
         };
-        const relaxed = await this.runQuery('', relaxedFilters, 5, excludeIds);
+        const relaxed = await this.runQuery(
+          '',
+          relaxedFilters,
+          ScoutService.DIAGNOSIS_SAMPLE_SIZE,
+          excludeIds,
+        );
         return {
           field,
           priority: resolveCriteriaPriority(filters, field),
@@ -263,7 +312,7 @@ export class ScoutService {
     const broadest = await this.runQuery(
       '',
       { sport: filters.sport },
-      5,
+      ScoutService.DIAGNOSIS_SAMPLE_SIZE,
       excludeIds,
     );
 

@@ -25,7 +25,7 @@ Your job is to understand what the coach or recruiter is trying to accomplish th
 5. Geographic preference (region or state)
 6. Transfer portal preference (yes/no)
 7. NCAA eligibility requirement (yes/no)
-8. Academic requirements (minimum GPA) — you can ask about this, but always make clear it's optional and the recruiter doesn't need to set one
+8. Academic requirements (minimum GPA) — you can ask about this, but always make clear it's optional and the recruiter doesn't need to set one. This is the lowest-priority item on this whole list: it must never be the reason you add a question once you already have a reasonable basis to search on from the items above — offer to search first, and mention GPA afterward as something you can layer in later if they want it, rather than pausing beforehand to ask about it
 9. Any specific physical attributes, playing style, character signals, or fit criteria
 
 Understand priorities, not only filters:
@@ -38,7 +38,7 @@ A recruiting request is never a flat list of equally-weighted filters. For every
 Example: "I need a linebacker, 2027 class, at least 6'2", from Florida, a good student, who can compete right away" breaks down as: position=required, graduation class=required, ready-to-contribute=important, academics=important, height=preference, Florida=preference. Do not default everything to required — only tag a criterion required when the recruiter would consider the search a failure without it.
 
 Search for fit, not just match:
-A traditional search engine asks "does this satisfy every filter?" Billy asks "who is the best fit for what this recruiter actually needs?" An athlete does not need to satisfy 100% of the stated criteria to be worth recommending — the platform will still surface a highly-relevant athlete who narrowly misses a criterion instead of hiding them. When that happens, the athlete's results will come with the specific gap already identified (e.g. "class of 2026, one year ahead of the 2027 you're targeting") — you must always name that gap plainly and explain why the athlete is still worth the recruiter's attention, grounded only in what you're given. Never imply an athlete matches something they don't, and never hide a deviation to make a recommendation look cleaner.
+A traditional search engine asks "does this satisfy every filter?" Billy asks "who is the best fit for what this recruiter actually needs?" An athlete does not need to satisfy 100% of the stated criteria to be worth recommending — the platform will still surface a highly-relevant athlete who narrowly misses a criterion instead of hiding them. When that happens, the athlete's results will come with the specific gap already identified (e.g. "class of 2026, one year ahead of the 2027 you're targeting") — you must always name that gap plainly and explain why the athlete is still worth the recruiter's attention, grounded only in what you're given. Never imply an athlete matches something they don't, and never hide a deviation to make a recommendation look cleaner. This obligation is not limited to criteria the platform can structurally filter on — it covers anything the recruiter has stated as a bar for this search, including something like a minimum height, weight, or speed the recruiter mentioned in conversation. If you know an athlete you're discussing falls short of a bar the recruiter actually set — from either source — say so unprompted, in the same message that recommends or discusses them. A recruiter should never have to ask twice, or push back, to learn about a gap you already knew about.
 
 Rules:
 - Ask ONE question at a time, never multiple
@@ -47,13 +47,17 @@ Rules:
 - If the recruiter gives a broad or ambiguous request, ask the single highest-value clarifying question before searching
 - Every question must materially improve the recruiting decision; do not interrogate or ask filler questions
 - Prioritize recruiting objective, context, verified information, athlete fit, academics, character/readiness, athletic ability, geography, and timeline — highlight media never replaces reasoning
-- Never treat a minimum GPA as required to run a search — omit "minGpa" from the filters entirely unless the recruiter states one
+- Never treat a minimum GPA as required to run a search — omit "minGpa" from the filters entirely unless the recruiter states one. This applies to every optional filter (minGpa, graduationYear, transferPortal, ncaaEligible, region, leagueLevel): if the recruiter was asked about one and explicitly declined to set it ("no specific GPA", "doesn't matter"), that field must be left out of the filters JSON entirely — never write in a placeholder or sentinel value to stand in for "not set." A field that isn't a real, stated value is not a filter the platform is enforcing, and it must never be treated as a live constraint later (e.g. offered up as something to "relax")
 - If the recruiter's program profile below already includes a sport, treat it as known — never ask for it again, and use it as the default for every search unless they explicitly mention a different one
 - More generally: nothing in the recruiter's stored program profile is ever a reason to pause and ask for confirmation. It's background context, not a constraint to defend — a brand-new conversation starts with a blank search every time. When the recruiter's current message explicitly names a position, region, class, or anything else that differs from the stored profile, just search for what they asked — never present the stored value back to them as something to confirm or choose between
-- After gathering enough info (at least sport + position + a recruiting objective or one meaningful fit criterion), offer to search
+- After gathering enough info (at least sport + position + a recruiting objective or one meaningful fit criterion), offer to search immediately — do not add a second clarifying round-trip once a reasonable basis already exists. If the recruiter's one message already gave you several usable signals (e.g. position, class year, a physical floor, location, and urgency), that is well past enough — search on it rather than reaching further down your list of things you could still ask about. Reducing uncertainty means stopping once uncertainty is low enough to act on, not exhausting every item you could ask about
+- Never guess or invent the "sport" filter — it must come from something the recruiter actually said in this conversation, or from their known program profile above. If neither has established it, ask before offering to search; do not fill it in with whatever sport happens to come to mind. The sport and position you put in the [SEARCH_READY] filters must always match what you just said in your visible text and what the recruiter actually asked for — never let the JSON contradict the positions or sport you were just discussing
+- If the recruiter has no preference for a specific position (e.g. "any position", "all positions", "whoever fits"), omit the "position" key from filters entirely — never write "all" or "any" as its value; that string won't match anything in the database and would silently return zero athletes instead of searching broadly like the recruiter asked
+- You have no real athlete data until a search actually runs — never write out specific athlete names, positions, or bios before that point. Once you're ready, keep the visible text a brief, generic lead-in (e.g., "Great, let me pull that up for you.") immediately followed by the [SEARCH_READY] tag — never a fabricated list of results
 - If the recruiter asks for more athletes, other options, or anyone else (e.g. "show me more", "who else"), treat it as a new search using the same criteria unless they mention new ones — the platform automatically excludes athletes already shown in this conversation, so you will never repeat a previous recommendation
-- When you have enough information, respond with a JSON block at the end of your message in this exact format, tagging the priority tier of every filter you set in "priorities" (omit a key from "priorities" only if you truly can't judge its priority — never omit "position" or "graduationYear" when they're set):
-  [SEARCH_READY]{"query": "the full natural language query", "filters": {"sport": "...", "position": "...", "minGpa": 0.0, "graduationYear": 0, "transferPortal": true/false, "ncaaEligible": true/false, "priorities": {"position": "required", "graduationYear": "required", "minGpa": "important", "region": "preference"}}}[/SEARCH_READY]
+- If the recruiter asks to relax, drop, or loosen a specific criterion — whether directly ("relax the position", "drop the GPA requirement", "forget about region") or by accepting a trade-off you just offered after a zero-match search (naming the criterion, picking "Option A"/"Option B" or just the letter, or a plain "yes"/"let's do that"/"show me") — that is a direct instruction, not something to confirm back: immediately omit that exact field from the filters below (don't just relabel its priority) and emit a new [SEARCH_READY] tag right away, keeping every other filter from your current working set exactly as it is. Never repeat a trade-off question the recruiter has already answered — a search with no exact match must never become a dead end
+- When you have enough information, respond with a JSON block at the end of your message in this format, tagging the priority tier of every filter you set in "priorities" (omit a key from "priorities" only if you truly can't judge its priority — never omit "position" or "graduationYear" when they're set). Include ONLY the filter keys you have a real, stated value for — this example has a GPA and no region because that's what this particular recruiter gave you; a different conversation might have neither, or different fields entirely. Never pad the object with a key just to match this shape:
+  [SEARCH_READY]{"query": "the full natural language query", "filters": {"sport": "football", "position": "LB", "graduationYear": 2027, "minGpa": 3.0, "priorities": {"sport": "required", "position": "required", "graduationYear": "required", "minGpa": "important"}}}[/SEARCH_READY]
 - If the user says they want to search now, generate the search immediately
 - If the recruiter asks about their own profile, program, or saved information, respond with the details from the "Recruiter profile on file" section in a clean, readable format — do NOT search for athletes in this case
 - If the recruiter asks to update or change any of their profile fields (university, location, scholarshipType, sport, division, gender, openings), confirm the change in plain text and append the update tag with ONLY the changed fields:
@@ -81,6 +85,7 @@ Rules:
 - Write 2-5 sentences total, introducing the athletes below as a group or individually — whichever reads more naturally.
 - Explain WHY each athlete is worth the recruiter's attention using the fuller context you're given — never rely only on position, height, weight, location, or class. Reference things like academic performance, ability to contribute soon, character or fit signals, or athletic profile when the data actually supports it.
 - For every deviation listed, name the specific gap in plain language and briefly explain why the athlete is still worth attention, grounded ONLY in the strengths/context given for that athlete.
+- The "deviations" list only covers criteria the platform can structurally filter on — it has no field for things like a minimum height, weight, or speed threshold. The "query" you're given is the recruiter's full request in their own words, and may state exactly that kind of criterion. If an athlete's own summary or context shows a real measurement that falls short of something the recruiter actually asked for in "query" — even though it's absent from "deviations" — you must name that gap too, exactly like a structured deviation: state it plainly and explain why the athlete is still worth attention. Never let the deviations list's structural blind spot become a reason to stay silent about a shortfall you can see in the data. Only ever cite a number that's actually present in what you're given — never estimate or infer one.
 - Never invent a number, measurement, fact, or trait that isn't in the data given to you. If the context for an athlete is thin, say less rather than embellishing.
 - Do not restate every field — the athlete cards shown below your message already have full details.
 - End with a natural, low-key invitation to go deeper (e.g. "Want me to pull up their dossier?") — vary the phrasing, don't repeat it verbatim every time.
@@ -97,7 +102,7 @@ export const ZERO_MATCH_SYSTEM_PROMPT = `You are Billy, the Director of Recruiti
 Turn this into a recruiting conversation, not a dead end:
 1. Say plainly that there's no exact match today.
 2. You're given, for each hard criterion in the search, how many athletes would match if ONLY that one criterion were dropped (everything else kept). The one with the highest count is the real bottleneck — name it and explain it in one sentence, grounded only in those numbers. If multiple criteria show similarly low counts, say the combination itself is rare rather than singling one out.
-3. Offer up to two concrete, reasoned trade-offs: (A) keep the other criteria and relax the limiting one, or (B) keep the limiting one and relax something else that has room (a different criterion with a non-zero count). Never propose relaxing a criterion you have no data for.
+3. Offer up to two concrete, reasoned trade-offs, each explicitly labeled "Option A" and "Option B" in your visible text (so the recruiter can reply with just the letter): Option A keeps the other criteria and relaxes the limiting one; Option B keeps the limiting one and relaxes something else that has room (a different criterion with a non-zero count). The "limitingFactors" list is the ONLY source of truth for what can be named here — every field you offer to relax, in either option, must be an entry in that list. Never name or offer to relax GPA, graduation year, or anything else just because it sounds like a typical criterion, or because a recruiter mentions academics in passing — if it isn't in "limitingFactors", you have no data that it's even part of this search, let alone a bottleneck, and proposing to relax it would invent a constraint the recruiter never set.
 4. Ask which trade-off the recruiter would rather make — do not decide for them or run a broader search yourself.
 5. You're also given the best fit score available for this sport with every other filter dropped. If that score is null or very low, there is no version of this search worth pushing further — say plainly that you don't have anyone in the network today you'd feel comfortable recommending, instead of proposing alternatives. That is a legitimate answer, not a failure — never invent a candidate or relevance that isn't there.
 
@@ -234,14 +239,29 @@ export class BillyWorker {
       ? `\n\nThis recruiter's program profile — already known, do not ask for these again; use them when they ask about their profile, program, or saved info. Treat them as soft defaults for a search ONLY when the recruiter's current message doesn't specify otherwise. The moment their message names something explicit and different (a different position, region, class, etc.), silently follow the message — never pause to ask them to confirm or choose between the stored default and what they just said, and never announce the stored default back to them unless they asked about their profile directly. This applies fresh in every conversation, including a brand-new one with no prior search:\n${profileLines}`
       : '';
 
+    // The exact filters from the last search run in this conversation — the
+    // model otherwise has to reconstruct them from its own free-text replies
+    // (the [SEARCH_READY] JSON itself is stripped before anything is stored
+    // in history), which is how a confirmed trade-off previously ended up
+    // re-running the identical search instead of actually dropping a filter.
+    const hasSearchCriteria =
+      sessionState.searchCriteria &&
+      Object.keys(sessionState.searchCriteria).length > 0;
+    const criteriaContext = hasSearchCriteria
+      ? `\n\nThe filters from the most recent search you ran in this conversation — this is your current working set, not just a suggestion. When the recruiter refines, confirms, or accepts a trade-off on it (including a short reply like "A" or "yes" to an offer you just made), change only what they asked to change and carry everything else over exactly as it appears here:\n${JSON.stringify(sessionState.searchCriteria)}`
+      : '';
+
     const response = await this.openai.chat.completions.create({
       model: 'gpt-4o-mini',
       messages: [
-        { role: 'system', content: SEARCH_SYSTEM_PROMPT + profileContext },
+        {
+          role: 'system',
+          content: SEARCH_SYSTEM_PROMPT + profileContext + criteriaContext,
+        },
         ...messages,
       ],
       temperature: 0.7,
-      max_tokens: 300,
+      max_tokens: 500,
     });
 
     const rawContent = response.choices[0].message.content ?? '';
@@ -252,6 +272,12 @@ export class BillyWorker {
     const updateMatch = rawContent.match(
       /\[PROFILE_UPDATE\](.*?)\[\/PROFILE_UPDATE\]/s,
     );
+    // A completion can get cut off by max_tokens before the tag closes —
+    // an unclosed tag never matches the pairs above, so without this check
+    // the dangling raw payload (and anything the model wrote around it)
+    // would fall straight through to the recruiter's chat unstripped.
+    const hasUnclosedSearchTag =
+      !searchMatch && rawContent.includes('[SEARCH_READY]');
     let visibleContent = rawContent;
     let searchResults: unknown[] | undefined;
     let extractedFilters: SearchFilters | undefined;
@@ -288,7 +314,17 @@ export class BillyWorker {
       }
     }
 
-    if (searchMatch) {
+    if (hasUnclosedSearchTag) {
+      // Truncated mid-tag — there's no reliable close boundary to strip from,
+      // so treat this the same as a malformed payload: never let the partial
+      // internal payload reach the recruiter, and skip search entirely
+      // rather than run on incomplete filters.
+      this.logger.warn(
+        `Received an unclosed [SEARCH_READY] tag for conversation ${conversationId}, likely truncated by max_tokens`,
+      );
+      visibleContent =
+        'Sorry, something went wrong while I was preparing that search. Could you try asking again?';
+    } else if (searchMatch) {
       // Same rule as above: strip the tag before attempting to parse it, so
       // a malformed payload can never leak the internal search schema into
       // the visible chat (previously it did — see FS-CS-003).
@@ -786,9 +822,14 @@ export class BillyWorker {
           { role: 'system', content: ZERO_MATCH_SYSTEM_PROMPT },
           {
             role: 'user',
+            // Deliberately excludes the raw requested filters — limitingFactors
+            // is the only thing every rule above is grounded in, and a coach
+            // once had a placeholder minGpa/graduationYear value in the raw
+            // filters (from a field they never actually set) offered back to
+            // them as a "trade-off" simply because it was present in that
+            // object, even though it never appeared in limitingFactors.
             content: JSON.stringify({
               query,
-              requestedFilters: scoutResult.filters,
               limitingFactors: diagnosis.limitingFactors,
               broadestFitScore: diagnosis.broadestFitScore,
             }),

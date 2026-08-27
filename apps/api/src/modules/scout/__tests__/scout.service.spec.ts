@@ -5,6 +5,7 @@ import type { Prisma } from '@prisma/client';
 
 type FindManyArgs = {
   where: Prisma.AthleteWhereInput;
+  take?: number;
 };
 
 describe('ScoutService', () => {
@@ -70,6 +71,25 @@ describe('ScoutService', () => {
     const { where } = findMany.mock.calls[0][0];
     expect(where.sport).toEqual({ equals: 'football', mode: 'insensitive' });
     expect(where.position).toEqual({ equals: 'LB', mode: 'insensitive' });
+  });
+
+  it('treats "all"/"any" position or sport as no preference instead of a literal filter value that would zero out every match', async () => {
+    await service.search('any position', {
+      sport: 'football',
+      position: 'all',
+    });
+
+    const { where } = findMany.mock.calls[0][0];
+    expect(where.sport).toEqual({ equals: 'football', mode: 'insensitive' });
+    expect(where.position).toBeUndefined();
+  });
+
+  it('is case-insensitive when normalizing a "no preference" sentinel value', async () => {
+    await service.search('anyone', { sport: 'Any', position: 'ALL' });
+
+    const { where } = findMany.mock.calls[0][0];
+    expect(where.sport).toBeUndefined();
+    expect(where.position).toBeUndefined();
   });
 
   describe('"show me more" (excludeIds)', () => {
@@ -196,6 +216,41 @@ describe('ScoutService', () => {
         resultCountIfDropped: 1,
       });
       expect(result.diagnosis?.broadestFitScore).not.toBeNull();
+    });
+
+    it('reports the true structural count for a relaxed criterion, not a display-sized sample capped at ~15', async () => {
+      // Regression: three unrelated searches (different positions, different
+      // regions, one with physically impossible measurables that aren't even
+      // filterable) all reported the identical "five potential athletes" once
+      // position was dropped. Traced to diagnoseZeroMatch reusing the normal
+      // "how many to show" limit (5, i.e. take: 15) for its count probe —
+      // once structured filters were just sport + position, every diagnosis
+      // ran the exact same capped query and always landed on the same number.
+      const manyAthletes = Array.from({ length: 40 }, (_, i) => ({
+        id: `wr-${i}`,
+        name: `Athlete ${i}`,
+        sport: 'football',
+        position: 'WR',
+        dossier: null,
+        createdAt: new Date(),
+      }));
+      findMany
+        .mockResolvedValueOnce([]) // primary: position required, zero match
+        .mockResolvedValueOnce(manyAthletes) // diagnosis: drop position
+        .mockResolvedValueOnce(manyAthletes); // broadest: sport only
+
+      const result = await service.search('wide receiver', {
+        sport: 'football',
+        position: 'WR',
+      });
+
+      expect(result.diagnosis?.limitingFactors[0]).toMatchObject({
+        field: 'position',
+        resultCountIfDropped: 40,
+      });
+
+      const diagnosisCallArgs = findMany.mock.calls[1][0];
+      expect(diagnosisCallArgs.take).toBeGreaterThan(40);
     });
 
     it('skips diagnosis entirely when there is nothing structural to isolate', async () => {
