@@ -96,8 +96,16 @@ export class ConversationWorker {
 
     try {
       const sessionState = await this.session.getSession(athleteId);
-      const intent = await this.intentClassifier.classify(message);
-      const extractedData = await this.dataExtractor.extract(message, intent);
+      const askedQuestion = this.lastQuestionAsked(sessionState.messages);
+      const intent = await this.intentClassifier.classify(
+        message,
+        askedQuestion,
+      );
+      const extractedData = await this.dataExtractor.extract(
+        message,
+        intent,
+        askedQuestion,
+      );
       const manualInsights = await this.manualExtractor.extract(
         message,
         intent,
@@ -166,6 +174,20 @@ export class ConversationWorker {
       });
       throw error;
     }
+  }
+
+  private lastQuestionAsked(messages: JerryMessage[]): string | undefined {
+    for (let index = messages.length - 1; index >= 0; index -= 1) {
+      const message = messages[index];
+      if (message.role !== 'assistant') continue;
+      const question = message.content
+        .split(/(?<=[.!?])\s+/)
+        .filter((sentence) => sentence.trim().endsWith('?'))
+        .join(' ')
+        .trim();
+      return question || undefined;
+    }
+    return undefined;
   }
 
   // History persistence must never fail the job: a DB hiccup here would

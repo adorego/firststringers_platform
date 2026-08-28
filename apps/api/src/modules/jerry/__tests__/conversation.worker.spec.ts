@@ -170,6 +170,34 @@ describe('ConversationWorker', () => {
     worker = makeWorker();
   });
 
+  it("gives the classifier and the extractor Jerry's last question as context", async () => {
+    mockSession.getSession.mockResolvedValue(
+      makeSession({
+        messages: [
+          {
+            role: 'assistant',
+            content: "What's your dominant hand or foot?",
+            timestamp: new Date(),
+          },
+        ],
+      }),
+    );
+
+    await worker.handle({
+      data: { athleteId: 'athlete-123', message: 'Right' },
+    } as Job<MessageJob>);
+
+    expect(mockIntentClassifier.classify).toHaveBeenCalledWith(
+      'Right',
+      "What's your dominant hand or foot?",
+    );
+    expect(mockDataExtractor.extract).toHaveBeenCalledWith(
+      'Right',
+      'other',
+      "What's your dominant hand or foot?",
+    );
+  });
+
   // ── TEST 1 ───────────────────────────────────────────────────────────────
 
   it('runs the pipeline in the correct order', async () => {

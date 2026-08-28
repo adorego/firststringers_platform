@@ -7,7 +7,10 @@ export class IntentClassifierService {
   constructor(private readonly llm: LLMService) {}
 
   // istanbul ignore next — direct delegation with no own logic; covered via LLMService
-  async classify(message: string): Promise<JerryIntent> {
-    return this.llm.classify(message);
+  async classify(
+    message: string,
+    askedQuestion?: string,
+  ): Promise<JerryIntent> {
+    return this.llm.classify(message, askedQuestion);
   }
 }

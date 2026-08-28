@@ -10,12 +10,13 @@ export class DataExtractorService {
   async extract(
     text: string,
     intent: JerryIntent,
+    askedQuestion?: string,
   ): Promise<Partial<DossierData> | null> {
     if (intent === 'question' || intent === 'other') {
       return null;
     }
 
-    const extractedData = await this.llm.extract(text, intent);
+    const extractedData = await this.llm.extract(text, intent, askedQuestion);
     return enhanceJerryExtraction(text, extractedData);
   }
 }
