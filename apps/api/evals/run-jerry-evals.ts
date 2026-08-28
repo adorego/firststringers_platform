@@ -6,6 +6,9 @@
  *   extraction  — dossier extraction: expected fields present / equal / contained
  *   invariants  — conversational rules Jerry must never break (asks a question,
  *                 responds in English, no internal spec leakage, no guarantees)
+ *   conversations — multi-turn scripts: short answers resolve against the
+ *                 question that preceded them, no field is dropped between
+ *                 turns, and Jerry never re-asks what was already answered
  *
  * Usage (from apps/api, requires OPENAI_API_KEY in .env or the environment):
  *   pnpm eval:jerry
@@ -19,6 +22,8 @@ import path from 'node:path';
 import { LLMService } from '../src/shared/llm/llm.service';
 import { PromptBuilderService } from '../src/modules/jerry/prompt-builder.service';
 import type { ConversationStrategy, JerryIntent } from '../src/shared/types';
+
+type Json = Record<string, unknown>;
 
 // ── env loading (no dotenv dependency; pnpm does not hoist transitive deps) ──
 
@@ -306,6 +311,139 @@ async function runInvariants(llm: LLMService): Promise<SuiteResult> {
   return summarize('invariants', results, 0.9);
 }
 
+// ── conversations ─────────────────────────────────────────────────────────────
+
+interface ConversationTurn {
+  user: string;
+  strategy: ConversationStrategy;
+}
+
+interface ConversationCase {
+  id: string;
+  description: string;
+  turns: ConversationTurn[];
+  expect: Expectation[];
+  neverRepeat: string[];
+}
+
+function mergeInto(target: Json, source: Json): Json {
+  const result: Json = { ...target };
+  for (const [key, value] of Object.entries(source)) {
+    const current = result[key];
+    if (isPlainRecord(value) && isPlainRecord(current)) {
+      result[key] = mergeInto(current, value);
+    } else if (value !== undefined && value !== null) {
+      result[key] = value;
+    }
+  }
+  return result;
+}
+
+function isPlainRecord(value: unknown): value is Json {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+function questionsIn(response: string): string[] {
+  return response
+    .split(/(?<=[.!?])\s+/)
+    .map((sentence) => sentence.trim())
+    .filter((sentence) => sentence.endsWith('?'));
+}
+
+async function runConversations(
+  llm: LLMService,
+  limit?: number,
+): Promise<SuiteResult> {
+  const promptBuilder = new PromptBuilderService();
+  let cases = readJsonl<ConversationCase>(
+    path.join(DATASET_DIR, 'jerry-conversations.jsonl'),
+  );
+  if (limit) cases = cases.slice(0, limit);
+
+  const results = await mapPool(cases, 2, async (testCase) => {
+    try {
+      let dossier: Json = {};
+      const history: Array<{ role: 'user' | 'assistant'; content: string }> = [];
+      const problems: string[] = [];
+      let askedQuestion: string | undefined;
+      const answered: string[] = [];
+
+      for (const [index, turn] of testCase.turns.entries()) {
+        const intent = await llm.classify(turn.user, askedQuestion);
+        const extracted = await llm.extract(turn.user, intent, askedQuestion);
+
+        const before = dossier;
+        if (extracted) dossier = mergeInto(dossier, extracted as Json);
+
+        for (const path of Object.keys(before)) {
+          if (!(path in dossier)) {
+            problems.push(`turn ${index + 1} dropped the "${path}" section`);
+          }
+        }
+
+        history.push({ role: 'user', content: turn.user });
+        const raw = await llm.chat({
+          systemPrompt: promptBuilder.build(turn.strategy),
+          messages: history.map((message) => ({
+            ...message,
+            timestamp: new Date(),
+          })),
+          extractedData: null,
+        });
+        const response = promptBuilder.enforceConversationLeadership(
+          raw,
+          turn.strategy,
+        );
+        history.push({ role: 'assistant', content: response });
+
+        const asked = questionsIn(response);
+        const unique = new Set(asked.map((q) => q.toLowerCase()));
+        if (unique.size !== asked.length) {
+          problems.push(`turn ${index + 1} repeated a question verbatim`);
+        }
+        for (const phrase of answered) {
+          if (response.toLowerCase().includes(phrase)) {
+            problems.push(
+              `turn ${index + 1} asked again about "${phrase}" after it was answered`,
+            );
+          }
+        }
+
+        // A phrase only becomes forbidden once the athlete has answered it.
+        for (const phrase of testCase.neverRepeat) {
+          const lowered = phrase.toLowerCase();
+          if (
+            !answered.includes(lowered) &&
+            history.some(
+              (m) =>
+                m.role === 'assistant' && m.content.toLowerCase().includes(lowered),
+            )
+          ) {
+            answered.push(lowered);
+          }
+        }
+
+        askedQuestion = asked.join(' ') || undefined;
+      }
+
+      for (const expectation of testCase.expect) {
+        const problem = checkExpectation(dossier, expectation);
+        if (problem) problems.push(`final dossier: ${problem}`);
+      }
+
+      return {
+        id: testCase.id,
+        pass: problems.length === 0,
+        detail: problems.length === 0 ? 'ok' : problems.join('; '),
+      };
+    } catch (error) {
+      return { id: testCase.id, pass: false, detail: `error: ${String(error)}` };
+    }
+  });
+
+  return summarize('conversations', results, 0.8);
+}
+
 // ── reporting ─────────────────────────────────────────────────────────────────
 
 function summarize(
@@ -332,7 +470,7 @@ async function main(): Promise<void> {
   const limitArg = args.find((arg) => arg.startsWith('--limit='));
   const suites = suiteArg
     ? suiteArg.slice('--suite='.length).split(',')
-    : ['intents', 'extraction', 'invariants'];
+    : ['intents', 'extraction', 'invariants', 'conversations'];
   const limit = limitArg ? Number(limitArg.slice('--limit='.length)) : undefined;
 
   const model = process.env.OPENAI_MODEL || 'gpt-4o';
@@ -344,6 +482,9 @@ async function main(): Promise<void> {
   if (suites.includes('intents')) outcomes.push(await runIntents(llm, limit));
   if (suites.includes('extraction')) outcomes.push(await runExtraction(llm, limit));
   if (suites.includes('invariants')) outcomes.push(await runInvariants(llm));
+  if (suites.includes('conversations')) {
+    outcomes.push(await runConversations(llm, limit));
+  }
 
   let failed = false;
   for (const outcome of outcomes) {
