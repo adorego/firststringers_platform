@@ -53,6 +53,7 @@ export class LLMService {
   async extract(
     text: string,
     intent: JerryIntent,
+    askedQuestion?: string,
   ): Promise<Partial<DossierData> | null> {
     if (intent === 'question' || intent === 'other') {
       return null;
@@ -77,7 +78,9 @@ export class LLMService {
       messages: [
         {
           role: 'user',
-          content: `Extract the data from this text: "${text}"`,
+          content: askedQuestion
+            ? `The agent asked: "${askedQuestion}"\nThe athlete replied: "${text}"\nExtract the data the reply provides, resolving it against the question.`
+            : `Extract the data from this text: "${text}"`,
         },
       ],
     });
@@ -152,7 +155,7 @@ export class LLMService {
     };
   }
 
-  async classify(text: string): Promise<JerryIntent> {
+  async classify(text: string, askedQuestion?: string): Promise<JerryIntent> {
     const response = await this.client.chat.completions.create({
       model: process.env.OPENAI_MODEL || 'gpt-4o',
       max_tokens: 10,
@@ -170,11 +173,15 @@ export class LLMService {
             - recruiting: goals, timeline, target programs, competitive level preferences, limitations
             - question: athlete asking a question
             - other: anything else
+            A short reply such as "Right", "Yes" or "2027" answers the question the
+            agent just asked — classify it by the topic of that question, never as other.
             Respond with ONLY the category, no explanation or punctuation.`,
         },
         {
           role: 'user',
-          content: text,
+          content: askedQuestion
+            ? `The agent asked: "${askedQuestion}"\nThe athlete replied: "${text}"`
+            : text,
         },
       ],
     });

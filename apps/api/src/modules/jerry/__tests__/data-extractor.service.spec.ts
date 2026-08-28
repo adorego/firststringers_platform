@@ -35,6 +35,7 @@ describe('DataExtractorService', () => {
       expect(mockLlm.extract).toHaveBeenCalledWith(
         'jugué en la NCAA D1',
         'stats',
+        undefined,
       );
       expect(result).toEqual({ performance: { leagueLevel: 'D1' } });
     });
@@ -42,8 +43,33 @@ describe('DataExtractorService', () => {
     it('delega a llm.extract para intent === "academic"', async () => {
       mockLlm.extract.mockResolvedValue({ academic: { gpa: 3.8 } });
       const result = await service.extract('mi GPA es 3.8', 'academic');
-      expect(mockLlm.extract).toHaveBeenCalledWith('mi GPA es 3.8', 'academic');
+      expect(mockLlm.extract).toHaveBeenCalledWith(
+        'mi GPA es 3.8',
+        'academic',
+        undefined,
+      );
       expect(result).toEqual({ academic: { gpa: 3.8 } });
+    });
+
+    it('pasa la pregunta anterior de Jerry para que una respuesta corta tenga sentido', async () => {
+      mockLlm.extract.mockResolvedValue({
+        performance: { physicalProfile: { dominantSide: 'Right' } },
+      });
+
+      const result = await service.extract(
+        'Right',
+        'stats',
+        "What's your dominant hand or foot?",
+      );
+
+      expect(mockLlm.extract).toHaveBeenCalledWith(
+        'Right',
+        'stats',
+        "What's your dominant hand or foot?",
+      );
+      expect(result).toEqual({
+        performance: { physicalProfile: { dominantSide: 'Right' } },
+      });
     });
   });
 });
