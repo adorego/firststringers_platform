@@ -30,6 +30,29 @@ y el flujo de eval engineering de LangChain
 | `intents` | Clasificación de mensajes en la taxonomía de 9 intents | igualdad contra lista aceptada | 85 % |
 | `extraction` | Extracción de campos del dossier por intent | presencia / igualdad / contains sobre paths | 80 % |
 | `invariants` | Reglas que Jerry nunca debe romper: termina con pregunta (lidera la conversación), responde en inglés, no filtra IDs internos (`FS-CS-*`), no promete resultados, longitud acotada | checks de código sobre la respuesta post-procesada | 90 % |
+| `conversations` | Guiones multi-turno: una respuesta corta se resuelve contra la pregunta que la precede, ningún campo del dossier desaparece entre turnos, y Jerry no vuelve a preguntar lo ya contestado | dossier acumulado + invariantes por turno | 80 % |
+
+## Por qué existe `conversations`
+
+Las otras tres suites evalúan **un turno aislado**. Tres bugs reportados en
+producción durante agosto de 2026 no eran detectables así:
+
+- Jerry repetía la misma pregunta palabra por palabra en un mismo turno.
+- El dossier perdía altura y peso cuando un turno posterior guardaba la mano
+  dominante.
+- Una respuesta de una palabra ("Right") no se extraía, así que Jerry
+  preguntaba lo mismo indefinidamente.
+
+Los tres solo aparecen mirando la secuencia: turno N guarda, turno N+1 pisa o
+vuelve a preguntar. `conversations` recorre el guión acumulando el dossier y
+verifica al final; además chequea en cada turno que no se repita una pregunta
+textual, que no desaparezca una sección y que no se vuelva a pedir un dato ya
+respondido.
+
+La contraparte determinista y sin costo vive en Jest:
+`src/modules/dossier/__tests__/dossier-retention.spec.ts` maneja el worker real
+con una secuencia de extracciones y afirma que ningún campo aceptado se pierde.
+Ese sí corre en CI en cada PR.
 
 ## Correr
 
