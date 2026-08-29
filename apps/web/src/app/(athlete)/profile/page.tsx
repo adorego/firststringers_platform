@@ -75,9 +75,9 @@ export default function ProfilePage() {
                   <User size={18} />
                 </div>
                 <div>
-                  <p className="font-medium text-[#2D2D2D]">Profile details</p>
+                  <p className="font-medium text-[#2D2D2D]">Account</p>
                   <p className="text-sm text-[#A0A0A0]">
-                    Manage your athlete profile
+                    Name, email and password
                   </p>
                 </div>
               </button>
