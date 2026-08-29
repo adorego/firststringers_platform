@@ -3,6 +3,7 @@ import { AuthService } from './auth.service';
 import { RegisterDto } from './dto/register.dto';
 import { LoginDto } from './dto/login.dto';
 import { RefreshDto } from './dto/refresh.dto';
+import { ChangePasswordDto } from './dto/change-password.dto';
 import { Public } from './public.decorator';
 import { CurrentUser } from './current-user.decorator';
 
@@ -31,6 +32,14 @@ export class AuthController {
   @Post('send-otp')
   sendOtp(@CurrentUser() user: { id: string }) {
     return this.authService.sendOtp(user.id);
+  }
+
+  @Post('change-password')
+  changePassword(
+    @CurrentUser() user: { id: string },
+    @Body() dto: ChangePasswordDto,
+  ) {
+    return this.authService.changePassword(user.id, dto);
   }
 
   @Post('verify-email')

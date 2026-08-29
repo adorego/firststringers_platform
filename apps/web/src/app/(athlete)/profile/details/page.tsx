@@ -2,8 +2,8 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { useSession } from "next-auth/react";
-import { ArrowLeft, Check } from "lucide-react";
+import { useSession, signOut } from "next-auth/react";
+import { ArrowLeft, Check, LogOut } from "lucide-react";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001";
 
@@ -14,7 +14,7 @@ interface AthleteProfile {
   position: string;
 }
 
-export default function ProfileDetailsPage() {
+export default function AccountPage() {
   const { data: session } = useSession();
   const router = useRouter();
   const [profile, setProfile] = useState<AthleteProfile | null>(null);
@@ -22,6 +22,12 @@ export default function ProfileDetailsPage() {
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const [currentPassword, setCurrentPassword] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [changingPassword, setChangingPassword] = useState(false);
+  const [passwordChanged, setPasswordChanged] = useState(false);
+  const [passwordError, setPasswordError] = useState<string | null>(null);
 
   useEffect(() => {
     const token = session?.accessToken;
@@ -39,6 +45,8 @@ export default function ProfileDetailsPage() {
   }, [session?.accessToken]);
 
   const dirty = profile !== null && name.trim() !== profile.name;
+  const passwordReady =
+    currentPassword.length > 0 && newPassword.length >= 8 && !changingPassword;
 
   const handleSave = async () => {
     const token = session?.accessToken;
@@ -68,9 +76,44 @@ export default function ProfileDetailsPage() {
     }
   };
 
+  const handleChangePassword = async () => {
+    const token = session?.accessToken;
+    if (!token || !passwordReady) return;
+
+    setChangingPassword(true);
+    setPasswordError(null);
+    try {
+      const res = await fetch(`${API_URL}/auth/change-password`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ currentPassword, newPassword }),
+      });
+      if (!res.ok) {
+        const body = (await res.json().catch(() => null)) as {
+          message?: string;
+        } | null;
+        throw new Error(body?.message ?? "");
+      }
+      setCurrentPassword("");
+      setNewPassword("");
+      setPasswordChanged(true);
+      setTimeout(() => setPasswordChanged(false), 2500);
+    } catch (caught) {
+      setPasswordError(
+        caught instanceof Error && caught.message
+          ? caught.message
+          : "Could not update your password. Please try again.",
+      );
+    } finally {
+      setChangingPassword(false);
+    }
+  };
+
   return (
     <div className="flex h-full flex-col">
-      {/* Header */}
       <header className="flex items-center gap-3 px-6 pt-5 pb-4">
         <button
           onClick={() => router.push("/profile")}
@@ -79,29 +122,24 @@ export default function ProfileDetailsPage() {
         >
           <ArrowLeft size={20} />
         </button>
-        <h1 className="text-xl font-bold text-[#2D2D2D]">Profile details</h1>
+        <h1 className="text-xl font-bold text-[#2D2D2D]">Account</h1>
       </header>
 
       <div className="flex-1 overflow-y-auto px-6 pb-6">
         <div className="mx-auto max-w-2xl space-y-6">
-          {/* Error */}
           {error && (
             <div className="rounded-xl bg-red-50 px-4 py-3 text-sm text-red-700">
               {error}
             </div>
           )}
 
-          {/* Account info — editable */}
           <div>
             <h3 className="mb-3 px-1 text-xs font-semibold uppercase tracking-wider text-[#A0A0A0]">
-              Account
+              Your details
             </h3>
             <div className="space-y-3 rounded-2xl bg-[#EDEDEA] px-5 py-4">
               <div>
-                <label
-                  htmlFor="name"
-                  className="text-sm text-[#A0A0A0]"
-                >
+                <label htmlFor="name" className="text-sm text-[#A0A0A0]">
                   Full name
                 </label>
                 <input
@@ -122,7 +160,80 @@ export default function ProfileDetailsPage() {
             </div>
           </div>
 
-          {/* Athletic identity — managed by Jerry */}
+          <button
+            onClick={handleSave}
+            disabled={!dirty || !name.trim() || saving}
+            className="flex w-full items-center justify-center gap-2 rounded-2xl bg-[#3D3D3D] px-5 py-4 font-medium text-white transition-opacity disabled:opacity-30"
+          >
+            {saved ? (
+              <>
+                <Check size={18} /> Saved
+              </>
+            ) : saving ? (
+              "Saving…"
+            ) : (
+              "Save changes"
+            )}
+          </button>
+
+          <div>
+            <h3 className="mb-3 px-1 text-xs font-semibold uppercase tracking-wider text-[#A0A0A0]">
+              Password
+            </h3>
+            <div className="space-y-3 rounded-2xl bg-[#EDEDEA] px-5 py-4">
+              {passwordError && (
+                <p className="text-sm text-red-700">{passwordError}</p>
+              )}
+              <div>
+                <label
+                  htmlFor="currentPassword"
+                  className="text-sm text-[#A0A0A0]"
+                >
+                  Current password
+                </label>
+                <input
+                  id="currentPassword"
+                  type="password"
+                  autoComplete="current-password"
+                  value={currentPassword}
+                  onChange={(e) => setCurrentPassword(e.target.value)}
+                  className="mt-1 w-full rounded-xl border border-[#E0E0DC] bg-white px-4 py-3 text-sm font-medium text-[#2D2D2D] outline-none transition-colors focus:border-[#C0C0BC]"
+                />
+              </div>
+              <div>
+                <label htmlFor="newPassword" className="text-sm text-[#A0A0A0]">
+                  New password
+                </label>
+                <input
+                  id="newPassword"
+                  type="password"
+                  autoComplete="new-password"
+                  value={newPassword}
+                  onChange={(e) => setNewPassword(e.target.value)}
+                  className="mt-1 w-full rounded-xl border border-[#E0E0DC] bg-white px-4 py-3 text-sm font-medium text-[#2D2D2D] outline-none transition-colors focus:border-[#C0C0BC]"
+                />
+                <p className="mt-1 px-1 text-xs text-[#A0A0A0]">
+                  At least 8 characters.
+                </p>
+              </div>
+              <button
+                onClick={handleChangePassword}
+                disabled={!passwordReady}
+                className="flex w-full items-center justify-center gap-2 rounded-xl border border-[#D6D6D2] bg-white px-5 py-3 text-sm font-medium text-[#2D2D2D] transition-opacity disabled:opacity-30"
+              >
+                {passwordChanged ? (
+                  <>
+                    <Check size={16} /> Password updated
+                  </>
+                ) : changingPassword ? (
+                  "Updating…"
+                ) : (
+                  "Update password"
+                )}
+              </button>
+            </div>
+          </div>
+
           <div>
             <h3 className="mb-3 px-1 text-xs font-semibold uppercase tracking-wider text-[#A0A0A0]">
               Athletic identity
@@ -148,21 +259,11 @@ export default function ProfileDetailsPage() {
             </div>
           </div>
 
-          {/* Save */}
           <button
-            onClick={handleSave}
-            disabled={!dirty || !name.trim() || saving}
-            className="flex w-full items-center justify-center gap-2 rounded-2xl bg-[#3D3D3D] px-5 py-4 font-medium text-white transition-opacity disabled:opacity-30"
+            onClick={() => signOut({ callbackUrl: "/welcome" })}
+            className="flex w-full items-center justify-center gap-2 rounded-2xl border border-[#D6D6D2] px-5 py-4 font-medium text-[#6B6B6B] transition-colors hover:bg-[#EDEDEA]"
           >
-            {saved ? (
-              <>
-                <Check size={18} /> Saved
-              </>
-            ) : saving ? (
-              "Saving…"
-            ) : (
-              "Save changes"
-            )}
+            <LogOut size={18} /> Log out
           </button>
         </div>
       </div>

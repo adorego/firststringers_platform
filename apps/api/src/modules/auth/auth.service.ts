@@ -31,6 +31,34 @@ export class AuthService {
       this.config.getOrThrow<string>('JWT_SECRET');
   }
 
+  async changePassword(
+    userId: string,
+    dto: { currentPassword: string; newPassword: string },
+  ): Promise<{ ok: true }> {
+    if (dto.currentPassword === dto.newPassword) {
+      throw new BadRequestException(
+        'Your new password must be different from the current one.',
+      );
+    }
+
+    const user = await this.prisma.user.findUnique({ where: { id: userId } });
+    if (!user) {
+      throw new UnauthorizedException('Invalid credentials');
+    }
+
+    const valid = await bcrypt.compare(dto.currentPassword, user.password);
+    if (!valid) {
+      throw new UnauthorizedException('Current password is incorrect');
+    }
+
+    await this.prisma.user.update({
+      where: { id: userId },
+      data: { password: await bcrypt.hash(dto.newPassword, 12) },
+    });
+
+    return { ok: true };
+  }
+
   async register(dto: RegisterDto) {
     const existing = await this.prisma.user.findUnique({
       where: { email: dto.email },
