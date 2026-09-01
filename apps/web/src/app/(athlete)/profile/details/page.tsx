@@ -114,7 +114,7 @@ export default function AccountPage() {
 
   return (
     <div className="flex h-full flex-col">
-      <header className="flex items-center gap-3 px-6 pt-5 pb-4">
+      <header className="flex items-center gap-3 px-6 pt-2 pb-4">
         <button
           onClick={() => router.push("/profile")}
           className="flex h-9 w-9 items-center justify-center rounded-full text-fs-text-muted transition-colors hover:bg-fs-surface"

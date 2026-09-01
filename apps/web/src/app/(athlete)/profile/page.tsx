@@ -34,7 +34,7 @@ export default function ProfilePage() {
   return (
     <div className="flex h-full flex-col">
       {/* Header */}
-      <header className="px-6 pt-6 pb-4">
+      <header className="px-6 pt-2 pb-4">
         <h1 className="text-2xl font-bold text-fs-text">Profile</h1>
       </header>
 
