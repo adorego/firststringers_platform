@@ -71,31 +71,31 @@ export default function ConversationThreadPage({
       <header className="flex items-center gap-3 px-6 pt-5 pb-3">
         <button
           onClick={() => router.push("/conversations")}
-          className="flex h-9 w-9 items-center justify-center rounded-full text-[#6B6B6B] transition-colors hover:bg-[#EDEDEA]"
+          className="flex h-9 w-9 items-center justify-center rounded-full text-fs-text-muted transition-colors hover:bg-fs-surface"
           aria-label="Back to conversations"
         >
           <ArrowLeft size={20} />
         </button>
-        <div className="flex h-10 w-10 items-center justify-center rounded-full bg-[#3D3D3D] text-sm font-semibold text-white">
+        <div className="flex h-10 w-10 items-center justify-center rounded-full bg-fs-text text-sm font-semibold text-white">
           {(recruiterName ?? "R").charAt(0).toUpperCase()}
         </div>
         <div>
-          <h1 className="text-lg font-bold text-[#2D2D2D]">
+          <h1 className="text-lg font-bold text-fs-text">
             {recruiterName ?? "…"}
           </h1>
-          <p className="text-sm text-[#A0A0A0]">
+          <p className="text-sm text-fs-text-muted">
             {connected ? "Recruiter" : "Connecting…"}
           </p>
         </div>
       </header>
 
-      <div className="mx-6 h-px bg-[#E8E8E4]" />
+      <div className="mx-6 h-px bg-fs-surface-alt" />
 
       {/* Messages */}
       <div className="flex-1 overflow-y-auto px-6 py-3">
         <div className="mx-auto flex max-w-2xl flex-col gap-3">
           {messages.length === 0 && (
-            <p className="mt-8 text-center text-sm text-[#A0A0A0]">
+            <p className="mt-8 text-center text-sm text-fs-text-muted">
               This is the beginning of your conversation.
             </p>
           )}
@@ -110,8 +110,8 @@ export default function ConversationThreadPage({
               <div
                 className={`max-w-lg rounded-2xl px-4 py-3 ${
                   msg.senderRole === "athlete"
-                    ? "bg-[#3D3D3D] text-white"
-                    : "bg-[#EDEDEA] text-[#2D2D2D]"
+                    ? "bg-fs-text text-white"
+                    : "bg-fs-surface text-fs-text"
                 }`}
               >
                 <p className="text-sm leading-relaxed">{msg.content}</p>
@@ -119,7 +119,7 @@ export default function ConversationThreadPage({
                   className={`mt-1 text-xs ${
                     msg.senderRole === "athlete"
                       ? "text-white/40"
-                      : "text-[#A0A0A0]"
+                      : "text-fs-text-muted"
                   }`}
                 >
                   {formatTime(msg.createdAt)}
@@ -141,12 +141,12 @@ export default function ConversationThreadPage({
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={(e) => e.key === "Enter" && handleSend()}
             placeholder="Write a message"
-            className="flex-1 rounded-full border border-[#E0E0DC] bg-white px-5 py-3 text-sm text-[#2D2D2D] placeholder-[#A0A0A0] outline-none transition-colors focus:border-[#C0C0BC]"
+            className="flex-1 rounded-full border border-fs-border bg-white px-5 py-3 text-sm text-fs-text placeholder-fs-text-muted outline-none transition-colors focus:border-[#C0C0BC]"
           />
           <button
             onClick={handleSend}
             disabled={!input.trim() || !connected}
-            className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-full bg-[#3D3D3D] text-white transition-opacity disabled:opacity-30"
+            className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-full bg-fs-text text-white transition-opacity disabled:opacity-30"
             aria-label="Send message"
           >
             <Send size={18} />
