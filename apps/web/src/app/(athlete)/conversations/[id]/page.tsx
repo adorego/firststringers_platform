@@ -68,7 +68,7 @@ export default function ConversationThreadPage({
   return (
     <div className="flex h-full flex-col">
       {/* Header */}
-      <header className="flex items-center gap-3 px-6 pt-5 pb-3">
+      <header className="flex items-center gap-3 px-6 pt-2 pb-3">
         <button
           onClick={() => router.push("/conversations")}
           className="flex h-9 w-9 items-center justify-center rounded-full text-fs-text-muted transition-colors hover:bg-fs-surface"

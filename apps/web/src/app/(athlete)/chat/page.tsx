@@ -206,7 +206,7 @@ export default function ChatPage() {
   return (
     <div className="flex h-full flex-col">
       {/* Header */}
-      <header className="px-6 pt-5 pb-3">
+      <header className="px-6 pt-2 pb-3">
         <div className="flex items-center gap-3">
           <div className="flex h-10 w-10 items-center justify-center rounded-full bg-fs-text">
             <div className="h-2.5 w-2.5 rounded-full bg-fs-bg" />

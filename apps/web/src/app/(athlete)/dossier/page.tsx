@@ -362,7 +362,7 @@ export default function DossierPage() {
 
   return (
     <div className="min-h-full bg-fs-bg text-fs-text">
-      <div className="mx-auto flex w-full max-w-5xl flex-col px-5 pt-6 pb-28 sm:px-8 lg:px-10">
+      <div className="mx-auto flex w-full max-w-5xl flex-col px-5 pt-2 pb-28 sm:px-8 lg:px-10">
         {loading && !data ? (
           <DossierSkeleton />
         ) : (
