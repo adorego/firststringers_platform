@@ -10,7 +10,7 @@ import type { ConnectionRequest } from "@/stores/chat-store";
 function JerryWelcomeCard() {
   return (
     <div className="flex justify-center">
-      <div className="w-full max-w-lg overflow-hidden rounded-2xl bg-[#2D2D2D] text-white">
+      <div className="w-full max-w-lg overflow-hidden rounded-2xl bg-fs-text text-white">
         {/* Header with avatar */}
         <div className="px-5 pt-5 pb-4">
           <div className="flex items-center gap-3">
@@ -105,36 +105,36 @@ function ConnectionRequestCard({
 
   return (
     <div className="flex justify-center">
-      <div className="w-full max-w-lg overflow-hidden rounded-2xl border border-[#E0E0DC] bg-white">
+      <div className="w-full max-w-lg overflow-hidden rounded-2xl border border-fs-border bg-white">
         <div className="px-5 py-4">
-          <p className="text-xs font-medium uppercase tracking-wide text-[#A0A0A0]">
+          <p className="text-xs font-medium uppercase tracking-wide text-fs-text-muted">
             Connection request
           </p>
-          <p className="mt-1 text-sm font-semibold text-[#2D2D2D]">{from}</p>
+          <p className="mt-1 text-sm font-semibold text-fs-text">{from}</p>
           {request.pitch ? (
             <p className="mt-2 text-sm leading-relaxed text-[#4B4B4B]">
               {request.pitch}
             </p>
           ) : (
-            <p className="mt-1 text-sm text-[#6B6B6B]">
+            <p className="mt-1 text-sm text-fs-text-muted">
               wants to connect with you directly.
             </p>
           )}
         </div>
-        <div className="flex border-t border-[#E8E8E4]">
+        <div className="flex border-t border-fs-surface-alt">
           <button
             onClick={() => handle("decline")}
             disabled={busy}
-            className="flex flex-1 items-center justify-center gap-2 py-3 text-sm text-[#A0A0A0] transition-colors hover:bg-[#FAFAFA] hover:text-[#E53E3E] disabled:opacity-40"
+            className="flex flex-1 items-center justify-center gap-2 py-3 text-sm text-fs-text-muted transition-colors hover:bg-fs-bg hover:text-[#E53E3E] disabled:opacity-40"
           >
             <X size={15} />
             Decline
           </button>
-          <div className="w-px bg-[#E8E8E4]" />
+          <div className="w-px bg-fs-surface-alt" />
           <button
             onClick={() => handle("accept")}
             disabled={busy}
-            className="flex flex-1 items-center justify-center gap-2 py-3 text-sm font-medium text-[#2D2D2D] transition-colors hover:bg-[#F5F5F0] disabled:opacity-40"
+            className="flex flex-1 items-center justify-center gap-2 py-3 text-sm font-medium text-fs-text transition-colors hover:bg-fs-bg disabled:opacity-40"
           >
             <Check size={15} />
             Accept
@@ -208,12 +208,12 @@ export default function ChatPage() {
       {/* Header */}
       <header className="px-6 pt-5 pb-3">
         <div className="flex items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-full bg-[#3D3D3D]">
-            <div className="h-2.5 w-2.5 rounded-full bg-[#F5F5F0]" />
+          <div className="flex h-10 w-10 items-center justify-center rounded-full bg-fs-text">
+            <div className="h-2.5 w-2.5 rounded-full bg-fs-bg" />
           </div>
           <div>
-            <h1 className="text-lg font-bold text-[#2D2D2D]">Jerry</h1>
-            <p className="text-sm text-[#A0A0A0]">Always in your corner</p>
+            <h1 className="text-lg font-bold text-fs-text">Jerry</h1>
+            <p className="text-sm text-fs-text-muted">Always in your corner</p>
           </div>
         </div>
       </header>
@@ -241,21 +241,21 @@ export default function ChatPage() {
               className={`flex ${msg.sender === "athlete" ? "justify-end" : "justify-start"}`}
             >
               {msg.sender !== "athlete" && (
-                <div className="mr-3 mt-1 flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-[#3D3D3D]">
-                  <div className="h-2 w-2 rounded-full bg-[#F5F5F0]" />
+                <div className="mr-3 mt-1 flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-fs-text">
+                  <div className="h-2 w-2 rounded-full bg-fs-bg" />
                 </div>
               )}
               <div
                 className={`max-w-lg rounded-2xl px-4 py-3 ${
                   msg.sender === "athlete"
-                    ? "bg-[#3D3D3D] text-white"
-                    : "bg-[#EDEDEA] text-[#2D2D2D]"
+                    ? "bg-fs-text text-white"
+                    : "bg-fs-surface text-fs-text"
                 }`}
               >
                 <p className="text-sm leading-relaxed">{msg.content}</p>
                 <p
                   className={`mt-1 text-xs ${
-                    msg.sender === "athlete" ? "text-white/40" : "text-[#A0A0A0]"
+                    msg.sender === "athlete" ? "text-white/40" : "text-fs-text-muted"
                   }`}
                 >
                   {formatTime(msg.timestamp)}
@@ -267,7 +267,7 @@ export default function ChatPage() {
           {/* Suggestions — before user sends first message */}
           {!hasUserSent && (
             <div className="mt-2 text-center">
-              <p className="mb-3 text-xs text-[#A0A0A0]">You can ask me</p>
+              <p className="mb-3 text-xs text-fs-text-muted">You can ask me</p>
               <div className="flex flex-wrap justify-center gap-2">
                 {[
                   "Show me my overview",
@@ -277,7 +277,7 @@ export default function ChatPage() {
                   <button
                     key={suggestion}
                     onClick={() => setInput(suggestion)}
-                    className="rounded-full border border-[#E0E0DC] bg-white px-3 py-1.5 text-sm text-[#6B6B6B] transition-colors hover:border-[#C0C0BC] hover:text-[#2D2D2D]"
+                    className="rounded-full border border-fs-border bg-white px-3 py-1.5 text-sm text-fs-text-muted transition-colors hover:border-[#C0C0BC] hover:text-fs-text"
                   >
                     {suggestion}
                   </button>
@@ -298,14 +298,14 @@ export default function ChatPage() {
           {/* Typing indicator */}
           {isTyping && (
             <div className="flex justify-start">
-              <div className="mr-3 mt-1 flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-[#3D3D3D]">
-                <div className="h-2 w-2 rounded-full bg-[#F5F5F0]" />
+              <div className="mr-3 mt-1 flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-fs-text">
+                <div className="h-2 w-2 rounded-full bg-fs-bg" />
               </div>
-              <div className="rounded-2xl bg-[#EDEDEA] px-4 py-3">
+              <div className="rounded-2xl bg-fs-surface px-4 py-3">
                 <div className="flex items-center gap-1">
-                  <span className="h-2 w-2 animate-bounce rounded-full bg-[#A0A0A0] [animation-delay:0ms]" />
-                  <span className="h-2 w-2 animate-bounce rounded-full bg-[#A0A0A0] [animation-delay:150ms]" />
-                  <span className="h-2 w-2 animate-bounce rounded-full bg-[#A0A0A0] [animation-delay:300ms]" />
+                  <span className="h-2 w-2 animate-bounce rounded-full bg-fs-text-muted [animation-delay:0ms]" />
+                  <span className="h-2 w-2 animate-bounce rounded-full bg-fs-text-muted [animation-delay:150ms]" />
+                  <span className="h-2 w-2 animate-bounce rounded-full bg-fs-text-muted [animation-delay:300ms]" />
                 </div>
               </div>
             </div>
@@ -318,7 +318,7 @@ export default function ChatPage() {
       {/* Input */}
       <div className="px-6 pb-3">
         <div className="mx-auto max-w-2xl">
-          <div className="flex items-center gap-3 rounded-2xl border border-[#E0E0DC] bg-white px-4 py-2.5">
+          <div className="flex items-center gap-3 rounded-2xl border border-fs-border bg-white px-4 py-2.5">
             <input
               type="text"
               value={input}
@@ -330,12 +330,12 @@ export default function ChatPage() {
                 }
               }}
               placeholder="Share an update or ask a question"
-              className="flex-1 bg-transparent text-sm text-[#2D2D2D] placeholder:text-[#A0A0A0] focus:outline-none"
+              className="flex-1 bg-transparent text-sm text-fs-text placeholder:text-fs-text-muted focus:outline-none"
             />
             <button
               onClick={handleSend}
               disabled={!input.trim() || !isConnected}
-              className="flex h-8 w-8 items-center justify-center rounded-full bg-[#EDEDEA] text-[#6B6B6B] transition-colors hover:bg-[#E0E0DC] disabled:opacity-40"
+              className="flex h-8 w-8 items-center justify-center rounded-full bg-fs-surface text-fs-text-muted transition-colors hover:bg-fs-border disabled:opacity-40"
             >
               <Send size={16} />
             </button>

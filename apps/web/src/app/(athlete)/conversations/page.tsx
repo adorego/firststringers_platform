@@ -78,29 +78,29 @@ export default function ConversationsPage() {
     <div className="flex h-full flex-col">
       {/* Header */}
       <header className="px-6 pt-6 pb-2">
-        <h1 className="text-2xl font-bold text-[#2D2D2D]">Conversations</h1>
-        <p className="mt-1 text-sm text-[#A0A0A0]">
+        <h1 className="text-2xl font-bold text-fs-text">Conversations</h1>
+        <p className="mt-1 text-sm text-fs-text-muted">
           Active recruiting discussions
         </p>
       </header>
 
-      <div className="mx-6 mt-2 h-px bg-[#E8E8E4]" />
+      <div className="mx-6 mt-2 h-px bg-fs-surface-alt" />
 
       {loading ? (
         <div className="flex flex-1 items-center justify-center">
-          <p className="text-sm text-[#A0A0A0]">Loading…</p>
+          <p className="text-sm text-fs-text-muted">Loading…</p>
         </div>
       ) : isEmpty ? (
         <div className="flex flex-1 flex-col items-center justify-center px-6">
-          <div className="mb-6 flex h-14 w-14 items-center justify-center rounded-full bg-[#EDEDEA]">
-            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-[#E0E0DC]">
+          <div className="mb-6 flex h-14 w-14 items-center justify-center rounded-full bg-fs-surface">
+            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-fs-border">
               <div className="h-2 w-2 rounded-full bg-[#C0C0BC]" />
             </div>
           </div>
-          <h2 className="text-xl font-bold text-[#2D2D2D]">
+          <h2 className="text-xl font-bold text-fs-text">
             No active conversations yet
           </h2>
-          <p className="mt-3 max-w-sm text-center text-sm leading-relaxed text-[#A0A0A0]">
+          <p className="mt-3 max-w-sm text-center text-sm leading-relaxed text-fs-text-muted">
             When coaches request an introduction and you accept, your
             conversations will appear here.
           </p>
@@ -112,7 +112,7 @@ export default function ConversationsPage() {
             {/* Pending requests */}
             {pendingRequests.length > 0 && (
               <section>
-                <h2 className="mb-2 text-xs font-semibold uppercase tracking-widest text-[#A0A0A0]">
+                <h2 className="mb-2 text-xs font-semibold uppercase tracking-widest text-fs-text-muted">
                   Pending requests
                 </h2>
                 <div className="space-y-3">
@@ -121,20 +121,20 @@ export default function ConversationsPage() {
                     return (
                       <div
                         key={req.id}
-                        className="flex w-full items-start gap-3 rounded-2xl bg-[#F5F4F0] px-5 py-4 border border-[#E0DDD8]"
+                        className="flex w-full items-start gap-3 rounded-2xl bg-fs-bg px-5 py-4 border border-[#E0DDD8]"
                       >
                         {/* Avatar */}
-                        <div className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-full bg-[#3D3D3D] text-sm font-semibold text-white">
+                        <div className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-full bg-fs-text text-sm font-semibold text-white">
                           {(req.recruiter?.name ?? "R").charAt(0).toUpperCase()}
                         </div>
 
                         {/* Content */}
                         <div className="min-w-0 flex-1">
-                          <p className="font-semibold text-[#2D2D2D]">
+                          <p className="font-semibold text-fs-text">
                             {req.recruiter?.name ?? "Recruiter"}
                           </p>
                           {req.recruiter?.organization?.name && (
-                            <p className="text-xs text-[#A0A0A0]">
+                            <p className="text-xs text-fs-text-muted">
                               {req.recruiter.organization.name}
                             </p>
                           )}
@@ -143,7 +143,7 @@ export default function ConversationsPage() {
                               {req.recruiter.pitch}
                             </p>
                           )}
-                          <p className="mt-2 text-xs text-[#A0A0A0]">
+                          <p className="mt-2 text-xs text-fs-text-muted">
                             {formatTime(req.createdAt)}
                           </p>
 
@@ -152,14 +152,14 @@ export default function ConversationsPage() {
                             <button
                               onClick={() => handleAccept(req)}
                               disabled={isActing}
-                              className="rounded-xl bg-[#2D2D2D] px-4 py-2 text-sm font-medium text-white transition-opacity hover:opacity-80 disabled:opacity-50"
+                              className="rounded-xl bg-fs-text px-4 py-2 text-sm font-medium text-white transition-opacity hover:opacity-80 disabled:opacity-50"
                             >
                               {isActing ? "…" : "Accept"}
                             </button>
                             <button
                               onClick={() => handleDecline(req)}
                               disabled={isActing}
-                              className="rounded-xl bg-[#EDEDEA] px-4 py-2 text-sm font-medium text-[#2D2D2D] transition-colors hover:bg-[#E5E5E1] disabled:opacity-50"
+                              className="rounded-xl bg-fs-surface px-4 py-2 text-sm font-medium text-fs-text transition-colors hover:bg-[#E5E5E1] disabled:opacity-50"
                             >
                               {isActing ? "…" : "Decline"}
                             </button>
@@ -176,7 +176,7 @@ export default function ConversationsPage() {
             {conversations.length > 0 && (
               <section>
                 {pendingRequests.length > 0 && (
-                  <h2 className="mb-2 text-xs font-semibold uppercase tracking-widest text-[#A0A0A0]">
+                  <h2 className="mb-2 text-xs font-semibold uppercase tracking-widest text-fs-text-muted">
                     Active
                   </h2>
                 )}
@@ -191,21 +191,21 @@ export default function ConversationsPage() {
                       <button
                         key={conv.id}
                         onClick={() => router.push(`/conversations/${conv.id}`)}
-                        className="flex w-full items-center gap-3 rounded-2xl bg-[#EDEDEA] px-5 py-4 text-left transition-colors hover:bg-[#E5E5E1]"
+                        className="flex w-full items-center gap-3 rounded-2xl bg-fs-surface px-5 py-4 text-left transition-colors hover:bg-[#E5E5E1]"
                       >
                         {/* Avatar */}
-                        <div className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-full bg-[#3D3D3D] text-sm font-semibold text-white">
+                        <div className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-full bg-fs-text text-sm font-semibold text-white">
                           {(conv.recruiter?.name ?? "R").charAt(0).toUpperCase()}
                         </div>
 
                         {/* Content */}
                         <div className="min-w-0 flex-1">
                           <div className="flex items-center justify-between">
-                            <p className="truncate font-semibold text-[#2D2D2D]">
+                            <p className="truncate font-semibold text-fs-text">
                               {conv.recruiter?.name ?? "Recruiter"}
                             </p>
                             {lastMessage && (
-                              <span className="ml-2 flex-shrink-0 text-xs text-[#A0A0A0]">
+                              <span className="ml-2 flex-shrink-0 text-xs text-fs-text-muted">
                                 {formatTime(lastMessage.createdAt)}
                               </span>
                             )}
@@ -214,14 +214,14 @@ export default function ConversationsPage() {
                             <p
                               className={`truncate text-sm ${
                                 unread
-                                  ? "font-medium text-[#2D2D2D]"
-                                  : "text-[#A0A0A0]"
+                                  ? "font-medium text-fs-text"
+                                  : "text-fs-text-muted"
                               }`}
                             >
                               {lastMessage?.content ?? "Start the conversation"}
                             </p>
                             {unread && (
-                              <span className="ml-2 h-2.5 w-2.5 flex-shrink-0 rounded-full bg-[#3D3D3D]" />
+                              <span className="ml-2 h-2.5 w-2.5 flex-shrink-0 rounded-full bg-fs-text" />
                             )}
                           </div>
                         </div>

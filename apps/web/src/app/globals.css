@@ -5,6 +5,18 @@
   --font-sans: var(--font-inter);
   --font-mono: var(--font-mono);
 
+  /* First Stringers surface system — shared by Jerry and Billy.
+     Source of truth: Athlete Dossier Experience prototype, approved 2026-09-02. */
+  --color-fs-bg: #FAF8F5;
+  --color-fs-surface: #F3F0EC;
+  --color-fs-surface-alt: #EBE8E4;
+  --color-fs-text: #27251E;
+  --color-fs-text-muted: #6B6962;
+  --color-fs-border: rgba(39, 37, 30, 0.08);
+  --color-fs-accent: #7B91A8;
+  --color-fs-accent-muted: #A8B8C6;
+
+  /* Legacy palette — being replaced by the tokens above. Do not use in new work. */
   /* Primary Colors */
   --color-fs-black: #000000;
   --color-fs-dark: #0A0A0A;

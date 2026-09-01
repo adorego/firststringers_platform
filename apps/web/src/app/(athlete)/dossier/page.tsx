@@ -212,11 +212,11 @@ function initialsFromName(name: string): string {
 function DossierSkeleton() {
   return (
     <div className="space-y-8" aria-busy="true" aria-label="Loading dossier">
-      <div className="h-44 animate-pulse rounded-[28px] bg-[#F3F0EC]" />
-      <div className="h-36 animate-pulse rounded-[28px] bg-[#F3F0EC]/70" />
+      <div className="h-44 animate-pulse rounded-[28px] bg-fs-surface" />
+      <div className="h-36 animate-pulse rounded-[28px] bg-fs-surface/70" />
       <div className="space-y-4">
         {Array.from({ length: 4 }).map((_, index) => (
-          <div key={index} className="h-16 animate-pulse rounded-2xl bg-[#EBE8E4]/70" />
+          <div key={index} className="h-16 animate-pulse rounded-2xl bg-fs-surface-alt/70" />
         ))}
       </div>
     </div>
@@ -227,18 +227,18 @@ function FieldRow({ field }: { field: DossierField }) {
   const known = Boolean(field.value);
 
   return (
-    <div className="grid gap-2 border-t border-[#27251E]/5 py-4 sm:grid-cols-[minmax(0,180px)_1fr_auto] sm:items-start sm:gap-5">
-      <dt className="text-[11px] font-medium uppercase tracking-[0.18em] text-[#27251E]/45">
+    <div className="grid gap-2 border-t border-fs-text/5 py-4 sm:grid-cols-[minmax(0,180px)_1fr_auto] sm:items-start sm:gap-5">
+      <dt className="text-[11px] font-medium uppercase tracking-[0.18em] text-fs-text/45">
         {field.label}
       </dt>
-      <dd className={`text-sm leading-6 ${known ? "text-[#27251E]" : "text-[#27251E]/35"}`}>
+      <dd className={`text-sm leading-6 ${known ? "text-fs-text" : "text-fs-text/35"}`}>
         {field.value ?? "Waiting for Jerry"}
       </dd>
       <span
         className={`w-fit rounded-full px-2.5 py-1 text-[10px] font-medium uppercase tracking-[0.16em] ${
           known
             ? "bg-[#DDE5EF] text-[#4A5F79]"
-            : "border border-[#27251E]/10 text-[#27251E]/35"
+            : "border border-fs-text/10 text-fs-text/35"
         }`}
       >
         {known ? "Known" : "Pending"}
@@ -259,7 +259,7 @@ function SectionAccordion({
   const known = knownCount(section.fields);
 
   return (
-    <section className="border-t border-[#27251E]/5">
+    <section className="border-t border-fs-text/5">
       <button
         type="button"
         onClick={onToggle}
@@ -269,23 +269,23 @@ function SectionAccordion({
         <span className="flex min-w-0 items-center gap-3">
           <span
             className={`h-2 w-2 flex-shrink-0 rounded-full ${
-              known > 0 ? "bg-[#6F7F95]" : "bg-[#27251E]/20"
+              known > 0 ? "bg-[#6F7F95]" : "bg-fs-text/20"
             }`}
           />
           <span className="min-w-0">
-            <span className="block text-base font-medium text-[#27251E]">{section.title}</span>
-            <span className="mt-1 block text-xs leading-5 text-[#27251E]/45">
+            <span className="block text-base font-medium text-fs-text">{section.title}</span>
+            <span className="mt-1 block text-xs leading-5 text-fs-text/45">
               {section.description}
             </span>
           </span>
         </span>
         <span className="flex flex-shrink-0 items-center gap-3">
-          <span className="hidden text-[10px] font-medium uppercase tracking-[0.16em] text-[#27251E]/45 sm:inline">
+          <span className="hidden text-[10px] font-medium uppercase tracking-[0.16em] text-fs-text/45 sm:inline">
             {known}/{section.fields.length} known
           </span>
           <ChevronRight
             size={15}
-            className={`text-[#27251E]/40 transition-transform duration-200 ${
+            className={`text-fs-text/40 transition-transform duration-200 ${
               open ? "rotate-90" : ""
             }`}
           />
@@ -361,26 +361,26 @@ export default function DossierPage() {
   };
 
   return (
-    <div className="min-h-full bg-[#FAF8F5] text-[#27251E]">
+    <div className="min-h-full bg-fs-bg text-fs-text">
       <div className="mx-auto flex w-full max-w-5xl flex-col px-5 pt-6 pb-28 sm:px-8 lg:px-10">
         {loading && !data ? (
           <DossierSkeleton />
         ) : (
-          <main className="overflow-hidden rounded-[32px] border border-[#27251E]/5 bg-[#FAF8F5] shadow-[0_24px_80px_rgba(39,37,30,0.06)]">
-            <section className="sticky top-0 z-10 border-b border-[#27251E]/5 bg-[#FAF8F5]/95 px-5 py-6 backdrop-blur sm:px-10 sm:py-10">
+          <main className="overflow-hidden rounded-[32px] border border-fs-text/5 bg-fs-bg shadow-[0_24px_80px_rgba(39,37,30,0.06)]">
+            <section className="sticky top-0 z-10 border-b border-fs-text/5 bg-fs-bg/95 px-5 py-6 backdrop-blur sm:px-10 sm:py-10">
               <div className="flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between">
                 <div className="flex min-w-0 gap-5 sm:gap-7">
-                  <div className="flex h-20 w-20 flex-shrink-0 items-center justify-center rounded-md border border-[#27251E]/10 bg-[#EBE8E4] text-xl font-medium tracking-[-0.04em] text-[#27251E]/70">
+                  <div className="flex h-20 w-20 flex-shrink-0 items-center justify-center rounded-md border border-fs-text/10 bg-fs-surface-alt text-xl font-medium tracking-[-0.04em] text-fs-text/70">
                     {initials}
                   </div>
                   <div className="min-w-0">
-                    <h2 className="text-2xl font-medium tracking-[-0.04em] text-[#27251E] sm:text-3xl">
+                    <h2 className="text-2xl font-medium tracking-[-0.04em] text-fs-text sm:text-3xl">
                       {displayName}
                     </h2>
-                    <p className="mt-2 text-sm leading-6 text-[#27251E]/50">
+                    <p className="mt-2 text-sm leading-6 text-fs-text/50">
                       {meta.length > 0 ? meta.join(" · ") : "Core identity pending"}
                     </p>
-                    <p className="mt-1 text-sm text-[#27251E]/50">
+                    <p className="mt-1 text-sm text-fs-text/50">
                       {identity.location ?? "Location pending"}
                     </p>
                   </div>
@@ -392,31 +392,31 @@ export default function DossierPage() {
                   </span>
                   <Link
                     href="/chat"
-                    className="rounded-full border border-[#27251E]/10 px-3 py-2 text-[10px] font-medium uppercase tracking-[0.16em] text-[#27251E]/55 transition-colors hover:bg-[#F3F0EC]"
+                    className="rounded-full border border-fs-text/10 px-3 py-2 text-[10px] font-medium uppercase tracking-[0.16em] text-fs-text/55 transition-colors hover:bg-fs-surface"
                   >
                     Continue with Jerry
                   </Link>
                 </div>
               </div>
 
-              <div className="mt-8 flex flex-wrap gap-x-6 gap-y-3 pl-0 text-sm text-[#27251E] sm:pl-[6.75rem]">
+              <div className="mt-8 flex flex-wrap gap-x-6 gap-y-3 pl-0 text-sm text-fs-text sm:pl-[6.75rem]">
                 <span>{performance.archetype ?? "Archetype pending"}</span>
-                <span className="text-[#27251E]/60">
+                <span className="text-fs-text/60">
                   {performance.leagueLevel ?? identity.competitiveLevel ?? "Development level pending"}
                 </span>
                 <ReadinessBadge score={completeness ?? 0} showPercent />
               </div>
             </section>
 
-            <section className="bg-[#F3F0EC]/30 px-5 py-10 sm:px-10 sm:py-12">
+            <section className="bg-fs-surface/30 px-5 py-10 sm:px-10 sm:py-12">
               <div className="max-w-3xl">
-                <div className="mb-6 flex items-center gap-2 text-[#27251E]">
+                <div className="mb-6 flex items-center gap-2 text-fs-text">
                   <Zap size={16} className="text-[#6F7F95]" strokeWidth={1.7} />
                   <h2 className="text-xl font-medium tracking-[-0.03em]">
                     Intelligence Summary
                   </h2>
                 </div>
-                <p className="text-base font-light leading-[1.9] text-[#27251E]/80">
+                <p className="text-base font-light leading-[1.9] text-fs-text/80">
                   {summary}
                 </p>
               </div>
@@ -424,7 +424,7 @@ export default function DossierPage() {
 
             <section className="px-5 py-10 sm:px-10 sm:py-12">
               <div className="max-w-3xl">
-                <div className="mb-8 flex items-center gap-2 text-[#27251E]">
+                <div className="mb-8 flex items-center gap-2 text-fs-text">
                   <span className="h-2 w-2 rounded-full bg-[#6F7F95]" />
                   <h2 className="text-xl font-medium tracking-[-0.03em]">
                     Development Timeline
@@ -440,10 +440,10 @@ export default function DossierPage() {
                           item.status === "pending" ? "opacity-55" : ""
                         }`}
                       >
-                        <span className="pt-1 text-[10px] font-medium uppercase tracking-[0.18em] text-[#27251E]/45">
+                        <span className="pt-1 text-[10px] font-medium uppercase tracking-[0.18em] text-fs-text/45">
                           {item.period}
                         </span>
-                        <span className="relative block border-l border-[#27251E]/10 pl-5">
+                        <span className="relative block border-l border-fs-text/10 pl-5">
                           <span
                             className={`absolute -left-[5px] top-1 h-2.5 w-2.5 rounded-full ${
                               index < 2 && item.status === "known"
@@ -451,10 +451,10 @@ export default function DossierPage() {
                                 : "bg-[#C9C3BB]"
                             }`}
                           />
-                          <span className="block text-base font-medium text-[#27251E]">
+                          <span className="block text-base font-medium text-fs-text">
                             {item.title}
                           </span>
-                          <span className="mt-2 block text-sm leading-6 text-[#27251E]/55">
+                          <span className="mt-2 block text-sm leading-6 text-fs-text/55">
                             {item.detail}
                           </span>
                         </span>
@@ -462,8 +462,8 @@ export default function DossierPage() {
                     ))}
                   </ol>
                 ) : (
-                  <div className="rounded-2xl bg-[#F3F0EC]/70 px-5 py-8">
-                    <p className="text-sm leading-6 text-[#27251E]/55">
+                  <div className="rounded-2xl bg-fs-surface/70 px-5 py-8">
+                    <p className="text-sm leading-6 text-fs-text/55">
                       {emptyStateTitle}. Start chatting with Jerry to create the first
                       representation signals.
                     </p>
@@ -472,12 +472,12 @@ export default function DossierPage() {
               </div>
             </section>
 
-            <section className="bg-[#F3F0EC]/20 px-5 py-6 sm:px-10">
+            <section className="bg-fs-surface/20 px-5 py-6 sm:px-10">
               <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-                <p className="text-[11px] font-medium uppercase tracking-[0.2em] text-[#27251E]/45">
+                <p className="text-[11px] font-medium uppercase tracking-[0.2em] text-fs-text/45">
                   Supporting Intelligence
                 </p>
-                <p className="text-xs text-[#27251E]/45">
+                <p className="text-xs text-fs-text/45">
                   {knownSignalsLabel}
                 </p>
               </div>
@@ -495,12 +495,12 @@ export default function DossierPage() {
                 ))
               ) : (
                 <div className="py-10 text-center">
-                  <p className="text-sm leading-6 text-[#27251E]/55">
+                  <p className="text-sm leading-6 text-fs-text/55">
                     Start chatting with Jerry to build the Athlete Dossier.
                   </p>
                   <Link
                     href="/chat"
-                    className="mt-5 inline-flex rounded-full bg-[#27251E] px-5 py-3 text-xs font-medium uppercase tracking-[0.16em] text-[#FAF8F5] transition-opacity hover:opacity-85"
+                    className="mt-5 inline-flex rounded-full bg-fs-text px-5 py-3 text-xs font-medium uppercase tracking-[0.16em] text-fs-bg transition-opacity hover:opacity-85"
                   >
                     Open Jerry
                   </Link>
