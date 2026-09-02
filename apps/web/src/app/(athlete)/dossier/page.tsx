@@ -5,7 +5,6 @@ import { useEffect, useMemo, useState } from "react";
 import { useSession } from "next-auth/react";
 import { ChevronRight, Zap } from "lucide-react";
 import { useDossierStore } from "@/stores/dossier-store";
-import { ReadinessBadge } from "@/components/ui/ReadinessBadge";
 
 type DossierData = NonNullable<ReturnType<typeof useDossierStore.getState>["data"]>;
 
@@ -21,7 +20,6 @@ interface DossierSection {
 }
 
 interface TimelineItem {
-  period: string;
   title: string;
   detail: string;
   status: "known" | "pending";
@@ -136,11 +134,9 @@ function buildSections(data: DossierData): DossierSection[] {
 function buildSummary({
   data,
   displayName,
-  sections,
 }: {
   data: DossierData | null;
   displayName: string;
-  sections: DossierSection[];
 }): string {
   if (!data) {
     return `${displayName}'s Athlete Dossier has not been activated yet. Jerry is ready to begin collecting the identity, athletic, academic, recruiting, and character signals needed to represent the athlete with context.`;
@@ -151,10 +147,6 @@ function buildSummary({
   const academic = data.academic ?? {};
   const availability = data.availability ?? {};
   const character = data.character ?? {};
-
-  const totalKnown = sections.reduce((sum, section) => sum + knownCount(section.fields), 0);
-  const totalFields = sections.reduce((sum, section) => sum + section.fields.length, 0);
-  const pending = Math.max(0, totalFields - totalKnown);
 
   const signals = [
     identity.position || identity.sport
@@ -174,26 +166,16 @@ function buildSummary({
       ? `${displayName}'s dossier currently anchors around ${signals.join(", ")}.`
       : `${displayName}'s dossier has started, but Jerry still needs the core signals that make representation precise.`;
 
-  const completion =
-    pending > 0
-      ? ` Jerry has ${totalKnown} known signals and ${pending} pending details to complete the first representation layer.`
-      : " Jerry has enough core context to present a complete initial representation layer.";
-
-  return `${base}${completion}`;
+  return base;
 }
 
 function buildTimeline(sections: DossierSection[]): TimelineItem[] {
   return sections.map((section) => {
     const known = knownCount(section.fields);
-    const total = section.fields.length;
     const status = known > 0 ? "known" : "pending";
     return {
-      period: status === "known" ? "KNOWN" : "PENDING",
       title: section.title,
-      detail:
-        status === "known"
-          ? `${known}/${total} signals captured`
-          : `Jerry still needs ${section.title.toLowerCase()} context`,
+      detail: section.description,
       status,
     };
   });
@@ -280,9 +262,6 @@ function SectionAccordion({
           </span>
         </span>
         <span className="flex flex-shrink-0 items-center gap-3">
-          <span className="hidden text-[10px] font-medium uppercase tracking-[0.16em] text-fs-text/45 sm:inline">
-            {known}/{section.fields.length} known
-          </span>
           <ChevronRight
             size={15}
             className={`text-fs-text/40 transition-transform duration-200 ${
@@ -306,7 +285,6 @@ function SectionAccordion({
 export default function DossierPage() {
   const { data: session } = useSession();
   const data = useDossierStore((s) => s.data);
-  const completeness = useDossierStore((s) => s.completeness);
   const loading = useDossierStore((s) => s.loading);
   const lastUpdated = useDossierStore((s) => s.lastUpdated);
   const subscribe = useDossierStore((s) => s.subscribe);
@@ -330,18 +308,12 @@ export default function DossierPage() {
   const sections = useMemo(() => (data ? buildSections(data) : []), [data]);
   const timeline = useMemo(() => buildTimeline(sections), [sections]);
   const summary = useMemo(
-    () => buildSummary({ data, displayName, sections }),
-    [data, displayName, sections],
+    () => buildSummary({ data, displayName }),
+    [data, displayName],
   );
 
   const identity = data?.identity ?? {};
   const performance = data?.performance ?? {};
-  const knownSignals = sections.reduce((sum, section) => sum + knownCount(section.fields), 0);
-  const totalSignals = sections.reduce((sum, section) => sum + section.fields.length, 0);
-  const knownSignalsLabel =
-    totalSignals > 0
-      ? `${knownSignals}/${totalSignals} known details`
-      : "Waiting for first details";
   const meta = [
     identity.position ?? identity.sport,
     identity.graduationYear ? `Class of ${identity.graduationYear}` : null,
@@ -404,7 +376,6 @@ export default function DossierPage() {
                 <span className="text-fs-text/60">
                   {performance.leagueLevel ?? identity.competitiveLevel ?? "Development level pending"}
                 </span>
-                <ReadinessBadge score={completeness ?? 0} showPercent />
               </div>
             </section>
 
@@ -436,13 +407,10 @@ export default function DossierPage() {
                     {timeline.map((item, index) => (
                       <li
                         key={item.title}
-                        className={`grid grid-cols-[84px_1fr] gap-5 ${
+                        className={
                           item.status === "pending" ? "opacity-55" : ""
-                        }`}
+                        }
                       >
-                        <span className="pt-1 text-[10px] font-medium uppercase tracking-[0.18em] text-fs-text/45">
-                          {item.period}
-                        </span>
                         <span className="relative block border-l border-fs-text/10 pl-5">
                           <span
                             className={`absolute -left-[5px] top-1 h-2.5 w-2.5 rounded-full ${
@@ -476,9 +444,6 @@ export default function DossierPage() {
               <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                 <p className="text-[11px] font-medium uppercase tracking-[0.2em] text-fs-text/45">
                   Supporting Intelligence
-                </p>
-                <p className="text-xs text-fs-text/45">
-                  {knownSignalsLabel}
                 </p>
               </div>
             </section>
