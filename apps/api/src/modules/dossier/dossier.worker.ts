@@ -53,6 +53,8 @@ export class DossierWorker {
         },
       });
 
+      await this.recordChanges(athleteId, currentData, mergedData);
+
       // UI-facing event: full payload, emitted exactly once per update.
       this.eventEmitter.emit('dossier.updated', {
         athleteId,
@@ -115,6 +117,64 @@ and development potential. Maximum 3 paragraphs in English.`,
     this.logger.log(`Narrative generated for athlete ${athleteId}`);
   }
 
+  // The development timeline needs to know what actually moved, not just which
+  // section did. A failure here must never cost the athlete their dossier.
+  private async recordChanges(
+    athleteId: string,
+    before: Partial<DossierData>,
+    after: DossierData,
+  ): Promise<void> {
+    const changes = this.diffLeaves(
+      before as Record<string, unknown>,
+      after as Record<string, unknown>,
+    ).filter(({ field }) => !EXCLUDED_FROM_LOG.has(field.split('.')[0]));
+
+    if (changes.length === 0) return;
+
+    try {
+      await this.prisma.dossierChange.createMany({
+        data: changes.map((change) => ({
+          athleteId,
+          field: change.field,
+          previous: change.previous as Prisma.InputJsonValue,
+          current: change.current as Prisma.InputJsonValue,
+        })),
+      });
+    } catch (error) {
+      this.logger.warn(
+        `Could not record dossier changes for athlete ${athleteId}`,
+        error,
+      );
+    }
+  }
+
+  private diffLeaves(
+    before: Record<string, unknown>,
+    after: Record<string, unknown>,
+    prefix = '',
+  ): Array<{ field: string; previous: unknown; current: unknown }> {
+    const changes: Array<{
+      field: string;
+      previous: unknown;
+      current: unknown;
+    }> = [];
+
+    for (const [key, current] of Object.entries(after)) {
+      const field = prefix ? `${prefix}.${key}` : key;
+      const previous = before[key];
+
+      if (isPlainObject(current) && isPlainObject(previous)) {
+        changes.push(...this.diffLeaves(previous, current, field));
+      } else if (isPlainObject(current)) {
+        changes.push(...this.diffLeaves({}, current, field));
+      } else if (JSON.stringify(current) !== JSON.stringify(previous)) {
+        changes.push({ field, previous: previous ?? null, current });
+      }
+    }
+
+    return changes;
+  }
+
   private getChangedFields(
     before: Partial<DossierData>,
     after: DossierData,
@@ -153,6 +213,8 @@ and development potential. Maximum 3 paragraphs in English.`,
     return result;
   }
 }
+
+const EXCLUDED_FROM_LOG = new Set(['demoMetadata', 'recruiterPitch']);
 
 function isPlainObject(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);

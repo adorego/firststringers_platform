@@ -19,6 +19,7 @@ const mockPrisma = {
     upsert: jest.fn(),
     update: jest.fn(),
   },
+  dossierChange: { createMany: jest.fn() },
 };
 
 const mockLlm = { chat: jest.fn() };
@@ -53,6 +54,7 @@ describe('DossierWorker — event emissions', () => {
     mockPrisma.dossier.findUnique.mockResolvedValue(null);
     mockPrisma.dossier.upsert.mockResolvedValue({});
     mockPrisma.dossier.update.mockResolvedValue({});
+    mockPrisma.dossierChange.createMany.mockResolvedValue({ count: 0 });
     mockLlm.chat.mockResolvedValue('A generated narrative.');
   });
 
@@ -190,6 +192,92 @@ describe('DossierWorker — event emissions', () => {
       passingYards: 3240,
       touchdowns: 28,
     });
+  });
+
+  it('records every changed leaf with its previous and current value', async () => {
+    mockPrisma.dossier.findUnique.mockResolvedValue({
+      athleteId: 'ath-1',
+      data: {
+        identity: { sport: 'baseball' },
+        performance: { physicalProfile: { height: "5'11" } },
+      },
+    });
+
+    await worker.handleDossierUpdate({
+      athleteId: 'ath-1',
+      newData: {
+        performance: {
+          physicalProfile: { height: "6'0", dominantSide: 'right' },
+        },
+      },
+    });
+
+    const [args] = mockPrisma.dossierChange.createMany.mock.calls[0] as [
+      { data: Array<{ field: string; previous: unknown; current: unknown }> },
+    ];
+
+    expect(args.data).toEqual(
+      expect.arrayContaining([
+        {
+          athleteId: 'ath-1',
+          field: 'performance.physicalProfile.height',
+          previous: "5'11",
+          current: "6'0",
+        },
+        {
+          athleteId: 'ath-1',
+          field: 'performance.physicalProfile.dominantSide',
+          previous: null,
+          current: 'right',
+        },
+      ]),
+    );
+    expect(args.data).toHaveLength(2);
+  });
+
+  it('does not record a change when the athlete repeats the same value', async () => {
+    mockPrisma.dossier.findUnique.mockResolvedValue({
+      athleteId: 'ath-1',
+      data: { identity: { sport: 'baseball' } },
+    });
+
+    await worker.handleDossierUpdate({
+      athleteId: 'ath-1',
+      newData: { identity: { sport: 'baseball' } },
+    });
+
+    expect(mockPrisma.dossierChange.createMany).not.toHaveBeenCalled();
+  });
+
+  it('leaves demo metadata out of the athlete development log', async () => {
+    mockPrisma.dossier.findUnique.mockResolvedValue({
+      athleteId: 'ath-1',
+      data: { identity: { sport: 'baseball' } },
+    });
+
+    await worker.handleDossierUpdate({
+      athleteId: 'ath-1',
+      newData: {
+        academic: { gpa: 3.8 },
+        demoMetadata: { synthetic: true, dataset: 'fs-pilot-2026-08' },
+      },
+    });
+
+    const [args] = mockPrisma.dossierChange.createMany.mock.calls[0] as [
+      { data: Array<{ field: string }> },
+    ];
+    expect(args.data.map((entry) => entry.field)).toEqual(['academic.gpa']);
+  });
+
+  it('still persists the dossier when the change log write fails', async () => {
+    mockPrisma.dossierChange.createMany.mockRejectedValue(new Error('db down'));
+
+    await expect(
+      worker.handleDossierUpdate({ athleteId: 'ath-1', newData: UPDATE }),
+    ).resolves.toBeUndefined();
+
+    expect(mockPrisma.dossier.upsert).toHaveBeenCalled();
+    expect(eventsNamed('dossier.updated')).toHaveLength(1);
   });
 
   it('swallows dossier persistence failures without throwing (fire-and-forget listener)', async () => {

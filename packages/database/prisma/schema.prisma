@@ -28,6 +28,7 @@ model Athlete {
   ownersManual   OwnersManual?
   sessions       JerrySession[]
   updates        AthleteUpdate[]
+  dossierChanges DossierChange[]
   user           User?
   conversations  DirectConversation[]
   representationStatus String    @default("registered")
@@ -58,6 +59,19 @@ model AthleteUpdate {
 
   @@index([athleteId, createdAt])
   @@map("athlete_updates")
+}
+
+model DossierChange {
+  id        String   @id @default(uuid())
+  athleteId String
+  athlete   Athlete  @relation(fields: [athleteId], references: [id], onDelete: Cascade)
+  field     String
+  previous  Json?
+  current   Json
+  createdAt DateTime @default(now())
+
+  @@index([athleteId, createdAt])
+  @@map("dossier_changes")
 }
 
 model Dossier {
