@@ -10,6 +10,7 @@ watchPatterns = [
 ]
 
 [deploy]
+preDeployCommand = ["node /app/node_modules/prisma/build/index.js migrate deploy --schema /app/packages/database/prisma/schema.prisma"]
 healthcheckPath = "/health"
 healthcheckTimeout = 300
 restartPolicyType = "ON_FAILURE"

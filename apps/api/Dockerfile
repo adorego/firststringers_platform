@@ -29,6 +29,13 @@ RUN pnpm --dir packages/database exec prisma generate && \
       echo "ERROR: @prisma/client not found at $PARENT/@prisma/client" && exit 1; \
     fi
 
+# The prisma CLI is a devDependency, so --prod strips it from the runtime image.
+# Migrations run before the container starts, so dereference-copy it to a stable
+# path for the production COPY below.
+RUN PCLI=$(find /app -path "*/node_modules/prisma" -not -path "*/.pnpm/*" 2>/dev/null | head -1) && \
+    [ -n "$PCLI" ] || (echo "ERROR: prisma CLI not found" && exit 1) && \
+    mkdir -p /app/cli && cp -rL "$PCLI" /app/cli/prisma
+
 RUN pnpm --dir apps/api build
 
 FROM node:20-alpine AS production
@@ -54,6 +61,7 @@ RUN pnpm install --prod --frozen-lockfile --ignore-scripts
 # that pnpm just installed with the schema-aware version from prisma generate.
 COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma
 COPY --from=builder /app/node_modules/@prisma/client ./node_modules/@prisma/client
+COPY --from=builder /app/cli/prisma ./node_modules/prisma
 
 WORKDIR /app/apps/api
 RUN chown -R node:node /app
