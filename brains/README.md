@@ -26,6 +26,7 @@ approved version before deployment.
 | [FS-CS-006](FS-CS-006-jerry-activation-leadership.md)                      | Jerry Activation Leadership                    | How Jerry acknowledges athlete input while continuing the Dossier flow                      |
 | [FS-CS-007](FS-CS-007-billy-conversation-quality.md)                       | Billy Conversation Quality                     | Billy v2: objective-first conversations, uncertainty, and reasoned recommendations          |
 | [FS-CS-008](FS-CS-008-jerry-billy-representation-contract.md)              | Jerry–Billy Representation Contract            | Versioned, privacy-safe communication between recruiting and athlete representation         |
+| [FS-CS-009](FS-CS-009-jerry-representation-mode.md)                        | Jerry Representation Mode                      | When Jerry acts for the athlete instead of advising, and using the Dossier before asking     |
 
 ## Governance (Abel's process)
 
