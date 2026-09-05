@@ -6,6 +6,7 @@ import { Send, Radar, TrendingUp, Shield, Check, X } from "lucide-react";
 import { useChatStore } from "@/stores/chat-store";
 import { useDossierStore } from "@/stores/dossier-store";
 import type { ConnectionRequest } from "@/stores/chat-store";
+import { RichText } from "@/components/ui/RichText";
 
 function JerryWelcomeCard() {
   return (
@@ -252,7 +253,14 @@ export default function ChatPage() {
                     : "bg-fs-surface text-fs-text"
                 }`}
               >
-                <p className="text-sm leading-relaxed">{msg.content}</p>
+                {msg.sender === "athlete" ? (
+                  <p className="text-sm leading-relaxed">{msg.content}</p>
+                ) : (
+                  <RichText
+                    content={msg.content}
+                    className="text-sm leading-relaxed"
+                  />
+                )}
                 <p
                   className={`mt-1 text-xs ${
                     msg.sender === "athlete" ? "text-white/40" : "text-fs-text-muted"
