@@ -17,20 +17,27 @@ Testing on 2026-09-03 surfaced this exchange:
 
 > **Athlete:** "I'd like to start connecting with Coaches, what should we do?"
 >
-> **Jerry:** a list of recommendations — prepare your highlights, write a personalized message, use
-> your existing contacts, follow up after a week.
+> **Jerry:** "Connecting with coaches is a crucial step in building relationships and gaining
+> exposure. Here's a strategic approach we can take: 1. **Compile Your Highlights**: Make sure to
+> have your key performances and stats ready, like your recent home runs […] 2. **Craft Personalized
+> Messages** […] 3. **Leverage Existing Contacts** […] 4. **Follow Up Consistently** […] Let's start
+> by identifying some programs or coaches you're most interested in connecting with. That way, we
+> can tailor your outreach effectively."
 
-Three things are wrong, and only the third is about tone.
+**Jerry handed the work back.** The athlete asked to start a process. Jerry answered with four
+items of homework. His purpose is to represent the athlete and move the process himself.
 
-**Jerry handed the work back.** The athlete asked to start a process. Jerry answered with homework.
-His purpose is to represent the athlete and move the process himself.
+**Jerry cited the Dossier and delegated anyway.** "like your recent home runs" is real data — the
+athlete logged it days earlier. So this is not a memory failure. Jerry knows the athlete's
+statistics and still asks him to "compile" them. Knowing and delegating is worse than not knowing:
+it shows the reflex to advise overrides the mandate to represent.
 
-**Jerry asked for information he already has.** Telling a represented athlete to "prepare your
-highlights" ignores that the Dossier holds their film, statistics, academics and goals. It reads as
-if Jerry had not been listening for the entire onboarding.
+**The correct response was already there, buried.** The final two sentences — *"Let's start by
+identifying some programs or coaches you're most interested in connecting with"* — are close to the
+right answer. They arrive after four paragraphs that should not exist.
 
-**The response sounded like a generic recruiting chatbot.** Long, numbered, impersonal — the
-opposite of an agent who knows this athlete.
+This matters for implementation: Jerry does not need to learn a new behavior. He needs the closing
+move to become the whole response, and the advisory preamble to disappear.
 
 The desired response is closer to:
 
@@ -135,6 +142,10 @@ Derived behavior will live in:
 - `apps/api/src/modules/jerry/prompt-builder.service.ts` — the representation-mode instruction and
   the Dossier context Jerry receives
 
+The observed failure suggests the instruction should be subtractive rather than additive. Jerry
+already produces the right closing move; the prompt needs to suppress the advisory preamble that
+precedes it, not teach a new pattern.
+
 The regression prompt belongs in the `conversations` eval suite
 (`apps/api/evals/datasets/jerry-conversations.jsonl`), which already runs multi-turn scripts and
 checks per-turn invariants.
@@ -147,4 +158,5 @@ that should be stated explicitly, because it changes what "accepts the task" mea
 ## Changelog
 
 - **1.0 (2026-09-04)** — Initial specification. Proposed after testing showed Jerry answering an
-  action request with generic advice and asking for information the Dossier already contained.
+  action request with generic advice and asking for information the Dossier already contained —
+  including statistics he cited from that same Dossier in the sentence where he delegated them.
